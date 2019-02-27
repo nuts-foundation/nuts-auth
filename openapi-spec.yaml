@@ -1,0 +1,109 @@
+openapi: 3.0.0
+info:
+  title: Nuts Service API Proxy
+  version: 0.0.1
+paths:
+  /auth/contract/validate:
+    get:
+      summary: Validate a Nuts Security Contract
+      tags:
+        - auth
+      parameters:
+        - name: type
+          required: false
+          in: query
+          description: Define the contract type. Currently we only support IMRA.
+          schema:
+            type: string
+            default: IRMA
+        - name: token
+          required: true
+          description: BASE64 encoded token
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: if the token is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signature:
+                    type: object
+                    example:
+                      text: "ik ga akkoord"
+                      period:
+                        from: '2019-02-26T10:10:15'
+                        to: 'infinity'
+                      purpose: giving-care
+                      language: nl
+                      version: v1
+                      acting_party: Helder
+                  signer_attributes:
+                    type: object
+                    example: {
+                      "irma-demo.MijnOverheid.ageLower.over12": "yes",
+                      "irma-demo.MijnOverheid.fullName": "present"}
+        '403':
+          description: if the token is invalid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                    example: ['Invalid signature', 'Signature Expired']
+  /auth/contract/{type}:
+    get:
+      summary: Get a contract by type and version
+      tags:
+        - auth
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          description: The version of this contract. If omitted, the most recent version will be returned
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: language
+          in: query
+          required: false
+          schema:
+            type: string
+            default: nl
+      responses:
+        '404':
+          description: if no contract exists
+        '200':
+          description: Returns the contract of this type, version and language
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: login
+                  version:
+                    type: string
+                    example: v1
+                  signer_attributes:
+                    type: array
+                    items:
+                      type: string
+                      example: [ "irma-demo.MijnOverheid.ageLower.over12",
+                                 "irma-demo.MijnOverheid.fullName"
+                      ]
+                  template:
+                    type: string
+                    example: ik verklaar dat ${acting_party} namens mij request mag maken
