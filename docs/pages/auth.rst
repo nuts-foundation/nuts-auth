@@ -5,9 +5,14 @@ The Authentication module enables the :doc:`Vendor space <nuts-documentation:pag
 We use authentication contracts in which a user gives consent to an acting party to operate on data on its behalves.
 See contracts in the main documentation :doc:`nuts-documentation:pages/login-contract`
 
-In a cross Nuts node operation we have two roles, one for each party:
-The **acting party**, the one who serves its user and makes the request.
-The **serving party**, the one who serves the data of the patient and reveives the request.
+In an operation between two Nuts nodes there are two roles:
+  * The **acting party**: the one who serves its user and makes the request.
+  * The **serving party**: the one who serves the data of the patient and reveives the request.
+
+.. figure:: /_static/images/parties-diagram.png
+    :align: center
+    :alt: Two parties exchanging data
+    :figclass: align-center
 
 
 Create auth contract for user
