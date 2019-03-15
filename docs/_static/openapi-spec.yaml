@@ -1,0 +1,225 @@
+openapi: 3.0.0
+info:
+  title: Nuts Service API Proxy
+  version: 0.0.1
+  description: |
+    This is the Nuts Service Api Proxy specification.
+
+    Every request should contain a **Authentication** header. This token contains a Care provider identification number such as an AGB code. During production this token should be signed with the private key of the care provider.
+
+security:
+  - bearerAuth: []
+paths:
+  /auth/contract/validate:
+    get:
+      summary: Validate a Nuts Security Contract
+      tags:
+        - auth
+      parameters:
+        - name: type
+          required: false
+          in: query
+          description: Define the contract type. Currently we only support IMRA.
+          schema:
+            type: string
+            default: IRMA
+        - name: token
+          required: true
+          description: BASE64 encoded token
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Validation result. Token could be parsed but does not have to be valid. See the status for that.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signature:
+                    type: object
+                    example:
+                      text: "ik ga akkoord"
+                      period:
+                        from: '2019-02-26T10:10:15'
+                        to: 'infinity'
+                      purpose: giving-care
+                      language: nl
+                      version: v1
+                      acting_party: Helder
+                  signer_attributes:
+                    type: object
+                    example: {
+                      "irma-demo.MijnOverheid.ageLower.over12": "yes",
+                      "irma-demo.MijnOverheid.fullName": "present"}
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /auth/contract/session:
+    post:
+      summary: |
+        Start a new contract signing session.
+      tags:
+        - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSignatureSession'
+      responses:
+        201:
+          description: The IRMA session reference.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignatureSession'
+          links:
+            getSessionById:
+              operationId: getSessionState
+              parameters:
+                sessionId: $response.body#/u
+        400:
+          description: One or more parameters are invalid.
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+  /auth/contract/session/{sessionId}:
+    get:
+      operationId: getSessionState
+      summary: |
+        Get the current state of the session.
+      description: |
+        This endpoint can be used to poll every second for progress while the user signes the contract using its app.
+      tags:
+        - auth
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: |
+            The state of this contract session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignatureSessionStatus'
+  /auth/contract/{type}:
+    get:
+      summary: Get a contract by type and version
+      tags:
+        - auth
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          description: The version of this contract. If omitted, the most recent version will be returned
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: language
+          in: query
+          required: false
+          schema:
+            type: string
+            default: nl
+      responses:
+        '404':
+          description: if no contract exists
+        '200':
+          description: Returns the contract of this type, version and language
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: login
+                  version:
+                    type: string
+                    example: v1
+                  signer_attributes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - "irma-demo.MijnOverheid.ageLower.over12"
+                      - "irma-demo.MijnOverheid.fullName"
+                  template:
+                    type: string
+                    example: ik verklaar dat ${acting_party} namens mij request mag maken
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CreateSignatureSession:
+      type: object
+      properties:
+        contractId:
+          type: string
+          example: login
+          description: |
+            Multiple contracts can be available. Each contract will have
+            an ID.
+        version:
+          type: integer
+          example: 1
+        language:
+          type: string
+          example: nl
+        valid_from:
+          type: string
+          example: "2019-03-01T12:04:00"
+        valid_until:
+          type: string
+          example: "2019-03-01T14:04:00"
+        template_values:
+          type: object
+          description: |
+            Every contract can have template variables. Each variable should be defined in this group.
+          example:
+            consent_scope: access
+            purpose: treatment
+    SignatureSession:
+      type: object
+      properties:
+        token:
+          type: string
+          example: KzxuWKwL5KGLKr4uerws
+        sessionPtr:
+          type: object
+          properties:
+            u:
+              type: string
+              example: https://example.com/irma/ysDohpoySavbHAUDjmpz
+            irmaqr:
+              type: string
+              enum: [disclosing, signing, issuing]
+              example: signing
+    SignatureSessionStatus:
+      type: string
+      enum: [INITIALIZED, CONNECTED, CANCELLED, DONE, TIMEOUT]
+      description: |
+        * INITIALIZED: the session has been started and is waiting for the client
+        * CONNECTED: the client has retrieved the session request, we wait for its response
+        * CANCELLED: the session is cancelled: the user refused, or the user did not have the requested attributes, or an error occurred during the session
+        * DONE: the session has completed successfully
+        * TIMEOUT: session timed out
+
+  responses:
+    UnauthorizedError:
+      description: |
+        Access token is missing or invalid
