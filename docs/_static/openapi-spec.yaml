@@ -113,17 +113,19 @@ paths:
       parameters:
         - name: type
           in: path
+          description: The contract type identifier. A list of contract types is in the making.
           required: true
           schema:
             type: string
         - name: version
-          description: The version of this contract. If omitted, the most recent version will be returned
+          description: The version of this contract. If omitted, the most recent version will be returned.
           required: false
           in: query
           schema:
             type: string
         - name: language
           in: query
+          description: The language of the contract. If omitted, the Dutch language will be used.
           required: false
           schema:
             type: string

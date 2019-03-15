@@ -13,14 +13,20 @@ The **serving party**, the one who serves the data of the patient and reveives t
 Create auth contract for user
 #############################
 
-In order for a user to operate on data stored in another system, the software serving the user should craft a special token which proves that the acting party is authorized to perform a query on behalve of its user.
+In order for a user to query for or operate on data stored in the serving party, the acting party should craft a special token containing a contract signed by the user which proves that the acting party is authorized to perform a query.
 
-The Nuts proxy provides a convenient endpoint which can be used to initiate the authentication process. The acting party chooses the type of contract and the language.
-The system creates a session and returns an URL with the session information. The acting party should present this endpoint to its user who can choose to interact with this endpoint and sign the consent.
+.. note::
+  Nuts uses `IRMA <https://irma.app/docs/>`_ in the background to sign and verify contracts.
 
-Since the interaction between the user and IRMA are out of bound, the acting party does not know when the transaction is completed. Therefor it needs to poll or subscribe to changes in the transaction status.
+The Nuts proxy provides a convenient endpoint for the *Vendor space* to initiate the signing process.
+The acting party chooses the the appropriate contract type and the language.
+The in the background IRMA creates a signing session and returns a object with the session information.
+The acting party should present this session information in the form of a QR-code to its user who can choose to scan it with its IRMA app and sign the contract.
 
-When the transaction between the user and IRMA completes, the acting party receives the fully signed contract which it can use to make requests to other Nuts parties.
+Since the transaction between the user and IRMA are out of bound, the acting party does not know when the signing is completed or aborted. Therefor it needs to poll for or subscribe to changes in the transaction status.
+
+When the transaction between the user and IRMA completes, the acting party receives the fully signed contract which it can use to make requests to other *serving parties*.
+The contract must be sent in the form of a *JWT* with ``nuts`` as the issuer.
 
 .. figure:: /_static/images/irma-login.sequence-diagram.png
     :width: 600px
@@ -34,16 +40,20 @@ When the transaction between the user and IRMA completes, the acting party recei
       /auth/contract/session
 
 
-
-
 Validate auth contract from user
 ################################
 
-When the EHR system receives a request on its APIs from another Nuts party, it needs ti vakudate the validity of the authorization token.
+When the *serving party* receives a request on its APIs from another *acting party*, it needs to validate the *JWT* and its containing contract.
 
-The Nuts proxy provides a convenient endpoint which can be used to validate the token. The validation must be performed by a single REST call to the proxy.
+The Nuts proxy provides a convenient endpoint which can be used to validate the *JTW*. The validation must be performed by a REST call to the proxy.
 
 .. openapi:: /_static/openapi-spec.yaml
    :paths:
       /auth/contract/validate
 
+
+
+OpenAPI Specification
+#####################
+
+`Checkout the full OpenAPI spec here <https://editor.swagger.io/?url=https://raw.githubusercontent.com/nuts-foundation/nuts-proxy/init-docs/docs/_static/openapi-spec.yaml>`_
