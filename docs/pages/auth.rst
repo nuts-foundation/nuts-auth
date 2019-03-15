@@ -31,7 +31,7 @@ When the transaction between the user and IRMA completes, the acting party recei
 .. openapi:: /_static/openapi-spec.yaml
    :paths:
       /auth/contract/{type}
-      /auth/contract
+      /auth/contract/session
 
 
 
