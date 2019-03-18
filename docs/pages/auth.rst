@@ -2,7 +2,7 @@ Auth Module
 ===========
 
 The Authentication module enables the :doc:`Vendor space <nuts-documentation:pages/architecture>` to perform operations related to authentication.
-We use authentication contracts in which a user gives consent to an acting party to operate on data on its behalves.
+We use authentication contracts in which a user gives consent to an acting party to operate on data on its behalf.
 See contracts in the main documentation :doc:`nuts-documentation:pages/login-contract`
 
 In an operation between two Nuts nodes there are two roles:
