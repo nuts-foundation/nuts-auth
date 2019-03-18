@@ -58,7 +58,7 @@ paths:
   /auth/contract/session:
     post:
       summary: |
-        Start a new contract signing session.
+        Create a new contract signing session.
       tags:
         - auth
       requestBody:
@@ -88,19 +88,20 @@ paths:
       summary: |
         Get the current state of the session.
       description: |
-        This endpoint can be used to poll every second for progress while the user signes the contract using its app.
+        This endpoint can be used to poll every second for progress while the user signs the contract using its IRMA app.
       tags:
         - auth
       parameters:
         - name: sessionId
           in: path
+          description: The session id as found in the response object after session creation.
           required: true
           schema:
             type: string
       responses:
         200:
           description: |
-            The state of this contract session
+            The actual state of the contract session with the corresponding sessionID
           content:
             application/json:
               schema:
