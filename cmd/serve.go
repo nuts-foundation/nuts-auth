@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi"
@@ -23,6 +24,9 @@ import (
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 )
@@ -37,29 +41,41 @@ var serveCmd = &cobra.Command{
 	Short: "Start the service proxy",
 	Long:  `Start the service proxy.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		stop := make(chan os.Signal, 1)
+		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 		InitIRMA()
 
-		//httpPort := viper.Get("httpPort")
 		log.Printf("starting with httpPort: %d", httpPort)
 
+		// configure the router
 		r := chi.NewRouter()
 		r.Use(middleware.Logger)
 		r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
 			writer.Write([]byte("Welcome"))
 		})
-
 		r.Post("/auth/contract/session", CreateSessionHandler)
 
 		addr := fmt.Sprintf(":%d", httpPort)
-		err := http.ListenAndServe(addr, r)
-		if err != nil {
-			log.Panicf("Could not start server: %s", err)
-		}
+		httpServer := &http.Server{Addr: addr, Handler: r}
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		go func() {
+			if err := httpServer.ListenAndServe(); err != nil {
+				log.Panicf("Could not start server: %s", err)
+			}
+		}()
+
+		<-stop
+		log.Println("Shutting down the server")
+		httpServer.Shutdown(ctx)
+
+		cancel()
 	},
 }
 
-func InitIRMA()  {
+func InitIRMA() {
 	configuration := &server.Configuration{
 		URL: "http://localhost:1234/irma",
 	}
