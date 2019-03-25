@@ -15,8 +15,12 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/privacybydesign/irmago/server"
+	"github.com/privacybydesign/irmago/server/irmaserver"
 	"log"
 	"net/http"
 
@@ -24,21 +28,56 @@ import (
 )
 
 const DefaultHttpPort = 3000
+
 var httpPort int
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the service proxy",
-	Long: `Start the service proxy.`,
+	Long:  `Start the service proxy.`,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		configuration := &server.Configuration{
+			URL: "http://localhost:1234/irma",
+		}
+
+		log.Print("Initializing IRMA library...")
+		if err := irmaserver.Initialize(configuration); err != nil {
+			log.Panic("Could not initialize IRMA library:", err)
+		}
 
 		//httpPort := viper.Get("httpPort")
 		log.Printf("starting with httpPort: %d", httpPort)
 
 		r := chi.NewRouter()
+		r.Use(middleware.Logger)
 		r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
 			writer.Write([]byte("Welcome"))
+		})
+
+		r.Post("/auth/contract/session", func(writer http.ResponseWriter, request *http.Request) {
+
+			requestDefenition := `{
+				"type": "disclosing",
+				"content": [{ "label": "Full name", "attributes": [ "pbdf.nijmegen.personalData.fullname" ]}]
+			}`
+
+			sessionPointer, token, err := irmaserver.StartSession(requestDefenition, func(result *server.SessionResult) {
+				log.Printf("session done, result: %s", server.ToJson(result))
+			})
+
+			if err != nil {
+				log.Print("error while creating session: ", err)
+			}
+
+			log.Printf("session created with token: %s", token)
+
+			jsonSessionPointer, _ := json.Marshal(sessionPointer)
+			_, err = writer.Write(jsonSessionPointer)
+			if err != nil {
+				log.Printf("Write failed: %v", err)
+			}
 		})
 
 		addr := fmt.Sprintf(":%d", httpPort)
@@ -51,5 +90,5 @@ var serveCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().IntVarP(&httpPort, "httpPort","p", DefaultHttpPort, "The port the http server should bind to")
+	serveCmd.Flags().IntVarP(&httpPort, "httpPort", "p", DefaultHttpPort, "The port the http server should bind to")
 }
