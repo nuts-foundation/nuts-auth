@@ -66,3 +66,4 @@ typings/
 
 # next.js build output
 .next
+nuts_service_proxy
