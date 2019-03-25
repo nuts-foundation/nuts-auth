@@ -38,14 +38,7 @@ var serveCmd = &cobra.Command{
 	Long:  `Start the service proxy.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		configuration := &server.Configuration{
-			URL: "http://localhost:1234/irma",
-		}
-
-		log.Print("Initializing IRMA library...")
-		if err := irmaserver.Initialize(configuration); err != nil {
-			log.Panic("Could not initialize IRMA library:", err)
-		}
+		InitIRMA()
 
 		//httpPort := viper.Get("httpPort")
 		log.Printf("starting with httpPort: %d", httpPort)
@@ -56,29 +49,7 @@ var serveCmd = &cobra.Command{
 			writer.Write([]byte("Welcome"))
 		})
 
-		r.Post("/auth/contract/session", func(writer http.ResponseWriter, request *http.Request) {
-
-			requestDefenition := `{
-				"type": "disclosing",
-				"content": [{ "label": "Full name", "attributes": [ "pbdf.nijmegen.personalData.fullname" ]}]
-			}`
-
-			sessionPointer, token, err := irmaserver.StartSession(requestDefenition, func(result *server.SessionResult) {
-				log.Printf("session done, result: %s", server.ToJson(result))
-			})
-
-			if err != nil {
-				log.Print("error while creating session: ", err)
-			}
-
-			log.Printf("session created with token: %s", token)
-
-			jsonSessionPointer, _ := json.Marshal(sessionPointer)
-			_, err = writer.Write(jsonSessionPointer)
-			if err != nil {
-				log.Printf("Write failed: %v", err)
-			}
-		})
+		r.Post("/auth/contract/session", CreateSessionHandler)
 
 		addr := fmt.Sprintf(":%d", httpPort)
 		err := http.ListenAndServe(addr, r)
@@ -86,6 +57,41 @@ var serveCmd = &cobra.Command{
 			log.Panicf("Could not start server: %s", err)
 		}
 	},
+}
+
+func InitIRMA()  {
+	configuration := &server.Configuration{
+		URL: "http://localhost:1234/irma",
+	}
+
+	log.Print("Initializing IRMA library...")
+	if err := irmaserver.Initialize(configuration); err != nil {
+		log.Panic("Could not initialize IRMA library:", err)
+	}
+}
+
+func CreateSessionHandler(writer http.ResponseWriter, request *http.Request) {
+	requestDefenition := `{
+			"type": "disclosing",
+			"content": [{ "label": "Full name", "attributes": [ "pbdf.nijmegen.personalData.fullname" ]}]
+		}`
+
+	sessionPointer, token, err := irmaserver.StartSession(requestDefenition, func(result *server.SessionResult) {
+		log.Printf("session done, result: %s", server.ToJson(result))
+	})
+
+	if err != nil {
+		log.Print("error while creating session: ", err)
+	}
+
+	log.Printf("session created with token: %s", token)
+
+	jsonSessionPointer, _ := json.Marshal(sessionPointer)
+	writer.WriteHeader(http.StatusCreated)
+	_, err = writer.Write(jsonSessionPointer)
+	if err != nil {
+		log.Printf("Write failed: %v", err)
+	}
 }
 
 func init() {
