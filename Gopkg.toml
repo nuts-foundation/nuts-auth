@@ -8,3 +8,11 @@
 [[constraint]]
   name = "github.com/go-chi/chi"
   version = "4.0.2"
+
+[[constraint]]
+  name = "github.com/privacybydesign/irmago"
+  version = "0.1.0"
+
+[[override]]
+  branch = "master"
+  name = "github.com/timshannon/bolthold"
