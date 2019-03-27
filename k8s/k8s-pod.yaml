@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nuts-service-proxy
+  labels:
+    env: demo
+    app: generic-ehr
+spec:
+  containers:
+    - name: nuts-service-proxy
+      image: nuts/service-proxy
+      env:
+        - name: PORT
+          value: "3000"
+      ports:
+        - containerPort: 3000
