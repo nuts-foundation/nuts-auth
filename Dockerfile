@@ -12,8 +12,10 @@ WORKDIR $SRC_PATH
 COPY Gopkg.toml Gopkg.lock main.go ./
 RUN dep ensure --vendor-only
 COPY cmd ./cmd
+COPY api ./api
 
-RUN CGO_ENABLED=0 go build -o /$EXECUTABLE_NAME main.go
+RUN go test ./...
+RUN go build -o /$EXECUTABLE_NAME main.go
 
 FROM scratch
 COPY --from=builder /$EXECUTABLE_NAME .

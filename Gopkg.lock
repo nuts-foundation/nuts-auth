@@ -77,6 +77,14 @@
   version = "v4.0.2"
 
 [[projects]]
+  digest = "1:dfa416a1bb8139f30832543340f972f65c0db9932034cb6a1b42c5ac615a3fb8"
+  name = "github.com/go-chi/cors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "dba6525398619dead495962a916728e7ee2ca322"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:aacef5f5e45685f2aeda5534d0a750dee6859de7e9088cdd06192787bb01ae6d"
   name = "github.com/go-errors/errors"
   packages = ["."]
@@ -244,7 +252,7 @@
   revision = "a82627413483b5fcbbbaeda0ef65ef19242736ab"
 
 [[projects]]
-  digest = "1:ec47d7f45a7304f062dd60846f2d0f9fd528dbf3a380ab6b3b8f901cd9a497b9"
+  digest = "1:632b8ccf74b851d3fbe0551c59cd05f77939429f25a78d7e9d154e55b48477b9"
   name = "github.com/privacybydesign/irmago"
   packages = [
     ".",
@@ -253,6 +261,7 @@
     "internal/servercore",
     "server",
     "server/irmaserver",
+    "server/requestorserver",
   ]
   pruneopts = "UT"
   revision = "4c02373c2587ebe528d58d7fade4630831e4e661"
@@ -420,8 +429,10 @@
     "github.com/go-chi/chi",
     "github.com/go-chi/chi/middleware",
     "github.com/mitchellh/go-homedir",
+    "github.com/privacybydesign/irmago",
     "github.com/privacybydesign/irmago/server",
     "github.com/privacybydesign/irmago/server/irmaserver",
+    "github.com/privacybydesign/irmago/server/requestorserver",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
