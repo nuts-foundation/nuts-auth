@@ -2,12 +2,14 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"time"
 )
 
 type AuthAPI struct {
@@ -47,16 +49,39 @@ func (api AuthAPI) GetContractHandler(writer http.ResponseWriter, request *http.
 	writer.Write(contractJson)
 }
 
-func (api AuthAPI) CreateSessionHandler(writer http.ResponseWriter, _ *http.Request) {
+func (api AuthAPI) CreateSessionHandler(writer http.ResponseWriter, r *http.Request) {
+	var sessionRequest ContractSigningRequest
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&sessionRequest); err != nil {
+		logMsg := fmt.Sprintf("Could not decode json request parameters %v", r.Body)
+		logrus.Info(logMsg)
+		http.Error(writer, logMsg, http.StatusBadRequest)
+		return
+	}
+	contract := ContractByType(sessionRequest.Type, sessionRequest.Language)
+	if contract == nil {
+		logMsg := fmt.Sprintf("Could not find contract with type %v", sessionRequest.Type)
+		logrus.Info(logMsg)
+		http.Error(writer, logMsg, http.StatusBadRequest)
+		return
+	}
+	message, err := contract.renderTemplate(map[string]string{"acting_party": "Helder", "valid_from": time.Now().Format(time.RFC850), "valid_to": time.Now().Add(time.Minute * 60).Format(time.RFC850)})
+	logrus.Infof("contractMessage: %v", message)
+	if err != nil {
+		logMsg := fmt.Sprintf("Could not render contract template of type %v: %v", contract.Type, err)
+		logrus.Error(logMsg)
+		http.Error(writer, logMsg, http.StatusBadRequest)
+		return
+	}
 	signatureRequest := &irma.SignatureRequest{
-		Message: "Ga je akkoord?",
+		Message: message,
 		DisclosureRequest: irma.DisclosureRequest{
 			BaseRequest: irma.BaseRequest{
 				Type: irma.ActionSigning,
 			},
 			Content: irma.AttributeDisjunctionList([]*irma.AttributeDisjunction{{
 				Label:      "AGB-Code",
-				Attributes: []irma.AttributeTypeIdentifier{irma.NewAttributeTypeIdentifier("irma-demo.nuts.agb.agbcode")},
+				Attributes: []irma.AttributeTypeIdentifier{irma.NewAttributeTypeIdentifier(contract.SignerAttributes[0])},
 			}}),
 		},
 	}

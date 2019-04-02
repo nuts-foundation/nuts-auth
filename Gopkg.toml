@@ -16,3 +16,7 @@
 [[override]]
   branch = "master"
   name = "github.com/timshannon/bolthold"
+
+[[constraint]]
+  name = "github.com/cbroglie/mustache"
+  version = "1.0.1"

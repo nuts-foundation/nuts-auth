@@ -8,6 +8,8 @@
 POST http://localhost:3000/auth/contract/session
 Content-Type: application/json
 
-{}
+{
+  "type": "BehandelaarLogin"
+}
 
 ###
