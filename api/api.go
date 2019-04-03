@@ -8,6 +8,7 @@ import (
 	"github.com/nuts-foundation/nuts-proxy/api/auth"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"time"
 )
 
 type API struct {
@@ -22,14 +23,25 @@ func (api *API) Start() {
 	addr := fmt.Sprintf(":%d", api.config.Port)
 	api.server = &http.Server{Addr: addr, Handler: api.router}
 
-	if err := api.server.ListenAndServe(); err != nil {
-		logrus.Panicf("Could not start server: %s", err)
+	err := api.server.ListenAndServe() // blocks
+
+	if err != http.ErrServerClosed {
+		logrus.WithError(err).Error("Http server stopped unexpected")
+	} else {
+		logrus.WithError(err).Info("Http server stopped")
 	}
 }
 
-func (api *API) Shutdown(context context.Context) error {
-	logrus.Info("Shutting down the server")
-	return api.server.Shutdown(context)
+func (api *API) Shutdown() {
+	if api.server != nil {
+		logrus.Info("Shutting down the server")
+		ctx, _ := context.WithTimeout(context.Background(), 10*time.Minute)
+		if err := api.server.Shutdown(ctx); err != nil {
+			logrus.WithError(err).Error("Failed to shutdown the server")
+
+		}
+		api.server = nil
+	}
 }
 
 func New(config *Config) *API {
@@ -38,25 +50,33 @@ func New(config *Config) *API {
 		config: config,
 	}
 
-	// configure the router
-	api.router = chi.NewRouter()
-	api.router.Use(middleware.RequestID)
-	api.router.Use(NewStructuredLogger(api.config.Logger))
-	api.router.Use(ContentTypeMiddleware)
-	api.router.Get("/", func(writer http.ResponseWriter, request *http.Request) {
-		_, _ = writer.Write([]byte("Welcome Nuts proxy!!"))
-	})
-
-	api.router.Mount("/auth", auth.New().AuthHandler())
+	api.router = api.Router()
 
 	return api
 }
 
-func ContentTypeMiddleware(next http.Handler) http.Handler {
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		next.ServeHTTP(w, r)
-	}
+func (api *API) Router() *chi.Mux {
+	// configure the router
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(NewStructuredLogger(api.config.Logger))
+	r.Use(ContentTypeMiddlewareFn("application/json"))
+	r.Get("/", ApiRootHandler)
+	r.Mount("/auth", auth.New().Handler())
+	return r
+}
 
-	return http.HandlerFunc(fn)
+func ApiRootHandler(writer http.ResponseWriter, _ *http.Request) {
+	_, _ = writer.Write([]byte("Welcome Nuts proxy!!"))
+}
+
+func ContentTypeMiddlewareFn(contentType string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", contentType)
+			next.ServeHTTP(w, r)
+		}
+
+		return http.HandlerFunc(fn)
+	}
 }
