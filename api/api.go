@@ -27,9 +27,9 @@ func (api *API) Start() {
 	}
 }
 
-func (api *API) Shutdown(context context.Context) {
+func (api *API) Shutdown(context context.Context) error {
 	logrus.Info("Shutting down the server")
-	api.server.Shutdown(context)
+	return api.server.Shutdown(context)
 }
 
 func New(config *Config) *API {
@@ -44,7 +44,7 @@ func New(config *Config) *API {
 	api.router.Use(NewStructuredLogger(api.config.Logger))
 	api.router.Use(ContentTypeMiddleware)
 	api.router.Get("/", func(writer http.ResponseWriter, request *http.Request) {
-		writer.Write([]byte("Welcome Nuts proxy!!"))
+		_, _ = writer.Write([]byte("Welcome Nuts proxy!!"))
 	})
 
 	api.router.Mount("/auth", auth.New().AuthHandler())
