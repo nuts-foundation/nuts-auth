@@ -7,12 +7,12 @@ import (
 	"testing"
 )
 
-const HEAD_CONTENT_TYPE = "Content-Type"
-const CT_JSON = "application/json"
+const HeadContentType = "Content-Type"
+const ContentTypeJson = "application/json"
 
 func testContentTypeIsJson(r http.ResponseWriter, t *testing.T) {
-	actualContentType := r.Header().Get(HEAD_CONTENT_TYPE)
-	expectedContentType := CT_JSON
+	actualContentType := r.Header().Get(HeadContentType)
+	expectedContentType := ContentTypeJson
 	if actualContentType != expectedContentType {
 		t.Errorf("Handler returned the wrong Content-type: got %v, expected %v", actualContentType, expectedContentType)
 	}

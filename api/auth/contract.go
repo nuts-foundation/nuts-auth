@@ -6,18 +6,18 @@ import (
 )
 
 type Contract struct {
-	Type               string   `json: "type"`
-	Version            string   `json: "version"`
-	Language           string   `json: "language"`
-	SignerAttributes   []string `json: "signer_attributes"`
-	Template           string   `json: "template"`
-	TemplateAttributes []string `json: "template_attributes"`
+	Type               string   `json:"type"`
+	Version            string   `json:"version"`
+	Language           string   `json:"language"`
+	SignerAttributes   []string `json:"signer_attributes"`
+	Template           string   `json:"template"`
+	TemplateAttributes []string `json:"template_attributes"`
 }
 
 type ContractSigningRequest struct {
-	Type string `json:"type"`
-	Version string `json:"version"`
-	Language string `json:"language"`
+	Type               string `json:"type"`
+	Version            string `json:"version"`
+	Language           string `json:"language"`
 	TemplateAttributes map[string]string
 }
 

@@ -12,10 +12,10 @@ import (
 	"time"
 )
 
-type AuthAPI struct {
+type API struct {
 }
 
-func (api AuthAPI) InitIRMA() {
+func (api API) InitIRMA() {
 	configuration := &server.Configuration{
 		//TODO: Make IRMA client URL a config variable
 		URL:    "https://d7ca041d.ngrok.io/auth/irmaclient",
@@ -28,13 +28,13 @@ func (api AuthAPI) InitIRMA() {
 	}
 }
 
-func New() *AuthAPI {
-	api := &AuthAPI{}
+func New() *API {
+	api := &API{}
 	api.InitIRMA()
 	return api
 }
 
-func (api AuthAPI) AuthHandler() http.Handler {
+func (api API) AuthHandler() http.Handler {
 	r := chi.NewRouter()
 	r.Post("/contract/session", api.CreateSessionHandler)
 	r.Get("/contract/{type}", api.GetContractHandler)
@@ -42,14 +42,14 @@ func (api AuthAPI) AuthHandler() http.Handler {
 	return r
 }
 
-func (api AuthAPI) GetContractHandler(writer http.ResponseWriter, request *http.Request) {
+func (api API) GetContractHandler(writer http.ResponseWriter, request *http.Request) {
 	contractType := chi.URLParam(request, "type")
 	contract := ContractByType(contractType, "NL")
 	contractJson, _ := json.Marshal(contract)
-	writer.Write(contractJson)
+	_, _ = writer.Write(contractJson)
 }
 
-func (api AuthAPI) CreateSessionHandler(writer http.ResponseWriter, r *http.Request) {
+func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request) {
 	var sessionRequest ContractSigningRequest
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&sessionRequest); err != nil {

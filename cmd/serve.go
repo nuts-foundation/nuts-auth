@@ -19,11 +19,11 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the service proxy",
 	Long:  `Start the service proxy.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		stop := make(chan os.Signal, 1)
 		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-		apiConfig := &api.Config{Port: httpPort, Logger:logrus.StandardLogger()}
+		apiConfig := &api.Config{Port: httpPort, Logger: logrus.StandardLogger()}
 		api := api.New(apiConfig)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -33,9 +33,12 @@ var serveCmd = &cobra.Command{
 		}()
 
 		<-stop
-		api.Shutdown(ctx)
+		if err := api.Shutdown(ctx); err != nil {
+			return err
+		}
 
 		cancel()
+		return nil
 	},
 }
 
