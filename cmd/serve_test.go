@@ -29,7 +29,7 @@ func TestContentType(t *testing.T) {
 		testContentTypeIsJson(w, t)
 	}
 
-	handler := api.ContentTypeMiddleware(http.HandlerFunc(testHandler))
+	handler := api.ContentTypeMiddlewareFn("application/json")(http.HandlerFunc(testHandler))
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 }
