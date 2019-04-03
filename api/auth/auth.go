@@ -102,6 +102,7 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 
 	if err != nil {
 		logrus.Panic("error while creating session: ", err)
+		http.Error(writer, "Could not create a new session", http.StatusInternalServerError)
 	}
 
 	logrus.Infof("session created with token: %s", token)
