@@ -12,10 +12,17 @@ import (
 	"time"
 )
 
-type API struct {
+// IrmaInterface allows mocking the irma server during tests
+type IrmaInterface interface {
+	StartSession(interface{}, irmaserver.SessionHandler) (*irma.Qr, string, error)
+	HandlerFunc() http.HandlerFunc
 }
 
-func (api API) InitIRMA() {
+type API struct {
+	irmaServer IrmaInterface
+}
+
+func (api *API) InitIRMA() {
 	configuration := &server.Configuration{
 		//TODO: Make IRMA client URL a config variable
 		URL:    "https://d7ca041d.ngrok.io/auth/irmaclient",
@@ -23,9 +30,12 @@ func (api API) InitIRMA() {
 	}
 
 	logrus.Info("Initializing IRMA library...")
-	if err := irmaserver.Initialize(configuration); err != nil {
+	irmaServer, err := irmaserver.New(configuration)
+	if err != nil {
 		logrus.Panic("Could not initialize IRMA library:", err)
 	}
+
+	api.irmaServer = irmaServer
 }
 
 func New() *API {
@@ -34,11 +44,11 @@ func New() *API {
 	return api
 }
 
-func (api API) AuthHandler() http.Handler {
+func (api API) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Post("/contract/session", api.CreateSessionHandler)
 	r.Get("/contract/{type}", api.GetContractHandler)
-	r.Mount("/irmaclient", irmaserver.HandlerFunc())
+	r.Mount("/irmaclient", api.irmaServer.HandlerFunc())
 	return r
 }
 
@@ -86,7 +96,7 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 		},
 	}
 
-	sessionPointer, token, err := irmaserver.StartSession(signatureRequest, func(result *server.SessionResult) {
+	sessionPointer, token, err := api.irmaServer.StartSession(signatureRequest, func(result *server.SessionResult) {
 		logrus.Infof("session done, result: %s", server.ToJson(result))
 	})
 

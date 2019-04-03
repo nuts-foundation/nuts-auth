@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	irma "github.com/privacybydesign/irmago"
+	"github.com/privacybydesign/irmago/server/irmaserver"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -11,6 +12,18 @@ import (
 	"strings"
 	"testing"
 )
+
+type SpyIrmaService struct{}
+
+func (s *SpyIrmaService) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
+	return &irma.Qr{URL: "https://api.helder.health/auth/irmaclient/123-sessionid-123", Type: irma.ActionSigning}, "", nil
+}
+
+func (s *SpyIrmaService) HandlerFunc() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Hello from mocked irma client handler"))
+	}
+}
 
 func TestCreateSessionHandler(t *testing.T) {
 	makeRequest := func(t *testing.T, payload []byte) *http.Request {
@@ -28,7 +41,7 @@ func TestCreateSessionHandler(t *testing.T) {
 		rr = httptest.NewRecorder()
 		req := makeRequest(t, payload)
 
-		handler := http.HandlerFunc(New().CreateSessionHandler)
+		handler := http.HandlerFunc(API{irmaServer: &SpyIrmaService{}}.CreateSessionHandler)
 
 		handler.ServeHTTP(rr, req)
 		return
@@ -92,7 +105,8 @@ func TestCreateSessionHandler(t *testing.T) {
 
 func TestGetContract(t *testing.T) {
 	t.Run("happy flow", func(t *testing.T) {
-		router := New().AuthHandler()
+		api := API{irmaServer: &SpyIrmaService{}}
+		router := api.Handler()
 		ts := httptest.NewServer(router)
 		defer ts.Close()
 
