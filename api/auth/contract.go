@@ -31,7 +31,7 @@ func ContractByType(contractType string, language string) *Contract {
 			Language:           "NL",
 			SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
 			Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om uit zijn/haar naam het nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
-			TemplateAttributes: []string{"valid_from", "valid_to"},
+			TemplateAttributes: []string{"acting_party", "valid_from", "valid_to"},
 		}
 	}
 
@@ -40,6 +40,6 @@ func ContractByType(contractType string, language string) *Contract {
 	return nil
 }
 
-func (c Contract) renderTemplate(vars map[string]string) (string, error) {
+func (c Contract) RenderTemplate(vars map[string]string) (string, error) {
 	return mustache.Render(c.Template, vars)
 }
