@@ -8,6 +8,7 @@ import (
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
 	"net/http"
 	"time"
 )
@@ -20,13 +21,24 @@ type IrmaInterface interface {
 
 type API struct {
 	irmaServer IrmaInterface
+	irmaConfig *irma.Configuration
 }
 
 func (api *API) InitIRMA() {
+
+	irmaConfig, err := irma.NewConfiguration("./conf")
+	if err != nil {
+		logrus.WithError(err).Error("Could not create irma config")
+	}
+
+	api.irmaConfig = irmaConfig
+
+	irmaConfig.DownloadDefaultSchemes()
 	configuration := &server.Configuration{
 		//TODO: Make IRMA client URL a config variable
-		URL:    "https://d7ca041d.ngrok.io/auth/irmaclient",
-		Logger: logrus.StandardLogger(),
+		URL:               "https://5f8da8e3.ngrok.io/auth/irmaclient",
+		Logger:            logrus.StandardLogger(),
+		IrmaConfiguration: irmaConfig,
 	}
 
 	logrus.Info("Initializing IRMA library...")
@@ -48,6 +60,7 @@ func (api API) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Post("/contract/session", api.CreateSessionHandler)
 	r.Get("/contract/{type}", api.GetContractHandler)
+	r.Post("/contract/validate", api.ValidateContractHandler)
 	r.Mount("/irmaclient", api.irmaServer.HandlerFunc())
 	return r
 }
@@ -75,7 +88,7 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 		http.Error(writer, logMsg, http.StatusBadRequest)
 		return
 	}
-	message, err := contract.renderTemplate(map[string]string{"acting_party": "Helder", "valid_from": time.Now().Format(time.RFC850), "valid_to": time.Now().Add(time.Minute * 60).Format(time.RFC850)})
+	message, err := contract.RenderTemplate(map[string]string{"acting_party": "Helder", "valid_from": time.Now().Format(time.RFC850), "valid_to": time.Now().Add(time.Minute * 60).Format(time.RFC850)})
 	logrus.Infof("contractMessage: %v", message)
 	if err != nil {
 		logMsg := fmt.Sprintf("Could not render contract template of type %v: %v", contract.Type, err)
@@ -113,4 +126,37 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 	if err != nil {
 		logrus.Panicf("Write failed: %v", err)
 	}
+}
+
+type ValidationResultResponse struct {
+	ValidationResult    string                    `json:"validation_result"`
+	DisclosedAttributes []*irma.DisclosedAttribute `json:"disclosed_attributes"`
+}
+
+func (api *API) ValidateContractHandler(writer http.ResponseWriter, r *http.Request) {
+	var signedContract irma.SignedMessage
+	body, err := ioutil.ReadAll(r.Body)
+	logrus.Infof("Contract validation request for: %v", string(body))
+	if err != nil {
+		logrus.WithError(err).Error("Could not validate contract. Unable to read body")
+		http.Error(writer, "Could not read body", http.StatusBadRequest)
+		return
+	}
+	if err := json.Unmarshal(body, &signedContract); err != nil {
+		logMsg := fmt.Sprint("Could not decode json payload")
+		logrus.WithError(err).Info(logMsg)
+		http.Error(writer, logMsg, http.StatusBadRequest)
+		return
+	}
+	logrus.Info(signedContract)
+	attributes, status, err := signedContract.Verify(api.irmaConfig, nil)
+	if err != nil {
+		logMsg := "Unable to verify contract"
+		logrus.WithError(err).Info(logMsg)
+		http.Error(writer, logMsg, http.StatusBadRequest)
+		return
+	}
+
+	jsonResult, _ := json.Marshal(ValidationResultResponse{ValidationResult: string(status), DisclosedAttributes: attributes})
+	writer.Write(jsonResult)
 }
