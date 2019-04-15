@@ -33,7 +33,9 @@ func (api *API) InitIRMA() {
 
 	api.irmaConfig = irmaConfig
 
-	irmaConfig.DownloadDefaultSchemes()
+	if err := irmaConfig.DownloadDefaultSchemes(); err != nil {
+		logrus.WithError(err).Panic("Could not download default schemes")
+	}
 	configuration := &server.Configuration{
 		//TODO: Make IRMA client URL a config variable
 		URL:               "https://5f8da8e3.ngrok.io/auth/irmaclient",
@@ -44,7 +46,7 @@ func (api *API) InitIRMA() {
 	logrus.Info("Initializing IRMA library...")
 	irmaServer, err := irmaserver.New(configuration)
 	if err != nil {
-		logrus.Panic("Could not initialize IRMA library:", err)
+		logrus.WithError(err).Panic("Could not initialize IRMA library:")
 	}
 
 	api.irmaServer = irmaServer
@@ -129,7 +131,7 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 }
 
 type ValidationResultResponse struct {
-	ValidationResult    string                    `json:"validation_result"`
+	ValidationResult    string                     `json:"validation_result"`
 	DisclosedAttributes []*irma.DisclosedAttribute `json:"disclosed_attributes"`
 }
 
@@ -157,6 +159,9 @@ func (api *API) ValidateContractHandler(writer http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	jsonResult, _ := json.Marshal(ValidationResultResponse{ValidationResult: string(status), DisclosedAttributes: attributes})
-	writer.Write(jsonResult)
+	jsonResult, err := json.Marshal(ValidationResultResponse{ValidationResult: string(status), DisclosedAttributes: attributes})
+	if err!=nil{
+		logrus.WithError(err).Error("Could not marshall json response in ValidateContractHandler")
+	}
+	_, _ = writer.Write(jsonResult)
 }
