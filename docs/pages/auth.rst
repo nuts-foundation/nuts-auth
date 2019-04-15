@@ -63,4 +63,4 @@ OpenAPI Specification
 #####################
 
 The above REST specifications are an excerpt of the OpenAPI specification. Some fields and information are missing.
-`You are encouraged to view the full OpenAPI specification via the Swagger Editor <https://editor.swagger.io/?url=https://raw.githubusercontent.com/nuts-foundation/nuts-proxy/init-docs/docs/_static/openapi-spec.yaml>`_.
+`You are encouraged to view the full OpenAPI specification via the Swagger Editor <https://editor.swagger.io/?url=https://raw.githubusercontent.com/nuts-foundation/nuts-proxy/master/docs/_static/openapi-spec.yaml>`_.
