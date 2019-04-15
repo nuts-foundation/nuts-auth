@@ -35,7 +35,8 @@ func (api *API) Start() {
 func (api *API) Shutdown() {
 	if api.server != nil {
 		logrus.Info("Shutting down the server")
-		ctx, _ := context.WithTimeout(context.Background(), 10*time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
 		if err := api.server.Shutdown(ctx); err != nil {
 			logrus.WithError(err).Error("Failed to shutdown the server")
 
