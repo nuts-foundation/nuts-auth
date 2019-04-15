@@ -1,10 +1,16 @@
 
+
 Nuts Service Proxy
 ==================
 
 .. image:: https://readthedocs.org/projects/nuts-service-proxy/badge/?version=latest
-:target: https://nuts-documentation.readthedocs.io/projects/nuts-service-proxy/en/latest/?badge=latest
-:alt: Documentation Status
+    :target: https://nuts-documentation.readthedocs.io/projects/nuts-service-proxy/en/latest/?badge=latest
+    :alt: Documentation Status
+
+.. image:: https://travis-ci.com/nuts-foundation/nuts-proxy.svg?branch=master
+    :target: https://travis-ci.com/nuts-foundation/nuts-proxy
+    :alt: Test status
+
 
 
 Start the server with `go run main.go serve -p 3000`
