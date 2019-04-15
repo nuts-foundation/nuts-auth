@@ -6,3 +6,5 @@ before_install:
   make dep
 install:
   make build
+script:
+  make test
