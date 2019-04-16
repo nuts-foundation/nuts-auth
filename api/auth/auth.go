@@ -159,8 +159,12 @@ func (api *API) ValidateContractHandler(writer http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	jsonResult, err := json.Marshal(ValidationResultResponse{ValidationResult: string(status), DisclosedAttributes: attributes})
-	if err!=nil{
+	jsonResult, err := json.Marshal(
+		ValidationResultResponse{
+			ValidationResult:    string(status),
+			DisclosedAttributes: attributes,
+		})
+	if err != nil {
 		logrus.WithError(err).Error("Could not marshall json response in ValidateContractHandler")
 	}
 	_, _ = writer.Write(jsonResult)

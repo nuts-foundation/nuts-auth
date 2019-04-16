@@ -11,7 +11,7 @@
 
 [[constraint]]
   name = "github.com/privacybydesign/irmago"
-  version = "0.1.0"
+  revision = "b8eadff382ff5d6101a66e99b91e03a6bc5f7d00"
 
 [[override]]
   branch = "master"

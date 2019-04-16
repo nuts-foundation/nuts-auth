@@ -252,7 +252,7 @@
   revision = "a82627413483b5fcbbbaeda0ef65ef19242736ab"
 
 [[projects]]
-  digest = "1:ec47d7f45a7304f062dd60846f2d0f9fd528dbf3a380ab6b3b8f901cd9a497b9"
+  digest = "1:057d21cf8926ccb1f7bf9643493b475e97523bb83dd892c960284f78daaa9451"
   name = "github.com/privacybydesign/irmago"
   packages = [
     ".",
@@ -263,8 +263,7 @@
     "server/irmaserver",
   ]
   pruneopts = "UT"
-  revision = "4c02373c2587ebe528d58d7fade4630831e4e661"
-  version = "v0.1.0"
+  revision = "b8eadff382ff5d6101a66e99b91e03a6bc5f7d00"
 
 [[projects]]
   digest = "1:e4c72127d910a96daf869a44f3dd563b86dbe6931a172863a0e99c5ff04b59e4"

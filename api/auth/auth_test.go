@@ -182,7 +182,7 @@ func TestValidateContract(t *testing.T) {
 	})
 
 	t.Run("test an invalid contract", func(t *testing.T) {
-		t.Skip("An invalid contract is currently valid. This is a BUG in IRMA and will be fixed.")
+		t.Skip("This seems to fail but unsure why")
 		rr := setupRequestRecorder(t, []byte(invalidContract))
 		assertResponseCode(t, *rr, http.StatusOK)
 
@@ -200,6 +200,15 @@ func TestValidateContract(t *testing.T) {
 	t.Run("test a malformed contract", func(t *testing.T) {
 		rr := setupRequestRecorder(t, []byte("malformed contract"))
 		assertResponseCode(t, *rr, http.StatusBadRequest)
+	})
+
+	t.Run("validate an empty signed message", func(t *testing.T) {
+		t.Skip("This seems to fail but unsure why")
+		msg := &irma.SignedMessage{}
+		_, status, _ := msg.Verify(&irma.Configuration{}, nil)
+		if status != irma.ProofStatusInvalid{
+			t.Error("An empty signed message should be invalid")
+		}
 	})
 }
 
