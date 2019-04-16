@@ -1,4 +1,4 @@
-package main
+package configuration
 
 import (
 	"reflect"
@@ -25,7 +25,7 @@ func TestConfiguration(t *testing.T) {
 	t.Run("load from file", func(t *testing.T) {
 		var config NutsProxyConfiguration
 
-		if err := config.LoadFromFile("./testdata/", "testconfig"); err != nil {
+		if err := config.LoadFromFile("../testdata/", "testconfig"); err != nil {
 			t.Errorf("Could not load value from file: %v", err)
 		}
 

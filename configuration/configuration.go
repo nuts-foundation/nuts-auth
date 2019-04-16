@@ -1,7 +1,8 @@
-package main
+package configuration
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -11,10 +12,21 @@ type NutsProxyConfiguration struct {
 	IrmaConfigPath string `mapstructure:"irma_config_path"`
 }
 
+func LoadConfigFromFile(path, filename string) (*NutsProxyConfiguration, error) {
+	config := NutsProxyConfiguration{}
+	config.SetDefaults()
+	if err := config.LoadFromFile(path, filename); err != nil {
+		return nil, err
+	}
+	return &config, nil
+
+}
+
 func (config *NutsProxyConfiguration) LoadFromFile(path, filename string) error {
+	logrus.Infof("Loading config from %s/%s.yaml", path, filename)
 	viper.AddConfigPath(path)
 	viper.SetConfigName(filename)
-	viper.SetConfigType("json")
+	viper.SetConfigType("yaml")
 	if err := viper.ReadInConfig(); err != nil {
 		return err
 	}
