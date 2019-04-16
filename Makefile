@@ -32,7 +32,7 @@ build: ## Build the app
 	$(DEP_ENSURE) && $(GOBUILD) -o $(BINARY_NAME)
 
 test: ## Run tests
-	$(GOTEST) ./...
+	$(GOTEST) -coverprofile=coverage.txt -covermode=atomic ./...
 
 clean: ## Remove all produced artifacts
 	$(GOCLEAN)
