@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -12,6 +13,24 @@ type NutsProxyConfiguration struct {
 	IrmaConfigPath string `mapstructure:"irma_config_path"`
 }
 
+// Default config instance
+var config *NutsProxyConfiguration
+
+// Getinstance returns the initialized error object. If there is no initialized object, it returns an error
+func GetInstance() (*NutsProxyConfiguration, error) {
+	if config == nil {
+		return nil, errors.New("cannot get instance of uninitialized config")
+	}
+	return config, nil
+}
+
+// Initialize is the default way of initializing the config. It sets the global config variable and makes sure
+// the app can access the config object through the whole application
+func Initialize(path, filename string) (err error) {
+	config, err = LoadConfigFromFile(path, filename)
+	return
+}
+
 func LoadConfigFromFile(path, filename string) (*NutsProxyConfiguration, error) {
 	config := NutsProxyConfiguration{}
 	config.SetDefaults()
@@ -19,7 +38,6 @@ func LoadConfigFromFile(path, filename string) (*NutsProxyConfiguration, error) 
 		return nil, err
 	}
 	return &config, nil
-
 }
 
 func (config *NutsProxyConfiguration) LoadFromFile(path, filename string) error {

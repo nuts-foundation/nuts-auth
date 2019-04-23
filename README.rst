@@ -14,6 +14,10 @@ Nuts Service Proxy
 
 Start the server with ``go run main.go serve -p 3000``
 
+Copy the ``testfonfig.yaml`` from the testdata directory and change its values.
+Start the server with ``go run main.go serve --config-file config --config-file-path .``
+For more information about how to use the server type ``go run main.go``
+
 
 Development
 ===========

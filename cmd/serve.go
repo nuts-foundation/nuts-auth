@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/nuts-foundation/nuts-proxy/api"
+	"github.com/nuts-foundation/nuts-proxy/configuration"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"os"
@@ -22,7 +23,12 @@ var serveCmd = &cobra.Command{
 		stop := make(chan os.Signal, 1)
 		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-		apiConfig := &api.Config{Port: httpPort, Logger: logrus.StandardLogger()}
+		appConfig, err := configuration.GetInstance()
+		if err != nil {
+			logrus.WithError(err).Panicf("Could not get config instance")
+		}
+
+		apiConfig := &api.Config{Port: appConfig.HttpPort, Logger: logrus.StandardLogger()}
 		api := api.New(apiConfig)
 
 		go func() {
