@@ -20,3 +20,7 @@
 [[constraint]]
   name = "github.com/cbroglie/mustache"
   version = "1.0.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/goodsign/monday"

@@ -93,6 +93,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:f2d471b47e90dcc6b9cf673997b901d8e1598708a3b1761a4a1272e7efc2cf92"
+  name = "github.com/goodsign/monday"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5432518a29cdff742f53750395f07e55dc987c90"
+
+[[projects]]
   digest = "1:0ade334594e69404d80d9d323445d2297ff8161637f9b2d347cc6973d2d6f05b"
   name = "github.com/hashicorp/errwrap"
   packages = ["."]
@@ -427,6 +435,8 @@
     "github.com/cbroglie/mustache",
     "github.com/go-chi/chi",
     "github.com/go-chi/chi/middleware",
+    "github.com/go-errors/errors",
+    "github.com/goodsign/monday",
     "github.com/mitchellh/go-homedir",
     "github.com/privacybydesign/irmago",
     "github.com/privacybydesign/irmago/server",
