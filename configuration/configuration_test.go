@@ -5,6 +5,53 @@ import (
 	"testing"
 )
 
+func TestGetInstance(t *testing.T) {
+	t.Run("returns an error if no instance found", func(t *testing.T) {
+		instance, err := GetInstance()
+		if instance != nil {
+			t.Error("Expected instance to be nil")
+		}
+
+		if err == nil {
+			t.Error("expected error to be set")
+		}
+	})
+
+	t.Run("returns the instance if set", func(t *testing.T) {
+		config = &NutsProxyConfiguration{}
+
+		instance, err := GetInstance()
+
+		if instance != config {
+			t.Errorf("expected intance to be the config intead of: %v", instance)
+		}
+
+		if err != nil {
+			t.Errorf("expected error to be nil intead of %v", err)
+		}
+	})
+
+}
+
+func TestInitialize(t *testing.T) {
+	t.Run("it initializes the global config", func(t *testing.T) {
+		err := Initialize("../testdata", "testconfig")
+		if config == nil {
+			t.Error("expected global config to be set")
+		}
+		if err != nil {
+			t.Errorf("expected error to be nil instead of %v", err)
+		}
+	})
+
+	t.Run("it throws an error on failure", func(t *testing.T) {
+		err := Initialize("unknown", "path")
+		if err == nil {
+			t.Error("expected an error")
+		}
+	})
+}
+
 func TestConfiguration(t *testing.T) {
 	type testValues struct {
 		Name     string

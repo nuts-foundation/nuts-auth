@@ -165,7 +165,9 @@ func TestValidateContract(t *testing.T) {
 	const invalidContract = `
     { "this datas": "smellz bad"}
 	`
-	type ValidationResult struct{ ValidationResult string `json:"validation_result"` }
+	type ValidationResult struct {
+		ValidationResult string `json:"validation_result"`
+	}
 	t.Run("test a valid contract", func(t *testing.T) {
 		// FIXME: disabled due to: https://github.com/privacybydesign/irmago/issues/35
 		t.Skip("Disabled due to a bug in IRMA")
@@ -210,7 +212,7 @@ func TestValidateContract(t *testing.T) {
 		t.Skip("This seems to fail but unsure why")
 		msg := &irma.SignedMessage{}
 		_, status, _ := msg.Verify(&irma.Configuration{}, nil)
-		if status != irma.ProofStatusInvalid{
+		if status != irma.ProofStatusInvalid {
 			t.Error("An empty signed message should be invalid")
 		}
 	})
