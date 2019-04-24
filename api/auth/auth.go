@@ -95,7 +95,7 @@ func (api API) GetContractHandler(writer http.ResponseWriter, request *http.Requ
 
 type CreateSessionResult struct {
 	QrCodeInfo irma.Qr `json:"qr_code_info"`
-	SessionId  string `json:"session_id"`
+	SessionId  string  `json:"session_id"`
 }
 
 func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request) {
@@ -114,7 +114,9 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 		http.Error(writer, logMsg, http.StatusBadRequest)
 		return
 	}
-	message, err := contract.RenderTemplate(map[string]string{"acting_party": "Helder", "valid_from": time.Now().Format(time.RFC850), "valid_to": time.Now().Add(time.Minute * 60).Format(time.RFC850)})
+	message, err := contract.RenderTemplate(map[string]string{
+		"acting_party": "Helder",
+	}, 0, 60 * time.Minute)
 	logrus.Infof("contractMessage: %v", message)
 	if err != nil {
 		logMsg := fmt.Sprintf("Could not render contract template of type %v: %v", contract.Type, err)

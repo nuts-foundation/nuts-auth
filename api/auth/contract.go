@@ -50,7 +50,15 @@ func ContractByType(contractType string, language string) *Contract {
 	return nil
 }
 
-func (c Contract) RenderTemplate(vars map[string]string) (string, error) {
+func (c Contract) timeLocation() *time.Location {
+	loc, _ := time.LoadLocation("Europe/Amsterdam")
+	return loc
+}
+
+func (c Contract) RenderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
+	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), TIME_LAYOUT, monday.LocaleNlNL)
+	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), TIME_LAYOUT, monday.LocaleNlNL)
+
 	return mustache.Render(c.Template, vars)
 }
 
