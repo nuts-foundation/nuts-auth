@@ -16,9 +16,10 @@ var httpPort int
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Start the service proxy",
-	Long:  `Start the service proxy.`,
+	Use:              "serve",
+	Short:            "Start the service proxy",
+	Long:             `Start the service proxy.`,
+	PersistentPreRun: InitConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		stop := make(chan os.Signal, 1)
 		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
