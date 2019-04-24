@@ -3,14 +3,16 @@ package auth
 import (
 	"bytes"
 	"encoding/json"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server/irmaserver"
+	"github.com/privacybydesign/irmago/server"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	irma "github.com/privacybydesign/irmago"
+	"github.com/privacybydesign/irmago/server/irmaserver"
 )
 
 type SpyIrmaService struct{}
@@ -23,6 +25,13 @@ func (s *SpyIrmaService) HandlerFunc() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("Hello from mocked irma client handler"))
 	}
+}
+
+func (s *SpyIrmaService) GetSessionResult(token string) *server.SessionResult {
+	if token == "known_token" {
+		return &server.SessionResult{ Status: server.StatusInitialized}
+	}
+	return nil
 }
 
 func assertResponseCode(t *testing.T, rr httptest.ResponseRecorder, expectedCode int) {
@@ -270,4 +279,40 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 	}()
 
 	return resp, string(respBody)
+}
+
+func TestAPI_GetSessionStatus(t *testing.T) {
+	api := API{irmaServer: &SpyIrmaService{}}
+	router := api.Handler()
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+
+	t.Run("unknown session results in http status code 404", func(t *testing.T) {
+		resp, _ := testRequest(t, ts, "GET", "/contract/session/123", nil)
+
+		httpStatus := resp.StatusCode
+		if httpStatus != http.StatusNotFound {
+			t.Errorf("Handler returned the wrong httpStatus: got %v, expected %v", httpStatus, http.StatusNotFound)
+		}
+	})
+
+	t.Run("when the session has started, status is PENDING", func(t *testing.T) {
+		resp, body := testRequest(t, ts, "GET", "/contract/session/known_token", nil)
+		httpStatus := resp.StatusCode
+		if httpStatus != http.StatusOK {
+			t.Errorf("Handler returned the wrong httpStatus: got %v, expected %v", httpStatus, http.StatusOK)
+		}
+
+		var status SessionStatus
+
+		if err := json.Unmarshal([]byte(body), &status); err != nil {
+			t.Errorf("Could not unmarshal SessionStatus response :'%v'", body)
+		}
+
+		if status.Status != "INITIALIZED" {
+			t.Errorf("Wrong kind of status type: got %v, expected %v", status.Status, "INITIALIZED")
+		}
+	})
+
 }
