@@ -160,7 +160,7 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 
 			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
 			expected := "invalid time range"
-			if err.Error() != expected {
+			if err == nil || err.Error() != expected {
 				t.Errorf("expected '%v', got '%v'", expected, err)
 			}
 		})
@@ -171,7 +171,7 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 
 			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
 			expected := "contract is not yet valid"
-			if err.Error() != expected {
+			if err == nil || err.Error() != expected {
 				t.Errorf("expected '%v', got '%v'", expected, err)
 			}
 		})
@@ -182,7 +182,7 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 
 			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
 			expected := "contract is expired"
-			if err.Error() != expected {
+			if err == nil || err.Error() != expected {
 				t.Errorf("expected '%v', got '%v'", expected, err)
 			}
 		})
@@ -195,7 +195,8 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 			validToStr := monday.Format(time.Now().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
 
 			err := contract.ValidateTimeFrame(map[string]string{"valid_from": validFromStr, "valid_to": validToStr})
-			if err.Error() != "could not determine contract language" {
+			expected := "could not determine contract language"
+			if err == nil || err.Error() != expected {
 				t.Error("expected an error")
 			}
 		})
@@ -203,7 +204,8 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 		t.Run("no valid_from returns an error", func(t *testing.T) {
 			validToStr := monday.Format(time.Now().Add(130*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
 			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_to": validToStr})
-			if err.Error() != "valid_from missing in params" {
+			expected := "valid_from missing in params"
+			if err == nil || err.Error() != expected {
 				t.Error("expected an error")
 			}
 		})
@@ -211,7 +213,7 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 		t.Run("no valid_to returns an error", func(t *testing.T) {
 			validFromStr := monday.Format(time.Now().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
 			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr})
-			if err.Error() != "valid_to missing in params" {
+			if err == nil || err.Error() != "valid_to missing in params" {
 				t.Errorf("expected an error, got: %v", err)
 			}
 		})
