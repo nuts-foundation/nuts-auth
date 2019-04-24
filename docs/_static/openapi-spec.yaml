@@ -199,10 +199,10 @@ components:
     SignatureSession:
       type: object
       properties:
-        token:
+        session_id:
           type: string
           example: KzxuWKwL5KGLKr4uerws
-        sessionPtr:
+        qr_code_info:
           type: object
           properties:
             u:
