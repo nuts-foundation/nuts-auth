@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -130,7 +131,9 @@ func TestValidateContract(t *testing.T) {
 		rr = httptest.NewRecorder()
 		req := makeRequest(t, payload)
 
-		handler := http.HandlerFunc(New().ValidateContractHandler)
+		baseUrl, _ := url.Parse("http://localhost:3000")
+
+		handler := http.HandlerFunc(New(baseUrl).ValidateContractHandler)
 
 		handler.ServeHTTP(rr, req)
 		return

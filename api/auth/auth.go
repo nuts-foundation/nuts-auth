@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -25,7 +26,7 @@ type API struct {
 	irmaConfig *irma.Configuration
 }
 
-func (api *API) InitIRMA() {
+func (api *API) InitIRMA(baseUrl *url.URL) {
 
 	irmaConfig, err := irma.NewConfiguration("./conf")
 	if err != nil {
@@ -39,12 +40,13 @@ func (api *API) InitIRMA() {
 	}
 	configuration := &server.Configuration{
 		//TODO: Make IRMA client URL a config variable
-		URL:               "https://5f8da8e3.ngrok.io/auth/irmaclient",
+		URL:               fmt.Sprintf("%s/auth/irmaclient", baseUrl.String()),
 		Logger:            logrus.StandardLogger(),
 		IrmaConfiguration: irmaConfig,
 	}
 
 	logrus.Info("Initializing IRMA library...")
+	logrus.Infof("irma baseurl: %s", configuration.URL)
 	irmaServer, err := irmaserver.New(configuration)
 	if err != nil {
 		logrus.WithError(err).Panic("Could not initialize IRMA library:")
@@ -53,9 +55,9 @@ func (api *API) InitIRMA() {
 	api.irmaServer = irmaServer
 }
 
-func New() *API {
+func New(baseUrl *url.URL) *API {
 	api := &API{}
-	api.InitIRMA()
+	api.InitIRMA(baseUrl)
 	return api
 }
 

@@ -6,7 +6,7 @@ import (
 )
 
 type Config struct {
-	Port          int
-	IrmaClientUrl url.URL
-	Logger        *logrus.Logger
+	Port    int
+	BaseUrl *url.URL
+	Logger  *logrus.Logger
 }

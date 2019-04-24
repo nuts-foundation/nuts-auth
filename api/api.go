@@ -63,7 +63,7 @@ func (api *API) Router() *chi.Mux {
 	r.Use(NewStructuredLogger(api.config.Logger))
 	r.Use(contentTypeMiddlewareFn("application/json"))
 	r.Get("/", rootHandler)
-	r.Mount("/auth", auth.New().Handler())
+	r.Mount("/auth", auth.New(api.config.BaseUrl).Handler())
 	return r
 }
 
