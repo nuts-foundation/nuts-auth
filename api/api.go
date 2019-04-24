@@ -61,17 +61,17 @@ func (api *API) Router() *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(NewStructuredLogger(api.config.Logger))
-	r.Use(ContentTypeMiddlewareFn("application/json"))
-	r.Get("/", ApiRootHandler)
+	r.Use(contentTypeMiddlewareFn("application/json"))
+	r.Get("/", rootHandler)
 	r.Mount("/auth", auth.New().Handler())
 	return r
 }
 
-func ApiRootHandler(writer http.ResponseWriter, _ *http.Request) {
+func rootHandler(writer http.ResponseWriter, _ *http.Request) {
 	_, _ = writer.Write([]byte("Welcome Nuts proxy!!"))
 }
 
-func ContentTypeMiddlewareFn(contentType string) func(http.Handler) http.Handler {
+func contentTypeMiddlewareFn(contentType string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", contentType)

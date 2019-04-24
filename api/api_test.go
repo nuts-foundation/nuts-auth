@@ -1,7 +1,6 @@
-package cmd
+package api
 
 import (
-	"github.com/nuts-foundation/nuts-proxy/api"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,7 +28,7 @@ func TestContentType(t *testing.T) {
 		testContentTypeIsJson(w, t)
 	}
 
-	handler := api.ContentTypeMiddlewareFn("application/json")(http.HandlerFunc(testHandler))
+	handler := contentTypeMiddlewareFn("application/json")(http.HandlerFunc(testHandler))
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 }
