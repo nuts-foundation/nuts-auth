@@ -17,6 +17,7 @@ import (
 type IrmaInterface interface {
 	StartSession(interface{}, irmaserver.SessionHandler) (*irma.Qr, string, error)
 	HandlerFunc() http.HandlerFunc
+	GetSessionResult(token string) *server.SessionResult
 }
 
 type API struct {
@@ -61,10 +62,26 @@ func New() *API {
 func (api API) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Post("/contract/session", api.CreateSessionHandler)
+	r.Get("/contract/session/{sessionId}", api.GetSessionStatus)
 	r.Get("/contract/{type}", api.GetContractHandler)
 	r.Post("/contract/validate", api.ValidateContractHandler)
 	r.Mount("/irmaclient", api.irmaServer.HandlerFunc())
 	return r
+}
+
+type SessionStatus struct {
+	Status string `json:"status"`
+}
+
+func (api API) GetSessionStatus(writer http.ResponseWriter, r *http.Request) {
+	sessionId := chi.URLParam(r, "sessionId")
+	sessionResult := api.irmaServer.GetSessionResult(sessionId)
+	if sessionResult == nil {
+		http.Error(writer, "Session not found", http.StatusNotFound)
+		return
+	}
+	statusJson, _ := json.Marshal(sessionResult)
+	_, _ = writer.Write(statusJson)
 }
 
 func (api API) GetContractHandler(writer http.ResponseWriter, request *http.Request) {
