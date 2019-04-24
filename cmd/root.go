@@ -16,7 +16,6 @@ const defaultCfgFilePath = "$HOME"
 var (
 	cfgFile     string
 	cfgFilePath string
-	nutsConfig  configuration.NutsProxyConfiguration
 )
 
 // rootCmd represents the base command when called without any subcommands

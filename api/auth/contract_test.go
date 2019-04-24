@@ -141,7 +141,7 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 		Template:           "ik geef toestemming van {{valid_from}} tot {{valid_to}}.",
 		TemplateAttributes: []string{"valid_from", "valid_to"},
 	}
-	
+
 	timeInAmsterdam := func() time.Time {
 		amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
 		return time.Now().In(amsterdamLocation)
