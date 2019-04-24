@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"github.com/goodsign/monday"
 	"reflect"
 	"regexp"
@@ -25,13 +26,17 @@ func TestContractByType(t *testing.T) {
 }
 
 func TestContract_RenderTemplate(t *testing.T) {
-	contract := &Contract{Type: "Simple", Template: "ga je akkoord met {{wat}}?"}
-	result, err := contract.RenderTemplate(map[string]string{"wat": "alles"})
+	contract := &Contract{Type: "Simple", Template: "ga je akkoord met {{wat}} van {{valid_from}} tot {{valid_to}}?"}
+	result, err := contract.RenderTemplate(map[string]string{"wat": "alles"}, 0, 60*time.Minute)
 	if err != nil {
 		t.Error(err)
 	}
+	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
 
-	expected := "ga je akkoord met alles?"
+	from := monday.Format(time.Now().In(amsterdamLocation).Add(0), TIME_LAYOUT, monday.LocaleNlNL)
+	to := monday.Format(time.Now().In(amsterdamLocation).Add(60 * time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+
+	expected := fmt.Sprintf("ga je akkoord met alles van %s tot %s?", from, to)
 	if result != expected {
 		t.Errorf("Error while rendering the template: got '%v', expected '%v'", result, expected)
 	}
