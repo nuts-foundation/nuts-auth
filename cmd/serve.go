@@ -33,11 +33,12 @@ var serveCmd = &cobra.Command{
 		api := api.New(apiConfig)
 
 		go func() {
-			api.Start()
+			<-stop
+			logrus.Info("Received SIGTERM")
+			api.Shutdown()
 		}()
 
-		<-stop
-		api.Shutdown()
+		api.Start()
 	},
 }
 
