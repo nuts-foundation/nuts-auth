@@ -7,6 +7,10 @@
     :target: https://travis-ci.com/nuts-foundation/nuts-proxy
     :alt: Test status
 
+.. image:: https://codecov.io/gh/nuts-foundation/nuts-proxy/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/nuts-foundation/nuts-proxy
+    :alt: Test coverage
+
 
 Nuts Service Proxy
 ==================
