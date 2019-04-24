@@ -120,11 +120,13 @@ func (c Contract) ValidateTimeFrame(params map[string]string) error {
 		return errors.New("invalid time range")
 	}
 
-	if time.Now().Before(*validFrom) {
+	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
+
+	if time.Now().In(amsterdamLocation).Before(*validFrom) {
 		return errors.New("contract is not yet valid")
 
 	}
-	if time.Now().After(*validTo) {
+	if time.Now().In(amsterdamLocation).After(*validTo) {
 		return errors.New("contract is expired")
 	}
 
