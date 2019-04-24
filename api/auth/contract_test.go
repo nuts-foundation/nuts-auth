@@ -89,7 +89,7 @@ func TestParseTime(t *testing.T) {
 		location, _ := time.LoadLocation("Europe/Amsterdam")
 		expectedTime := time.Date(2019, 4, 3, 16, 36, 06, 0, location)
 
-		if !parsedTime.Equal(expectedTime) {
+		if parsedTime == nil || !parsedTime.Equal(expectedTime) {
 			t.Errorf("expected dutch time to be parsed. Got %v, expected %v", parsedTime, expectedTime)
 		}
 	})
@@ -104,7 +104,7 @@ func TestParseTime(t *testing.T) {
 		location, _ := time.LoadLocation("Europe/Amsterdam")
 		expectedTime := time.Date(2019, 4, 3, 16, 36, 06, 0, location)
 
-		if !parsedTime.Equal(expectedTime) {
+		if parsedTime == nil || !parsedTime.Equal(expectedTime) {
 			t.Errorf("expected English time to be parsed. Got %v, expected %v", parsedTime, expectedTime)
 		}
 	})
@@ -141,10 +141,15 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 		Template:           "ik geef toestemming van {{valid_from}} tot {{valid_to}}.",
 		TemplateAttributes: []string{"valid_from", "valid_to"},
 	}
+	
+	timeInAmsterdam := func() time.Time {
+		amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
+		return time.Now().In(amsterdamLocation)
+	}
 
 	t.Run("a valid contract returns no error", func(t *testing.T) {
-		validFromStr := monday.Format(time.Now().Add(-30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
-		validToStr := monday.Format(time.Now().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+		validFromStr := monday.Format(timeInAmsterdam().Add(-30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+		validToStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
 
 		err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
 		if err != nil {
@@ -155,8 +160,8 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 	t.Run("time range checks", func(t *testing.T) {
 
 		t.Run("a contract with invalid time range returns an error", func(t *testing.T) {
-			validFromStr := monday.Format(time.Now().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
-			validToStr := monday.Format(time.Now().Add(-30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+			validFromStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+			validToStr := monday.Format(timeInAmsterdam().Add(-30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
 
 			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
 			expected := "invalid time range"
@@ -166,8 +171,8 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 		})
 
 		t.Run("a contract valid in the future returns an error", func(t *testing.T) {
-			validFromStr := monday.Format(time.Now().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
-			validToStr := monday.Format(time.Now().Add(130*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+			validFromStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+			validToStr := monday.Format(timeInAmsterdam().Add(130*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
 
 			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
 			expected := "contract is not yet valid"
@@ -177,8 +182,8 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 		})
 
 		t.Run("an expired contract returns an error", func(t *testing.T) {
-			validFromStr := monday.Format(time.Now().Add(-130*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
-			validToStr := monday.Format(time.Now().Add(-30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+			validFromStr := monday.Format(timeInAmsterdam().Add(-130*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+			validToStr := monday.Format(timeInAmsterdam().Add(-30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
 
 			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
 			expected := "contract is expired"
@@ -191,8 +196,8 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 	t.Run("missing parameters", func(t *testing.T) {
 
 		t.Run("no language return an error", func(t *testing.T) {
-			validFromStr := monday.Format(time.Now().Add(-30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
-			validToStr := monday.Format(time.Now().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+			validFromStr := monday.Format(timeInAmsterdam().Add(-30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+			validToStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
 
 			err := contract.ValidateTimeFrame(map[string]string{"valid_from": validFromStr, "valid_to": validToStr})
 			expected := "could not determine contract language"
@@ -202,7 +207,7 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 		})
 
 		t.Run("no valid_from returns an error", func(t *testing.T) {
-			validToStr := monday.Format(time.Now().Add(130*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+			validToStr := monday.Format(timeInAmsterdam().Add(130*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
 			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_to": validToStr})
 			expected := "valid_from missing in params"
 			if err == nil || err.Error() != expected {
@@ -211,7 +216,7 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 		})
 
 		t.Run("no valid_to returns an error", func(t *testing.T) {
-			validFromStr := monday.Format(time.Now().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
+			validFromStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), TIME_LAYOUT, monday.LocaleNlNL)
 			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr})
 			if err == nil || err.Error() != "valid_to missing in params" {
 				t.Errorf("expected an error, got: %v", err)
