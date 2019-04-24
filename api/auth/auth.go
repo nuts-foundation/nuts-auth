@@ -62,7 +62,7 @@ func New() *API {
 func (api API) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Post("/contract/session", api.CreateSessionHandler)
-	r.Get("/contract/session/{sessionId}", api.GetSessionStatus)
+	r.Get("/contract/session/{sessionId}", api.GetSessionStatusHandler)
 	r.Get("/contract/{type}", api.GetContractHandler)
 	r.Post("/contract/validate", api.ValidateContractHandler)
 	r.Mount("/irmaclient", api.irmaServer.HandlerFunc())
@@ -73,7 +73,7 @@ type SessionStatus struct {
 	Status string `json:"status"`
 }
 
-func (api API) GetSessionStatus(writer http.ResponseWriter, r *http.Request) {
+func (api API) GetSessionStatusHandler(writer http.ResponseWriter, r *http.Request) {
 	sessionId := chi.URLParam(r, "sessionId")
 	sessionResult := api.irmaServer.GetSessionResult(sessionId)
 	if sessionResult == nil {
@@ -89,6 +89,11 @@ func (api API) GetContractHandler(writer http.ResponseWriter, request *http.Requ
 	contract := ContractByType(contractType, "NL")
 	contractJson, _ := json.Marshal(contract)
 	_, _ = writer.Write(contractJson)
+}
+
+type CreateSessionResult struct {
+	QrCodeInfo irma.Qr `json:"qr_code_info"`
+	SessionId  string `json:"session_id"`
 }
 
 func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request) {
@@ -139,9 +144,14 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 
 	logrus.Infof("session created with token: %s", token)
 
-	jsonSessionPointer, _ := json.Marshal(sessionPointer)
+	//jsonSessionPointer, _ := json.Marshal(sessionPointer)
+	createSessionResult := CreateSessionResult{
+		QrCodeInfo: *sessionPointer,
+		SessionId:  token,
+	}
+	createSessionResultJson, _ := json.Marshal(createSessionResult)
 	writer.WriteHeader(http.StatusCreated)
-	_, err = writer.Write(jsonSessionPointer)
+	_, err = writer.Write(createSessionResultJson)
 	if err != nil {
 		logrus.Panicf("Write failed: %v", err)
 	}

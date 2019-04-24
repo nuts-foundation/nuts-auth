@@ -96,11 +96,13 @@ func TestCreateSessionHandler(t *testing.T) {
 
 		assertResponseCode(t, *rr, http.StatusCreated)
 
-		qr := irma.Qr{}
+		response := CreateSessionResult{}
 
-		if err := json.Unmarshal(rr.Body.Bytes(), &qr); err != nil {
+		if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
 			t.Error("Could not unmarshal json qr code response", err)
 		}
+
+		qr := response.QrCodeInfo
 
 		if qr.Type != irma.ActionSigning {
 			t.Errorf("Wrong kind of IRMA session type: got %v, expected %v", qr.Type, irma.ActionSigning)
