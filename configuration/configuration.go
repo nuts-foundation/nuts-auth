@@ -61,6 +61,3 @@ func (config *NutsProxyConfiguration) SetDefaults() {
 	config.HttpAddress = fmt.Sprintf("localhost:%d", config.HttpPort)
 }
 
-func (config *NutsProxyConfiguration) Validate() error {
-	return nil
-}
