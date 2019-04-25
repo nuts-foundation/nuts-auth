@@ -27,7 +27,7 @@ type ContractSigningRequest struct {
 	Version            string    `json:"version"`
 	Language           string    `json:"language"`
 	ValidFrom          time.Time `json:"valid_from"`
-	ValidTo            time.Time `json:"valid_from"`
+	ValidTo            time.Time `json:"valid_to"`
 	TemplateAttributes map[string]string
 }
 
