@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"github.com/go-chi/chi/middleware"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/http/httptest"
@@ -12,7 +13,7 @@ import (
 
 func getTestHandler() http.HandlerFunc {
 	fn := func(rw http.ResponseWriter, req *http.Request) {
-		rw.Write([]byte("Hello Nuts!!"))
+		panic("Test handler says panic")
 	}
 	return http.HandlerFunc(fn)
 }
@@ -24,7 +25,7 @@ func TestStructuredLogger_NewLogEntry(t *testing.T) {
 	logrusInstance := logrus.New()
 	logrusInstance.Out = buf
 	logMiddleware := NewStructuredLogger(logrusInstance)
-	ts := httptest.NewServer(logMiddleware(getTestHandler()))
+	ts := httptest.NewServer(logMiddleware(middleware.Recoverer(getTestHandler())))
 	defer ts.Close()
 
 	http.Get(fmt.Sprintf("%s/", ts.URL))
@@ -33,7 +34,14 @@ func TestStructuredLogger_NewLogEntry(t *testing.T) {
 		t.Error("It should have logged")
 	}
 
-	if strings.Count(buf.String(), "\n") != 2 {
-		t.Errorf("Expecetd 2 logged lines.")
+	lines := strings.Split(buf.String(), "\n")
+
+	// check for 3 entries since the newline split results in 1 empty 3rd string
+	if len(lines) != 3 {
+		t.Errorf("Expected 2 logged lines.")
+	}
+
+	if !strings.Contains(lines[1], "Test handler says panic") {
+		t.Errorf("Expected log line to contain panic message. Instead got: %s", lines[1])
 	}
 }
