@@ -28,7 +28,7 @@ func TestStructuredLogger_NewLogEntry(t *testing.T) {
 	ts := httptest.NewServer(logMiddleware(middleware.Recoverer(getTestHandler())))
 	defer ts.Close()
 
-	http.Get(fmt.Sprintf("%s/", ts.URL))
+	_, _ = http.Get(fmt.Sprintf("%s/", ts.URL))
 
 	if buf.Len() == 0 {
 		t.Error("It should have logged")
