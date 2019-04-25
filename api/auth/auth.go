@@ -39,7 +39,6 @@ func (api *API) InitIRMA(baseUrl *url.URL) {
 		logrus.WithError(err).Panic("Could not download default schemes")
 	}
 	configuration := &server.Configuration{
-		//TODO: Make IRMA client URL a config variable
 		URL:               fmt.Sprintf("%s/auth/irmaclient", baseUrl.String()),
 		Logger:            logrus.StandardLogger(),
 		IrmaConfiguration: irmaConfig,
@@ -88,7 +87,15 @@ func (api API) GetSessionStatusHandler(writer http.ResponseWriter, r *http.Reque
 
 func (api API) GetContractHandler(writer http.ResponseWriter, request *http.Request) {
 	contractType := chi.URLParam(request, "type")
-	contract := ContractByType(contractType, "NL")
+
+	contractLanguage := request.URL.Query().Get("language")
+	if contractLanguage == "" {
+		contractLanguage = "NL"
+	}
+
+	contractVersion := request.URL.Query().Get("version")
+
+	contract := ContractByType(contractType, contractLanguage, contractVersion)
 	contractJson, _ := json.Marshal(contract)
 	_, _ = writer.Write(contractJson)
 }
@@ -107,7 +114,7 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 		http.Error(writer, logMsg, http.StatusBadRequest)
 		return
 	}
-	contract := ContractByType(sessionRequest.Type, sessionRequest.Language)
+	contract := ContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
 	if contract == nil {
 		logMsg := fmt.Sprintf("Could not find contract with type %v", sessionRequest.Type)
 		logrus.Info(logMsg)
@@ -115,6 +122,7 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 		return
 	}
 	message, err := contract.RenderTemplate(map[string]string{
+		// FIXME: get the acting party from a config or http session (JWT)
 		"acting_party": "Helder",
 	}, 0, 60 * time.Minute)
 	logrus.Infof("contractMessage: %v", message)

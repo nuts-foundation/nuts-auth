@@ -13,39 +13,57 @@ import (
 const TIME_LAYOUT = "Monday, 2 January 2006 15:04:05"
 
 type Contract struct {
-	Type               string   `json:"type"`
-	Version            string   `json:"version"`
-	Language           string   `json:"language"`
-	SignerAttributes   []string `json:"signer_attributes"`
-	Template           string   `json:"template"`
-	TemplateAttributes []string `json:"template_attributes"`
-	Regexp             *regexp.Regexp
+	Type               string         `json:"type"`
+	Version            string         `json:"version"`
+	Language           string         `json:"language"`
+	SignerAttributes   []string       `json:"signer_attributes"`
+	Template           string         `json:"template"`
+	TemplateAttributes []string       `json:"template_attributes"`
+	Regexp             *regexp.Regexp `json:"-"`
 }
 
 type ContractSigningRequest struct {
-	Type               string `json:"type"`
-	Version            string `json:"version"`
-	Language           string `json:"language"`
+	Type               string    `json:"type"`
+	Version            string    `json:"version"`
+	Language           string    `json:"language"`
+	ValidFrom          time.Time `json:"valid_from"`
+	ValidTo            time.Time `json:"valid_from"`
 	TemplateAttributes map[string]string
 }
 
-func ContractByType(contractType string, language string) *Contract {
+func ContractByType(contractType string, language, version string) *Contract {
 
 	switch contractType {
 	case "PractitionerLogin", "BehandelaarLogin":
-		r, _ := regexp.Compile(`NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om uit zijn/haar naam het nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`)
-		return &Contract{
-			Type:               contractType,
-			Version:            "v1",
-			Language:           "NL",
-			SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
-			Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om uit zijn/haar naam het nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
-			TemplateAttributes: []string{"acting_party", "valid_from", "valid_to"},
-			Regexp:             r,
+		if version == "" || version == "v1" {
+
+			if language == "NL" {
+				r, _ := regexp.Compile(`NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om uit zijn/haar naam het nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`)
+				return &Contract{
+					Type:               "BehandelaarLogin",
+					Version:            "v1",
+					Language:           "NL",
+					SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
+					Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om uit zijn/haar naam het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
+					TemplateAttributes: []string{"acting_party", "valid_from", "valid_to"},
+					Regexp:             r,
+				}
+			} else if language == "EN" {
+				r, _ := regexp.Compile(`EN:PractitionerLogin:v1 Undersigned givers persmission to (.+) to make request on its behalf to the Nuts network. This permission is valid from (.+) until (.+).`)
+				return &Contract{
+					Type:               "PractitionerLogin",
+					Version:            "v1",
+					Language:           "EN",
+					SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
+					Template:           `EN:PractitionerLogin:v1 Undersigned givers persmission to {{acting_party}} to make request on its behalf to the Nuts network. This permission is valid from {{valid_from}} until {{valid_to}}.`,
+					TemplateAttributes: []string{"acting_party", "valid_from", "valid_to"},
+					Regexp:             r,
+				}
+			}
 		}
 	}
 
-	logrus.Warnf("Contract with type '%v' and language '%v' not found", contractType, language)
+	logrus.Warnf("Contract with type '%s' language '%s' and version %s not found", contractType, language, version)
 
 	return nil
 }
