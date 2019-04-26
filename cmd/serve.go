@@ -25,10 +25,7 @@ var serveCmd = &cobra.Command{
 		stop := make(chan os.Signal, 1)
 		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
-		appConfig, err := configuration.GetInstance()
-		if err != nil {
-			logrus.WithError(err).Panicf("Could not get config instance")
-		}
+		appConfig := configuration.GetInstance()
 		httpBaseUrl, err := url.Parse(appConfig.HttpAddress);
 		if err != nil {
 			logrus.Panic("Could not parse http address from config. Make sure it is a valid URL")

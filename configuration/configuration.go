@@ -1,7 +1,6 @@
 package configuration
 
 import (
-	"errors"
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -11,17 +10,22 @@ type NutsProxyConfiguration struct {
 	HttpPort       int    `mapstructure:"http_port"`
 	HttpAddress    string `mapstructure:"http_address"`
 	IrmaConfigPath string `mapstructure:"irma_config_path"`
+	// ActingPartyCN is the common name of the acting party using this proxy.
+	// This name will be used in contracts and must known and unique in the Nuts network.
+	// Note: In the future this name should be stored in an address book.
+	// Note: In a future version, the service should be able to handle multiple Acting parties
+	ActingPartyCN  string `mapstructure:"acting_party_cn"`
 }
 
 // Default config instance
 var config *NutsProxyConfiguration
 
 // Getinstance returns the initialized error object. If there is no initialized object, it returns an error
-func GetInstance() (*NutsProxyConfiguration, error) {
+func GetInstance() (*NutsProxyConfiguration) {
 	if config == nil {
-		return nil, errors.New("cannot get instance of uninitialized config")
+		panic("cannot get instance of uninitialized config")
 	}
-	return config, nil
+	return config
 }
 
 // Initialize is the default way of initializing the config. It sets the global config variable and makes sure

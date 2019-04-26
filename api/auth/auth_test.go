@@ -3,6 +3,7 @@ package auth
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/nuts-foundation/nuts-proxy/configuration"
 	"github.com/privacybydesign/irmago/server"
 	"io"
 	"io/ioutil"
@@ -19,7 +20,7 @@ import (
 type SpyIrmaService struct{}
 
 func (s *SpyIrmaService) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
-	return &irma.Qr{URL: "https://api.helder.health/auth/irmaclient/123-sessionid-123", Type: irma.ActionSigning}, "", nil
+	return &irma.Qr{URL: "https://api.helder.health/auth/irmaclient/123-session-ref-123", Type: irma.ActionSigning}, "abc-sessionid-abc", nil
 }
 
 func (s *SpyIrmaService) HandlerFunc() http.HandlerFunc {
@@ -46,7 +47,7 @@ func assertResponseCode(t *testing.T, rr httptest.ResponseRecorder, expectedCode
 func TestCreateSessionHandler(t *testing.T) {
 	makeRequest := func(t *testing.T, payload []byte) *http.Request {
 		t.Helper()
-		req, err := http.NewRequest("POST", "/auth/contract/session", bytes.NewBuffer(payload))
+		req, err := http.NewRequest("POST", "/contract/session", bytes.NewBuffer(payload))
 		if err != nil {
 			t.Error("Unable to make new create session handler request", err)
 		}
@@ -54,20 +55,41 @@ func TestCreateSessionHandler(t *testing.T) {
 		return req
 	}
 
+	loadConfig := func() {
+		err := configuration.Initialize("../../testdata", "testconfig")
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
 	setupRequestRecorder := func(t *testing.T, payload []byte) (rr *httptest.ResponseRecorder) {
 		t.Helper()
 		rr = httptest.NewRecorder()
 		req := makeRequest(t, payload)
 
-		handler := http.HandlerFunc(API{irmaServer: &SpyIrmaService{}}.CreateSessionHandler)
+		api := API{irmaServer: &SpyIrmaService{}}
+		router := api.Handler()
+
+		handler := http.Handler(router)
 
 		handler.ServeHTTP(rr, req)
 		return
 	}
 
+	t.Run("with unknown acting party result in error", func(t *testing.T) {
+		sessionRequest := ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
+		payload, _ := json.Marshal(sessionRequest)
+		loadConfig()
+		configuration.GetInstance().ActingPartyCN = ""
+		rr := setupRequestRecorder(t, payload)
+
+		assertResponseCode(t, *rr, http.StatusForbidden)
+	})
+
 	t.Run("with unknown contract type", func(t *testing.T) {
 		sessionRequest := ContractSigningRequest{Type: "Unknown type", Language: "NL"}
 		payload, _ := json.Marshal(sessionRequest)
+		loadConfig()
 		rr := setupRequestRecorder(t, payload)
 
 		assertResponseCode(t, *rr, http.StatusBadRequest)
@@ -77,8 +99,9 @@ func TestCreateSessionHandler(t *testing.T) {
 			t.Errorf("Expected different error message: %v", message)
 		}
 	})
-	t.Run("with invalid json param", func(t *testing.T) {
+	t.Run("with invalid json param returns a bad request", func(t *testing.T) {
 		payload := []byte("invalid paload")
+		loadConfig()
 		rr := setupRequestRecorder(t, payload)
 
 		assertResponseCode(t, *rr, http.StatusBadRequest)
@@ -90,9 +113,10 @@ func TestCreateSessionHandler(t *testing.T) {
 
 	})
 
-	t.Run("normal execution", func(t *testing.T) {
+	t.Run("valid request returns a qr code and sessionId", func(t *testing.T) {
 		sessionRequest := ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
 		payload, _ := json.Marshal(sessionRequest)
+		loadConfig()
 		rr := setupRequestRecorder(t, payload)
 
 		assertResponseCode(t, *rr, http.StatusCreated)
@@ -101,6 +125,10 @@ func TestCreateSessionHandler(t *testing.T) {
 
 		if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
 			t.Error("Could not unmarshal json qr code response", err)
+		}
+
+		if response.SessionId == "" {
+			t.Error("expected a sessionId in the response")
 		}
 
 		qr := response.QrCodeInfo
