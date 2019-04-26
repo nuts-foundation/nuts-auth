@@ -169,15 +169,16 @@ func TestValidateContract(t *testing.T) {
 	const validContract = `{
     "signature": [
       {
-        "c": "7IBqXjMivYL6SSr1v/TOpYG+3GXZMuMejsCIAtd6Xp4=",
-        "A": "ljVcut65H/UTeIUHjpXEcENX1rwU0BwvaJj2Z5fTw8i3QKnzCXTsaCskA3OsdjfIU5E0xOhI8rwZnLkbd2wZ1EwrWlL0vBLqh6m8DVfUn02czr2Fx9tWY6grc2trALy0ROqM4U/pp1wBlXV7m4CcslNwFWkvO35BXECic5PHfI2LUU88DnN0jLKOHmeu60TOJqS94PxVs7Bt3A5sC7hOi7dB1DIhJJmIMyxcLSB8IP1fTucIYiK1n0rd7rYG5BgivEHGbvg27AmgrpI3Z3zbnpmycuSLN80gARx8ozIvIIS/pdw5XieTkFbxL/hJTvymbz+LVTX3eKVBQXCmXXBnYw==",
-        "e_response": "Tht2LdtAmJH9kCuzNdW5PfgNqdna/iyy0xMcQVguvrmqhtMGhNE9aAZYL/BZlcFikz0xECRIkZXsLuKHmo7+",
-        "v_response": "BqryxHSYLIax24I3ZT2OSXQjab8zY8I19qIUx2m7cooEjlkFBQlJxR76y48MMNt6CExMxiZaw5ygEK7sQQlMyDv4BcIpCHxn9Iu8ZuHM4DqzDMxNed2iPyqiVjjxf3uDlY/aJ0dYKLe0oYZGQ11KPAV0uz5uGqEQN9Q8kdE7ZzxPyEiUZX9HkJJQ0HB4UkKoz3jbM51DdpW4V9dmxQaO/gSP2sUWfDrUkMnfBuAdImyQ7y4g8ZWYfNNCvdUvaaWuqo27X9e9DlgVVfbWf/tUsL0EemkMW4XtB8ql371qys2HRoNxAm6uAVzZrn1EHzuPSWXLsSluUYO1JS9fEq+5EZSzSqHPuqqmxmKMU2jAe3PYtZJphp0hFxinOARTspParaN3a18Rvw68iC5gdfK6+9qZlYeRSrOfU4IvEKugeOKatcRD46tUbGO+hiYblwSInvzvRYAXx+TT2rXTtTk6ez5wK2zgajzIzSfSXHTvQTjXEd+1gSIFtuvyw8yzRqEEXnVUAyly54uE4DwuedDsQEk=",
+        "c": "TH/z6HoTX5rvu70H8t7Q3B7mKG09a3LRU6UqlkEfJ3M=",
+        "A": "dcij67w/Dlk7FJftjFEvaQ8FKOf5PaLjrhfza9pl2OvqUFDeor0jMY5WiYpY6nimM4HT72BfNh6qS+RbMgk7TIVvPj3wV12BX7TRmLOwpHRM34JVtyen4msIJCoBm8or+T1HHE3bGhAN1kld9bG6HiprJGzMDz6eV2VMM1ppSIcbg+J6Mt4XlaCOqTi7ox+hvgVxOTJu5OlIMw4/OvmSRkG63h7iSuHF8pmavB3bUh3UUww2tVeesgDp1zQoSZKWJ8a+J1BHTDYAOy8fiS0tpDnckX09v/LiQOzYocPB2NUGn9AzCEcrlCZU3MNYSHlKH80dINoHE6+NkdzjMhrVHQ==",
+        "e_response": "1AjGh0WGbR5lZ6bqORFDKhhu2ORmY3B6H3SCXOtSbmi1x40CXAAw/ADCFXuy+wQd5OHwka85FmQD7vinSCkv",
+        "v_response": "CRNwuI0B5L9r/anmGdSqqpFtW8EHfkZeBo65aUPspRTpgvA6OjefaxNz06bJeIwuIgInKXMo8HbmISYYUAbVe9wvDwW9Jd5qw8N6sQiUnUouvhvWfBB5g04d6GbEfgszlNgXNQBpxowXlLe3Kphq8HOzlGPyGtC5jzsFv9iQQx2VVDWOxZ/lJSUwylM8luGsiMl4Pj2iVQ+2Lx9gAdVRdrjRwnmrkd6mcpH4fk/8NZ3wl8BMgG/U519DmZ7QachzOC2a5OdhkBF+v98bwUFmNXl+2ck1PpYrstJC37EAQQNHyLP9C1XCyDoLL9Sr1NIay6nb/q5nP2hjJQVLunOfTDEOAtz08mmn7oLIwS8uaO+Gi9vM8yqEd7ArAmGJvDkjE6y4tXDxyhNcs6q7+2q3kkwTR75wf5Z+rbrp8nhgqDwLQaZsiK4QGXkATuuGnYSSEPVKUWkQaXuX9b5PRoAwj1Ik61Noyfolxqsy89dvW8ffFyM6TaESk01aihjXFiL7oeGFPgTaKOxLQdYsujrym6M=",
         "a_responses": {
-          "0": "kd6cCLk/IQ52zyVgJu9M9DMYiGwEQhSB6Rj80Asm55LAqsOj0AYb+LGWpf/RiSaz/vJEbfUBbJjZqBGjgbLUTkmzaht9QiXg7Ro="
+          "0": "s9L2fM80S9pNxwqC/nbhByCVL12XX+V3kLavkcWwLRPgIMEBCOPSBpcxFhsqWK5HosCRdBr5YpWTzIm8+JcZaB8HGTkS5srqJMs=",
+          "3": "DcAgFh30gmjhe5GsUNWZw2WZgDBuoCIDjBkCsHA0CyTJBVEfoDIYHYc3pJ0eFJngQ3T+X2tFrIL0M/rABvgRfLvfShmnihSXOGNI9orRf+g="
         },
         "a_disclosed": {
-          "1": "AwAJ8gAaAABH2jklUts5iBWSlKLhMjvi",
+          "1": "AwAKCwAaAABH2jklUts5iBWSlKLhMjvi",
           "2": "YGBgYGBgYGM="
         }
       }
@@ -190,20 +191,20 @@ func TestValidateContract(t *testing.T) {
         }
       ]
     ],
-    "nonce": "pGW5aB1YNp8cADoDa2KXtQ==",
+    "nonce": "YPffjG+4BTMBtW1j5z1HOA==",
     "context": "AQ==",
-    "message": "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Helder om uit zijn/haar naam het nuts netwerk te bevragen. Deze toestemming is geldig van Wednesday, 03-Apr-19 16:36:06 CEST tot Wednesday, 03-Apr-19 17:36:06 CEST.",
+    "message": "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Helder om uit zijn/haar naam het Nuts netwerk te bevragen. Deze toestemming is geldig van vrijdag, 26 april 2019 11:45:30 tot vrijdag, 26 april 2019 12:45:30.",
     "timestamp": {
-      "Time": 1554302366,
+      "Time": 1556271999,
       "ServerUrl": "https://metrics.privacybydesign.foundation/atum",
       "Sig": {
         "Alg": "ed25519",
-        "Data": "7lX0cWof1dnkccBZ4QA7vz4W1JOxkPhxhj9ldzN2fuDCywR8Uk+WxPt5PuT8Rl5GO1uchky8BxKfYSi6RCfhAQ==",
+        "Data": "B1vRNosk4094k29T3JIsz1Te/YZEkSKFertuwvvTWUiWx5isZ3AYnc0ufBiL8eYqxtrkKGlhkBvz/NPz8ojIDQ==",
         "PublicKey": "e/nMAJF7nwrvNZRpuJljNpRx+CsT7caaXyn9OX683R8="
       }
     }
-}
-	`
+  }
+`
 	const invalidContract = `
     { "this datas": "smellz bad"}
 	`
@@ -211,8 +212,6 @@ func TestValidateContract(t *testing.T) {
 		ValidationResult string `json:"validation_result"`
 	}
 	t.Run("test a valid contract", func(t *testing.T) {
-		// FIXME: disabled due to: https://github.com/privacybydesign/irmago/issues/35
-		t.Skip("Disabled due to a bug in IRMA")
 		rr := setupRequestRecorder(t, []byte(validContract))
 		assertResponseCode(t, *rr, http.StatusOK)
 
