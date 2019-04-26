@@ -1,9 +1,11 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi"
+	"github.com/nuts-foundation/nuts-proxy/configuration"
 	"github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
@@ -62,9 +64,12 @@ func New(baseUrl *url.URL) *API {
 
 func (api API) Handler() http.Handler {
 	r := chi.NewRouter()
-	r.Post("/contract/session", api.CreateSessionHandler)
-	r.Get("/contract/session/{sessionId}", api.GetSessionStatusHandler)
-	r.Get("/contract/{type}", api.GetContractHandler)
+	r.Route("/contract", func(r chi.Router) {
+		r.Use(ServiceProviderCtx)
+		r.Post("/session", api.CreateSessionHandler)
+		r.Get("/session/{sessionId}", api.GetSessionStatusHandler)
+		r.Get("/{type}", api.GetContractHandler)
+	})
 	r.Post("/contract/validate", api.ValidateContractHandler)
 	r.Mount("/irmaclient", api.irmaServer.HandlerFunc())
 	return r
@@ -72,6 +77,23 @@ func (api API) Handler() http.Handler {
 
 type SessionStatus struct {
 	Status string `json:"status"`
+}
+
+// ActingPartyKey is the key that holds the common name of the current acting party in the request context.
+const ActingPartyKey = "actingParty"
+
+func ServiceProviderCtx(next http.Handler) http.Handler {
+
+	actingParty := determineActingParty()
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if actingParty == "" {
+			http.Error(w, "Unknown acting party", http.StatusForbidden)
+			return
+		}
+		ctx := context.WithValue(r.Context(), ActingPartyKey, actingParty)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func (api API) GetSessionStatusHandler(writer http.ResponseWriter, r *http.Request) {
@@ -121,10 +143,18 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 		http.Error(writer, logMsg, http.StatusBadRequest)
 		return
 	}
+
+	ctx := r.Context()
+	actingParty, ok := ctx.Value(ActingPartyKey).(string)
+	if !ok {
+		// This should not happen since the context provides us with the value and does its own error handling
+		http.Error(writer, http.StatusText(422), 422)
+		return
+	}
+
 	message, err := contract.RenderTemplate(map[string]string{
-		// FIXME: get the acting party from a config or http session (JWT)
-		"acting_party": "Helder",
-	}, 0, 60 * time.Minute)
+		"acting_party": actingParty,
+	}, 0, 60*time.Minute)
 	logrus.Infof("contractMessage: %v", message)
 	if err != nil {
 		logMsg := fmt.Sprintf("Could not render contract template of type %v: %v", contract.Type, err)
@@ -167,6 +197,12 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 	if err != nil {
 		logrus.Panicf("Write failed: %v", err)
 	}
+}
+
+func determineActingParty() (party string) {
+	config := configuration.GetInstance()
+	party = config.ActingPartyCN
+	return
 }
 
 type ValidationResultResponse struct {

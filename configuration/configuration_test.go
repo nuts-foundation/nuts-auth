@@ -6,28 +6,23 @@ import (
 )
 
 func TestGetInstance(t *testing.T) {
-	t.Run("returns an error if no instance found", func(t *testing.T) {
-		instance, err := GetInstance()
-		if instance != nil {
-			t.Error("Expected instance to be nil")
-		}
+	t.Run("it panics when no instance is set", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Error("expected a panic")
+			}
+		}()
 
-		if err == nil {
-			t.Error("expected error to be set")
-		}
+		GetInstance()
 	})
 
 	t.Run("returns the instance if set", func(t *testing.T) {
 		config = &NutsProxyConfiguration{}
 
-		instance, err := GetInstance()
+		instance := GetInstance()
 
 		if instance != config {
 			t.Errorf("expected intance to be the config intead of: %v", instance)
-		}
-
-		if err != nil {
-			t.Errorf("expected error to be nil intead of %v", err)
 		}
 	})
 
