@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/nuts-foundation/nuts-proxy/api"
+	"github.com/nuts-foundation/nuts-proxy/api/auth"
 	"github.com/nuts-foundation/nuts-proxy/configuration"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -33,6 +34,7 @@ var serveCmd = &cobra.Command{
 
 		apiConfig := &api.Config{Port: appConfig.HttpPort, Logger: logrus.StandardLogger(), BaseUrl: httpBaseUrl}
 		api := api.New(apiConfig)
+		api.Mount("/auth", auth.New().Handler())
 
 		go func() {
 			<-stop
