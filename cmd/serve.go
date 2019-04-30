@@ -3,6 +3,8 @@ package cmd
 import (
 	"github.com/nuts-foundation/nuts-proxy/api"
 	"github.com/nuts-foundation/nuts-proxy/api/auth"
+	authvalidator "github.com/nuts-foundation/nuts-proxy/auth"
+	"github.com/nuts-foundation/nuts-proxy/auth/irma"
 	"github.com/nuts-foundation/nuts-proxy/configuration"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -27,14 +29,15 @@ var serveCmd = &cobra.Command{
 		signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 		appConfig := configuration.GetInstance()
-		httpBaseUrl, err := url.Parse(appConfig.HttpAddress);
+		httpBaseUrl, err := url.Parse(appConfig.HttpAddress)
 		if err != nil {
 			logrus.Panic("Could not parse http address from config. Make sure it is a valid URL")
 		}
 
 		apiConfig := &api.Config{Port: appConfig.HttpPort, Logger: logrus.StandardLogger(), BaseUrl: httpBaseUrl}
 		api := api.New(apiConfig)
-		api.Mount("/auth", auth.New().Handler())
+		api.Mount("/auth", auth.New(appConfig, authvalidator.DefaultValidator{}).Handler())
+		api.Mount("/auth/irmaclient", irma.GetIrmaServer().HandlerFunc())
 
 		go func() {
 			<-stop

@@ -5,73 +5,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi"
+	"github.com/nuts-foundation/nuts-proxy/auth"
 	"github.com/nuts-foundation/nuts-proxy/configuration"
 	"github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"time"
 )
 
-// IrmaInterface allows mocking the irma server during tests
-type IrmaInterface interface {
-	StartSession(interface{}, irmaserver.SessionHandler) (*irma.Qr, string, error)
-	HandlerFunc() http.HandlerFunc
-	GetSessionResult(token string) *server.SessionResult
-}
-
 type API struct {
-	irmaServer IrmaInterface
-	irmaConfig *irma.Configuration
+	authValidator auth.Validator
+	configuration *configuration.NutsProxyConfiguration
 }
 
-func (api *API) InitIRMA(baseUrl *url.URL) {
-
-	irmaConfig, err := irma.NewConfiguration("./conf")
-	if err != nil {
-		logrus.WithError(err).Error("Could not create irma config")
+func New(config *configuration.NutsProxyConfiguration, authService auth.Validator) *API {
+	api := &API{
+		authValidator: authService,
+		configuration: config,
 	}
-
-	api.irmaConfig = irmaConfig
-
-	if err := irmaConfig.DownloadDefaultSchemes(); err != nil {
-		logrus.WithError(err).Panic("Could not download default schemes")
-	}
-	configuration := &server.Configuration{
-		URL:               fmt.Sprintf("%s/auth/irmaclient", baseUrl.String()),
-		Logger:            logrus.StandardLogger(),
-		IrmaConfiguration: irmaConfig,
-	}
-
-	logrus.Info("Initializing IRMA library...")
-	logrus.Infof("irma baseurl: %s", configuration.URL)
-	irmaServer, err := irmaserver.New(configuration)
-	if err != nil {
-		logrus.WithError(err).Panic("Could not initialize IRMA library:")
-	}
-
-	api.irmaServer = irmaServer
-}
-
-func New(baseUrl *url.URL) *API {
-	api := &API{}
-	api.InitIRMA(baseUrl)
 	return api
 }
 
 func (api API) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Route("/contract", func(r chi.Router) {
-		r.Use(ServiceProviderCtx)
+		r.Use(ServiceProviderCtxFn(api.configuration))
 		r.Post("/session", api.CreateSessionHandler)
 		r.Get("/session/{sessionId}", api.GetSessionStatusHandler)
 		r.Get("/{type}", api.GetContractHandler)
 	})
 	r.Post("/contract/validate", api.ValidateContractHandler)
-	r.Mount("/irmaclient", api.irmaServer.HandlerFunc())
 	return r
 }
 
@@ -82,23 +47,25 @@ type SessionStatus struct {
 // ActingPartyKey is the key that holds the common name of the current acting party in the request context.
 const ActingPartyKey = "actingParty"
 
-func ServiceProviderCtx(next http.Handler) http.Handler {
+func ServiceProviderCtxFn(config *configuration.NutsProxyConfiguration) func(http.Handler) http.Handler {
+	actingParty := config.ActingPartyCN
 
-	actingParty := determineActingParty()
+	return func(next http.Handler) http.Handler {
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if actingParty == "" {
-			http.Error(w, "Unknown acting party", http.StatusForbidden)
-			return
-		}
-		ctx := context.WithValue(r.Context(), ActingPartyKey, actingParty)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if actingParty == "" {
+				http.Error(w, "Unknown acting party", http.StatusForbidden)
+				return
+			}
+			ctx := context.WithValue(r.Context(), ActingPartyKey, actingParty)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
 func (api API) GetSessionStatusHandler(writer http.ResponseWriter, r *http.Request) {
-	sessionId := chi.URLParam(r, "sessionId")
-	sessionResult := api.irmaServer.GetSessionResult(sessionId)
+	sessionId := auth.SessionId(chi.URLParam(r, "sessionId"))
+	sessionResult := api.authValidator.SessionStatus(sessionId)
 	if sessionResult == nil {
 		http.Error(writer, "Session not found", http.StatusNotFound)
 		return
@@ -118,6 +85,10 @@ func (api API) GetContractHandler(writer http.ResponseWriter, request *http.Requ
 	contractVersion := request.URL.Query().Get("version")
 
 	contract := ContractByType(contractType, contractLanguage, contractVersion)
+	if contract == nil {
+		http.Error(writer, "could not find contract with this type, language and version", http.StatusNotFound)
+		return
+	}
 	contractJson, _ := json.Marshal(contract)
 	_, _ = writer.Write(contractJson)
 }
@@ -162,6 +133,7 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 		http.Error(writer, logMsg, http.StatusBadRequest)
 		return
 	}
+	// TODO: put this in a separate service
 	signatureRequest := &irma.SignatureRequest{
 		Message: message,
 		DisclosureRequest: irma.DisclosureRequest{
@@ -175,10 +147,9 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 		},
 	}
 
-	sessionPointer, token, err := api.irmaServer.StartSession(signatureRequest, func(result *server.SessionResult) {
+	sessionPointer, token, err := api.authValidator.StartSession(signatureRequest, func(result *server.SessionResult) {
 		logrus.Infof("session done, result: %s", server.ToJson(result))
 	})
-
 	if err != nil {
 		logrus.Panic("error while creating session: ", err)
 		http.Error(writer, "Could not create a new session", http.StatusInternalServerError)
@@ -199,10 +170,13 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 	}
 }
 
-func determineActingParty() (party string) {
-	config := configuration.GetInstance()
-	party = config.ActingPartyCN
-	return
+type ValidationRequest struct {
+	// ContractFormat specifies the type of format used for the contract, e.g. 'irma'
+	ContractFormat string `json:"contract_format"`
+	// The actual contract in string format to validate
+	ContractString string `json:"contract_string"`
+	// ActingPartyCN is the common name of the Acting party extracted from the client cert
+	ActingPartyCN string `json:"acting_party_cn"`
 }
 
 type ValidationResultResponse struct {
@@ -211,34 +185,30 @@ type ValidationResultResponse struct {
 }
 
 func (api *API) ValidateContractHandler(writer http.ResponseWriter, r *http.Request) {
-	var signedContract irma.SignedMessage
+	var validationRequest ValidationRequest
+
 	body, err := ioutil.ReadAll(r.Body)
-	logrus.Infof("Contract validation request for: %v", string(body))
 	if err != nil {
 		logrus.WithError(err).Error("Could not validate contract. Unable to read body")
 		http.Error(writer, "Could not read body", http.StatusBadRequest)
 		return
 	}
-	if err := json.Unmarshal(body, &signedContract); err != nil {
+	if err := json.Unmarshal(body, &validationRequest); err != nil {
 		logMsg := fmt.Sprint("Could not decode json payload")
 		logrus.WithError(err).Info(logMsg)
 		http.Error(writer, logMsg, http.StatusBadRequest)
 		return
 	}
-	logrus.Info(signedContract)
-	attributes, status, err := signedContract.Verify(api.irmaConfig, nil)
+	logrus.Debug(validationRequest)
+	validationResponse, err := api.authValidator.ValidateContract(validationRequest.ContractString, auth.ContractFormat(validationRequest.ContractFormat), validationRequest.ActingPartyCN)
 	if err != nil {
-		logMsg := "Unable to verify contract"
-		logrus.WithError(err).Info(logMsg)
-		http.Error(writer, logMsg, http.StatusBadRequest)
+		//logMsg := "Unable to verify contract"
+		logrus.WithError(err).Info(err.Error())
+		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	jsonResult, err := json.Marshal(
-		ValidationResultResponse{
-			ValidationResult:    string(status),
-			DisclosedAttributes: attributes,
-		})
+	jsonResult, err := json.Marshal(validationResponse)
 	if err != nil {
 		logrus.WithError(err).Error("Could not marshall json response in ValidateContractHandler")
 	}
