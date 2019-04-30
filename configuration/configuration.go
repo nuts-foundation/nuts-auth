@@ -14,14 +14,14 @@ type NutsProxyConfiguration struct {
 	// This name will be used in contracts and must known and unique in the Nuts network.
 	// Note: In the future this name should be stored in an address book.
 	// Note: In a future version, the service should be able to handle multiple Acting parties
-	ActingPartyCN  string `mapstructure:"acting_party_cn"`
+	ActingPartyCN string `mapstructure:"acting_party_cn"`
 }
 
 // Default config instance
 var config *NutsProxyConfiguration
 
 // Getinstance returns the initialized error object. If there is no initialized object, it returns an error
-func GetInstance() (*NutsProxyConfiguration) {
+func GetInstance() *NutsProxyConfiguration {
 	if config == nil {
 		panic("cannot get instance of uninitialized config")
 	}
@@ -64,4 +64,3 @@ func (config *NutsProxyConfiguration) SetDefaults() {
 	config.IrmaConfigPath = "."
 	config.HttpAddress = fmt.Sprintf("localhost:%d", config.HttpPort)
 }
-

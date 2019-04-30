@@ -29,7 +29,7 @@ func TestContentType(t *testing.T) {
 		testContentTypeIsJson(w, t)
 	}
 
-	api := New(&Config{Logger:logrus.New()})
+	api := New(&Config{Logger: logrus.New()})
 	api.router.Post("/auth/contract/session", testHandler)
 
 	rr := httptest.NewRecorder()

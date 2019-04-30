@@ -10,16 +10,16 @@ import (
 	"time"
 )
 
-const TIME_LAYOUT = "Monday, 2 January 2006 15:04:05"
+const TimeLayout = "Monday, 2 January 2006 15:04:05"
 
 type Contract struct {
-	Type               string         `json:"type"`
-	Version            string         `json:"version"`
-	Language           string         `json:"language"`
-	SignerAttributes   []string       `json:"signer_attributes"`
-	Template           string         `json:"template"`
-	TemplateAttributes []string       `json:"template_attributes"`
-	Regexp             *regexp.Regexp `json:"-"`
+	Type               string   `json:"type"`
+	Version            string   `json:"version"`
+	Language           string   `json:"language"`
+	SignerAttributes   []string `json:"signer_attributes"`
+	Template           string   `json:"template"`
+	TemplateAttributes []string `json:"template_attributes"`
+	Regexp             string   `json:"-"`
 }
 
 type ContractSigningRequest struct {
@@ -31,40 +31,58 @@ type ContractSigningRequest struct {
 	TemplateAttributes map[string]string
 }
 
-func ContractByType(contractType string, language, version string) *Contract {
+type Language string
+type Type string
+type Version string
 
-	switch contractType {
-	case "PractitionerLogin", "BehandelaarLogin":
-		if version == "" || version == "v1" {
+// EN:PractitionerLogin:v1 Contract
+var contracts = map[Language]map[Type]map[Version]*Contract{
+	"NL": {"BehandelaarLogin": {"v1": &Contract{
+		Type:               "BehandelaarLogin",
+		Version:            "v1",
+		Language:           "NL",
+		SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
+		Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om uit zijn/haar naam het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
+		TemplateAttributes: []string{"acting_party", "valid_from", "valid_to"},
+		Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om uit zijn/haar naam het nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
+	}}},
+	"EN": {"PractitionerLogin": {"v1": &Contract{
+		Type:               "PractitionerLogin",
+		Version:            "v1",
+		Language:           "EN",
+		SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
+		Template:           `EN:PractitionerLogin:v1 Undersigned gives permission to {{acting_party}} to make request on its behalf to the Nuts network. This permission is valid from {{valid_from}} until {{valid_to}}.`,
+		TemplateAttributes: []string{"acting_party", "valid_from", "valid_to"},
+		Regexp:             `EN:PractitionerLogin:v1 Undersigned gives permission to (.+) to make request on its behalf to the Nuts network. This permission is valid from (.+) until (.+).`,
+	}}},
+}
 
-			if language == "NL" {
-				r, _ := regexp.Compile(`NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om uit zijn/haar naam het nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`)
-				return &Contract{
-					Type:               "BehandelaarLogin",
-					Version:            "v1",
-					Language:           "NL",
-					SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
-					Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om uit zijn/haar naam het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
-					TemplateAttributes: []string{"acting_party", "valid_from", "valid_to"},
-					Regexp:             r,
-				}
-			} else if language == "EN" {
-				r, _ := regexp.Compile(`EN:PractitionerLogin:v1 Undersigned givers persmission to (.+) to make request on its behalf to the Nuts network. This permission is valid from (.+) until (.+).`)
-				return &Contract{
-					Type:               "PractitionerLogin",
-					Version:            "v1",
-					Language:           "EN",
-					SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
-					Template:           `EN:PractitionerLogin:v1 Undersigned givers persmission to {{acting_party}} to make request on its behalf to the Nuts network. This permission is valid from {{valid_from}} until {{valid_to}}.`,
-					TemplateAttributes: []string{"acting_party", "valid_from", "valid_to"},
-					Regexp:             r,
-				}
-			}
-		}
+func ContractByContents(contents string) *Contract {
+	r, _ := regexp.Compile(`^(.{2}):(.+):(v\d+)`)
+
+	matchResult := r.FindSubmatch([]byte(contents))
+	if len(matchResult) != 4 {
+		logrus.Error("Could not extract type, language and version form contract text")
+		return nil
 	}
 
-	logrus.Warnf("Contract with type '%s' language '%s' and version %s not found", contractType, language, version)
+	language := string(matchResult[1])
+	contractType := string(matchResult[2])
+	version := string(matchResult[3])
 
+	return ContractByType(contractType, language, version)
+
+}
+
+func ContractByType(contractType string, language, version string) *Contract {
+	if version == "" {
+		version = "v1"
+	}
+	contract, ok := contracts[Language(language)][Type(contractType)][Version(version)]
+	if ok {
+		return contract
+	}
+	logrus.Warnf("Contract with type '%s' language '%s' and version %s not found", contractType, language, version)
 	return nil
 }
 
@@ -74,14 +92,15 @@ func (c Contract) timeLocation() *time.Location {
 }
 
 func (c Contract) RenderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
-	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), TIME_LAYOUT, monday.LocaleNlNL)
-	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), TIME_LAYOUT, monday.LocaleNlNL)
+	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), TimeLayout, monday.LocaleNlNL)
+	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), TimeLayout, monday.LocaleNlNL)
 
 	return mustache.Render(c.Template, vars)
 }
 
 func (c Contract) ExtractParams(text string) (map[string]string, error) {
-	matchResult := c.Regexp.FindSubmatch([]byte(text))
+	r, _ := regexp.Compile(c.Regexp)
+	matchResult := r.FindSubmatch([]byte(text))
 	if len(matchResult) < 1 {
 		return nil, errors.New("Could not match the text")
 	}
@@ -102,7 +121,7 @@ func (c Contract) ExtractParams(text string) (map[string]string, error) {
 
 func parseTime(timeStr, language string) (*time.Time, error) {
 	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
-	parsedTime, err := monday.ParseInLocation(TIME_LAYOUT, timeStr, amsterdamLocation, monday.LocaleNlNL)
+	parsedTime, err := monday.ParseInLocation(TimeLayout, timeStr, amsterdamLocation, monday.LocaleNlNL)
 	if err != nil {
 		logrus.WithError(err).Errorf("error parsing contract time %v", timeStr)
 		return nil, err
@@ -143,6 +162,7 @@ func (c Contract) ValidateTimeFrame(params map[string]string) error {
 
 	// All parsed, check time range
 	if validFrom.After(*validTo) {
+
 		return errors.New("invalid time range")
 	}
 
