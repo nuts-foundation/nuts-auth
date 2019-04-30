@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,7 +29,9 @@ func TestContentType(t *testing.T) {
 		testContentTypeIsJson(w, t)
 	}
 
-	handler := contentTypeMiddlewareFn("application/json")(http.HandlerFunc(testHandler))
+	api := New(&Config{Logger:logrus.New()})
+	api.router.Post("/auth/contract/session", testHandler)
+
 	rr := httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
+	api.router.ServeHTTP(rr, req)
 }

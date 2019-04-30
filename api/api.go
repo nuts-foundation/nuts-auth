@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
-	"github.com/nuts-foundation/nuts-proxy/api/auth"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
@@ -56,6 +55,10 @@ func New(config *Config) *API {
 	return api
 }
 
+// Router sets up the Api with a stack of middleware and a basic rootHandler
+// Every request has a requestID
+// Panics get recovered and logged
+// Json is the default content type
 func (api *API) Router() *chi.Mux {
 	// configure the router
 	r := chi.NewRouter()
@@ -64,8 +67,11 @@ func (api *API) Router() *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(contentTypeMiddlewareFn("application/json"))
 	r.Get("/", rootHandler)
-	r.Mount("/auth", auth.New(api.config.BaseUrl).Handler())
 	return r
+}
+
+func (api *API) Mount(pattern string, handler http.Handler) {
+	api.router.Mount(pattern, handler)
 }
 
 func rootHandler(writer http.ResponseWriter, _ *http.Request) {
