@@ -11,7 +11,7 @@ import (
 )
 
 var instance *irma.Configuration
-var configOnce sync.Once
+var configOnce = new(sync.Once)
 
 func GetIrmaConfig() *irma.Configuration {
 	configOnce.Do(func() {
@@ -30,7 +30,7 @@ func GetIrmaConfig() *irma.Configuration {
 }
 
 var irmaServer *irmaserver.Server
-var serverOnce sync.Once
+var serverOnce = new(sync.Once)
 
 func GetIrmaServer() *irmaserver.Server {
 	serverOnce.Do(func() {
