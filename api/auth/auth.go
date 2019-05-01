@@ -84,7 +84,7 @@ func (api API) GetContractHandler(writer http.ResponseWriter, request *http.Requ
 
 	contractVersion := request.URL.Query().Get("version")
 
-	contract := ContractByType(contractType, contractLanguage, contractVersion)
+	contract := auth.ContractByType(contractType, contractLanguage, contractVersion)
 	if contract == nil {
 		http.Error(writer, "could not find contract with this type, language and version", http.StatusNotFound)
 		return
@@ -99,7 +99,7 @@ type CreateSessionResult struct {
 }
 
 func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request) {
-	var sessionRequest ContractSigningRequest
+	var sessionRequest auth.ContractSigningRequest
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&sessionRequest); err != nil {
 		logMsg := fmt.Sprintf("Could not decode json request parameters %v", r.Body)
@@ -107,7 +107,7 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 		http.Error(writer, logMsg, http.StatusBadRequest)
 		return
 	}
-	contract := ContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
+	contract := auth.ContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
 	if contract == nil {
 		logMsg := fmt.Sprintf("Could not find contract with type %v", sessionRequest.Type)
 		logrus.Info(logMsg)
