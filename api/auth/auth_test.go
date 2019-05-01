@@ -43,7 +43,7 @@ func (v MockValidator) ValidateContract(b64EncodedContract string, format auth.C
 func (v MockValidator) SessionStatus(id auth.SessionId) *auth.SessionStatusResult {
 	if id == "known_token" {
 		return &auth.SessionStatusResult{
-			server.SessionResult{Status: server.StatusInitialized},
+			SessionResult: server.SessionResult{Status: server.StatusInitialized},
 		}
 	}
 	return nil
