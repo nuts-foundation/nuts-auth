@@ -20,7 +20,7 @@ type NutsProxyConfiguration struct {
 // Default config instance
 var config *NutsProxyConfiguration
 
-// Getinstance returns the initialized error object. If there is no initialized object, it returns an error
+// GetInstance returns the initialized error object. If there is no initialized object, it returns an error
 func GetInstance() *NutsProxyConfiguration {
 	if config == nil {
 		panic("cannot get instance of uninitialized config")
@@ -50,6 +50,7 @@ func (config *NutsProxyConfiguration) LoadFromFile(path, filename string) error 
 	viper.SetConfigName(filename)
 	viper.SetConfigType("yaml")
 	if err := viper.ReadInConfig(); err != nil {
+		logrus.Error("could not read in config", err)
 		return err
 	}
 
