@@ -19,9 +19,6 @@ type API struct {
 func (api *API) Start() {
 	logrus.Infof("starting with httpPort: %d", api.config.Port)
 
-	addr := fmt.Sprintf(":%d", api.config.Port)
-	api.server = &http.Server{Addr: addr, Handler: api.router}
-
 	err := api.server.ListenAndServe() // blocks
 
 	if err != http.ErrServerClosed {
@@ -51,6 +48,8 @@ func New(config *Config) *API {
 	}
 
 	api.router = api.Router()
+	addr := fmt.Sprintf(":%d", api.config.Port)
+	api.server = &http.Server{Addr: addr, Handler: api.router}
 
 	return api
 }

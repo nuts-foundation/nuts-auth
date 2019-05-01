@@ -35,3 +35,4 @@ func TestContentType(t *testing.T) {
 	rr := httptest.NewRecorder()
 	api.router.ServeHTTP(rr, req)
 }
+
