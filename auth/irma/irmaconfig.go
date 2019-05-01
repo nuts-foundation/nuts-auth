@@ -7,6 +7,7 @@ import (
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
 	"sync"
 )
 
@@ -15,7 +16,16 @@ var configOnce = new(sync.Once)
 
 func GetIrmaConfig() *irma.Configuration {
 	configOnce.Do(func() {
-		config, err := irma.NewConfiguration("./conf")
+		irmaConfigFolder := configuration.GetInstance().IrmaConfigPath
+		if irmaConfigFolder == "" {
+			var err error
+			irmaConfigFolder, err = ioutil.TempDir("", "irmaconfig")
+			if err != nil {
+				logrus.Panic("Could not create irma tmp dir")
+			}
+		}
+		logrus.Infof("using irma config dir: %s", irmaConfigFolder)
+		config, err := irma.NewConfiguration(irmaConfigFolder)
 		if err != nil {
 			logrus.WithError(err).Panic("Could not create irma config")
 			return
