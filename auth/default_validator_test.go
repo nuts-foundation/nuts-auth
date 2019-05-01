@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/base64"
+	"github.com/nuts-foundation/nuts-proxy/configuration"
 	"github.com/nuts-foundation/nuts-proxy/testdata"
 	"reflect"
 	"testing"
@@ -34,6 +35,7 @@ func TestValidateContract(t *testing.T) {
 			false,
 		},
 	}
+	configuration.Initialize("../testdata", "testconfig")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := DefaultValidator{}.ValidateContract(tt.args.contract, tt.args.format, tt.args.actingPartyCN)

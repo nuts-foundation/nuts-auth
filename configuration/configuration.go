@@ -62,6 +62,6 @@ func (config *NutsProxyConfiguration) LoadFromFile(path, filename string) error 
 
 func (config *NutsProxyConfiguration) SetDefaults() {
 	config.HttpPort = 3000
-	config.IrmaConfigPath = "."
+	config.IrmaConfigPath = ""
 	config.HttpAddress = fmt.Sprintf("localhost:%d", config.HttpPort)
 }

@@ -67,14 +67,14 @@ func TestConfiguration(t *testing.T) {
 	t.Run("load from file", func(t *testing.T) {
 		var config NutsProxyConfiguration
 
-		if err := config.LoadFromFile("../testdata/", "testconfig"); err != nil {
+		if err := config.LoadFromFile("../testdata", "testconfig"); err != nil {
 			t.Errorf("Could not load value from file: %v", err)
 		}
 
 		for _, v := range []*testValues{
 			{"HttpPort", 3001},
 			{"HttpAddress", "https://nuts.helder.health"},
-			{"IrmaConfigPath", "/etc/nuts/irma"},
+			{"IrmaConfigPath", ""},
 		} {
 			testValue(t, &config, v)
 		}
@@ -88,7 +88,7 @@ func TestConfiguration(t *testing.T) {
 		for _, v := range []*testValues{
 			{"HttpPort", 3000},
 			{"HttpAddress", "localhost:3000"},
-			{"IrmaConfigPath", "."},
+			{"IrmaConfigPath", ""},
 		} {
 			testValue(t, &config, v)
 		}
