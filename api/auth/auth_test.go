@@ -89,7 +89,7 @@ func TestCreateSessionHandler(t *testing.T) {
 	}
 
 	t.Run("with unknown acting party result in error", func(t *testing.T) {
-		sessionRequest := ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
+		sessionRequest := auth.ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
 		payload, _ := json.Marshal(sessionRequest)
 
 		rr := httptest.NewRecorder()
@@ -106,7 +106,7 @@ func TestCreateSessionHandler(t *testing.T) {
 	})
 
 	t.Run("with unknown contract type results in error", func(t *testing.T) {
-		sessionRequest := ContractSigningRequest{Type: "Unknown type", Language: "NL"}
+		sessionRequest := auth.ContractSigningRequest{Type: "Unknown type", Language: "NL"}
 		payload, _ := json.Marshal(sessionRequest)
 		rr := setupRequestRecorder(t, payload)
 
@@ -131,7 +131,7 @@ func TestCreateSessionHandler(t *testing.T) {
 	})
 
 	t.Run("valid request returns a qr code and sessionId", func(t *testing.T) {
-		sessionRequest := ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
+		sessionRequest := auth.ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
 		payload, _ := json.Marshal(sessionRequest)
 		rr := setupRequestRecorder(t, payload)
 
@@ -248,7 +248,7 @@ func TestGetContract(t *testing.T) {
 			t.Errorf("Handler returned the wrong status: got %v, expected %v", status, http.StatusOK)
 		}
 
-		var contract Contract
+		var contract auth.Contract
 
 		if err := json.Unmarshal([]byte(body), &contract); err != nil {
 			t.Error("Could not unmarshal Contract response", err)
