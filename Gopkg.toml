@@ -24,3 +24,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/goodsign/monday"
+
+[[constraint]]
+  name = "github.com/bouk/monkey"
+  version = "1.0.0"
