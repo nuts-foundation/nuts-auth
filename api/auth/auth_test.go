@@ -187,7 +187,7 @@ func TestValidateContract(t *testing.T) {
 	type ValidationResult struct {
 		ValidationResult string `json:"validation_result"`
 	}
-	configuration.Initialize("../../testdata", "testconfig")
+	_ = configuration.Initialize("../../testdata", "testconfig")
 
 	t.Run("test a valid contract", func(t *testing.T) {
 		// mock time.Now() so we can validate the contract

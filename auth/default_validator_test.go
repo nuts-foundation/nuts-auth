@@ -158,7 +158,7 @@ func TestValidateContract(t *testing.T) {
 			true,
 		},
 	}
-	configuration.Initialize("../testdata", "testconfig")
+	_ = configuration.Initialize("../testdata", "testconfig")
 	irma.GetIrmaConfig()
 
 	for _, tt := range tests {
