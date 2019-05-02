@@ -198,7 +198,7 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 		validToStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), TimeLayout, monday.LocaleNlNL)
 
 		ok, err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
-		if ok == false || err != nil {
+		if !ok || err != nil {
 			t.Errorf("expected contract to be valid. Got %v", err)
 		}
 	})
@@ -211,7 +211,7 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 
 			ok, err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
 			expected := "invalid time range"
-			if ok != false || err == nil || err.Error() != expected {
+			if ok  || err == nil || err.Error() != expected {
 				t.Errorf("expected '%v', got '%v'", expected, err)
 			}
 		})

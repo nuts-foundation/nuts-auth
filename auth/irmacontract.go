@@ -72,7 +72,7 @@ func (sc *SignedIrmaContract) Validate(actingPartyCn string) (*ValidationRespons
 
 	// Validate timeframe
 	ok, err := contract.ValidateTimeFrame(params)
-	if ok == false || err != nil {
+	if !ok|| err != nil {
 		verifiedContract.ValidationResult = Invalid
 		return verifiedContract, err
 	}
@@ -82,7 +82,7 @@ func (sc *SignedIrmaContract) Validate(actingPartyCn string) (*ValidationRespons
 	if err != nil {
 		return nil, err
 	}
-	if ok == false {
+	if !ok {
 		verifiedContract.ValidationResult = Invalid
 		return verifiedContract, nil
 	}
