@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:d8abdc866ebbe05fa3bce50863e23afd4c73c804b90c908caa864e86df1db8a1"
+  name = "github.com/bouk/monkey"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5df1f207ff77e025801505ae4d903133a0b4353f"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:ab972abb4f8af4e054fa53e6f2160251598cd11d484f5581094925e00a4c59c0"
   name = "github.com/bwesterb/byteswriter"
   packages = ["."]
@@ -432,6 +440,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/bouk/monkey",
     "github.com/cbroglie/mustache",
     "github.com/go-chi/chi",
     "github.com/go-chi/chi/middleware",

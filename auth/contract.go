@@ -44,7 +44,7 @@ var contracts = map[Language]map[Type]map[Version]*Contract{
 		SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
 		Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om uit zijn/haar naam het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
 		TemplateAttributes: []string{"acting_party", "valid_from", "valid_to"},
-		Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om uit zijn/haar naam het nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
+		Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om uit zijn/haar naam het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
 	}}},
 	"EN": {"PractitionerLogin": {"v1": &Contract{
 		Type:               "PractitionerLogin",
@@ -57,7 +57,7 @@ var contracts = map[Language]map[Type]map[Version]*Contract{
 	}}},
 }
 
-func ContractByContents(contents string) *Contract {
+func ContractFromMessageContents(contents string) *Contract {
 	r, _ := regexp.Compile(`^(.{2}):(.+):(v\d+)`)
 
 	matchResult := r.FindSubmatch([]byte(contents))
@@ -129,52 +129,50 @@ func parseTime(timeStr, language string) (*time.Time, error) {
 	return &parsedTime, nil
 }
 
-func (c Contract) ValidateTimeFrame(params map[string]string) error {
+func (c Contract) ValidateTimeFrame(params map[string]string) (bool, error) {
 	var (
-		lang                     string
 		err                      error
 		ok                       bool
 		validFrom, validTo       *time.Time
 		validFromStr, validToStr string
 	)
 
-	if lang, ok = params["language"]; !ok {
-		return errors.New("could not determine contract language")
-	}
-
 	if validFromStr, ok = params["valid_from"]; !ok {
-		return errors.New("valid_from missing in params")
+		return false, errors.New("valid_from missing in params")
 	}
 
-	validFrom, err = parseTime(validFromStr, lang)
+	validFrom, err = parseTime(validFromStr, c.Language)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if validToStr, ok = params["valid_to"]; !ok {
-		return errors.New("valid_to missing in params")
+		return false, errors.New("valid_to missing in params")
 	}
 
-	validTo, err = parseTime(validToStr, lang)
+	validTo, err = parseTime(validToStr, c.Language)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// All parsed, check time range
 	if validFrom.After(*validTo) {
-
-		return errors.New("invalid time range")
+		return false, errors.New("invalid time range")
 	}
 
 	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
+	now := time.Now()
+	logrus.Infof("checking timeframe: now %v, validFrom: %v, validTo: %v", now, *validFrom, *validTo)
 
-	if time.Now().In(amsterdamLocation).Before(*validFrom) {
-		return errors.New("contract is not yet valid")
+	if now.In(amsterdamLocation).Before(*validFrom) {
+		logrus.Info("contract is not yet valid")
+		return false, nil
 
 	}
-	if time.Now().In(amsterdamLocation).After(*validTo) {
-		return errors.New("contract is expired")
+	if now.In(amsterdamLocation).After(*validTo) {
+		logrus.Info("contract is expired")
+		return false, nil
 	}
 
-	return nil
+	return true, nil
 }

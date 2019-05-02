@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"github.com/bouk/monkey"
 	"github.com/nuts-foundation/nuts-proxy/auth"
 	"github.com/nuts-foundation/nuts-proxy/configuration"
 	"github.com/nuts-foundation/nuts-proxy/testdata"
@@ -17,6 +18,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	irma "github.com/privacybydesign/irmago"
 )
@@ -188,6 +190,11 @@ func TestValidateContract(t *testing.T) {
 	configuration.Initialize("../../testdata", "testconfig")
 
 	t.Run("test a valid contract", func(t *testing.T) {
+		// mock time.Now() so we can validate the contract
+		location, _ := time.LoadLocation("Europe/Amsterdam")
+		contractDate := time.Date(2019, time.April, 26, 11, 46, 00, 0, location)
+		patch := monkey.Patch(time.Now, func() time.Time { return contractDate })
+		defer patch.Unpatch()
 
 		rr := setupRequestRecorder(t, []byte(testdata.ConstructValidationContract(testdata.ValidIrmaContract, "Helder")))
 		assertResponseCode(t, *rr, http.StatusOK)

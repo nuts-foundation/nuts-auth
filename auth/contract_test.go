@@ -42,7 +42,7 @@ func TestContractByType(t *testing.T) {
 func TestContractByContents(t *testing.T) {
 	t.Run("a correct triple returns the contract", func(t *testing.T) {
 		expected := contracts[Language("NL")][Type("BehandelaarLogin")][Version("v1")]
-		got := ContractByContents("NL:BehandelaarLogin:v1")
+		got := ContractFromMessageContents("NL:BehandelaarLogin:v1")
 		if got != expected {
 			t.Errorf("Expected different contract. Expected: %v, got: %v", expected, got)
 		}
@@ -51,16 +51,16 @@ func TestContractByContents(t *testing.T) {
 	t.Run("an unknown triple returns a nil", func(t *testing.T) {
 		var expected *Contract = nil
 
-		got := ContractByContents("DE:BehandelaarLogin:v1")
+		got := ContractFromMessageContents("DE:BehandelaarLogin:v1")
 		if got != expected {
 			t.Errorf("Expected different contract. Expected: %v, got: %v", expected, got)
 		}
 	})
 
-	t.Run("the triple does not work if it is not at the tart of the contract", func(t *testing.T) {
+	t.Run("a valid triple other than at the start of the contents returns a nil", func(t *testing.T) {
 		var expected *Contract = nil
 
-		got := ContractByContents("some other text NL:BehandelaarLogin:v1")
+		got := ContractFromMessageContents("some other text NL:BehandelaarLogin:v1")
 		if got != expected {
 			t.Errorf("Expected different contract. Expected: %v, got: %v", expected, got)
 		}
@@ -197,8 +197,8 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 		validFromStr := monday.Format(timeInAmsterdam().Add(-30*time.Minute), TimeLayout, monday.LocaleNlNL)
 		validToStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), TimeLayout, monday.LocaleNlNL)
 
-		err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
-		if err != nil {
+		ok, err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
+		if ok == false || err != nil {
 			t.Errorf("expected contract to be valid. Got %v", err)
 		}
 	})
@@ -209,62 +209,49 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 			validFromStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), TimeLayout, monday.LocaleNlNL)
 			validToStr := monday.Format(timeInAmsterdam().Add(-30*time.Minute), TimeLayout, monday.LocaleNlNL)
 
-			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
+			ok, err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
 			expected := "invalid time range"
-			if err == nil || err.Error() != expected {
+			if ok != false || err == nil || err.Error() != expected {
 				t.Errorf("expected '%v', got '%v'", expected, err)
 			}
 		})
 
-		t.Run("a contract valid in the future returns an error", func(t *testing.T) {
+		t.Run("a contract valid in the future is invalid", func(t *testing.T) {
 			validFromStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), TimeLayout, monday.LocaleNlNL)
 			validToStr := monday.Format(timeInAmsterdam().Add(130*time.Minute), TimeLayout, monday.LocaleNlNL)
 
-			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
-			expected := "contract is not yet valid"
-			if err == nil || err.Error() != expected {
-				t.Errorf("expected '%v', got '%v'", expected, err)
+			ok, err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
+			if ok != false || err != nil {
+				t.Errorf("expected ok == false and no error, got '%v', %v'", ok, err)
 			}
 		})
 
-		t.Run("an expired contract returns an error", func(t *testing.T) {
+		t.Run("an expired contract is invalid", func(t *testing.T) {
 			validFromStr := monday.Format(timeInAmsterdam().Add(-130*time.Minute), TimeLayout, monday.LocaleNlNL)
 			validToStr := monday.Format(timeInAmsterdam().Add(-30*time.Minute), TimeLayout, monday.LocaleNlNL)
 
-			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
-			expected := "contract is expired"
-			if err == nil || err.Error() != expected {
-				t.Errorf("expected '%v', got '%v'", expected, err)
+			ok, err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
+			if ok != false || err != nil {
+				t.Errorf("expected ok == false and no error, got '%v', %v'", ok, err)
 			}
 		})
 	})
 
 	t.Run("missing parameters", func(t *testing.T) {
 
-		t.Run("no language return an error", func(t *testing.T) {
-			validFromStr := monday.Format(timeInAmsterdam().Add(-30*time.Minute), TimeLayout, monday.LocaleNlNL)
-			validToStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), TimeLayout, monday.LocaleNlNL)
-
-			err := contract.ValidateTimeFrame(map[string]string{"valid_from": validFromStr, "valid_to": validToStr})
-			expected := "could not determine contract language"
-			if err == nil || err.Error() != expected {
-				t.Error("expected an error")
-			}
-		})
-
 		t.Run("no valid_from returns an error", func(t *testing.T) {
 			validToStr := monday.Format(timeInAmsterdam().Add(130*time.Minute), TimeLayout, monday.LocaleNlNL)
-			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_to": validToStr})
+			ok, err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_to": validToStr})
 			expected := "valid_from missing in params"
-			if err == nil || err.Error() != expected {
+			if ok != false || err == nil || err.Error() != expected {
 				t.Error("expected an error")
 			}
 		})
 
 		t.Run("no valid_to returns an error", func(t *testing.T) {
 			validFromStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), TimeLayout, monday.LocaleNlNL)
-			err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr})
-			if err == nil || err.Error() != "valid_to missing in params" {
+			ok, err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr})
+			if ok != false || err == nil || err.Error() != "valid_to missing in params" {
 				t.Errorf("expected an error, got: %v", err)
 			}
 		})
