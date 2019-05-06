@@ -79,8 +79,9 @@ func TestCreateSessionHandler(t *testing.T) {
 		req := makeRequest(t, payload)
 
 		api := API{
-			configuration: &configuration.NutsProxyConfiguration{ActingPartyCN: "Helder"},
-			authValidator: MockValidator{},
+			configuration:          &configuration.NutsProxyConfiguration{ActingPartyCN: "Helder"},
+			contractValidator:      MockValidator{},
+			contractSessionHandler: MockValidator{},
 		}
 		router := api.Handler()
 
@@ -177,7 +178,7 @@ func TestValidateContract(t *testing.T) {
 		rr = httptest.NewRecorder()
 		req := makeRequest(t, payload)
 
-		handlerFunc := New(&configuration.NutsProxyConfiguration{HttpAddress: "https://helder.health"}, MockValidator{})
+		handlerFunc := New(&configuration.NutsProxyConfiguration{HttpAddress: "https://helder.health"}, MockValidator{}, MockValidator{})
 
 		handler := http.HandlerFunc(handlerFunc.ValidateContractHandler)
 
@@ -245,7 +246,7 @@ func TestValidateContract(t *testing.T) {
 
 func TestGetContract(t *testing.T) {
 	t.Run("a known contracts returns the contract", func(t *testing.T) {
-		api := API{configuration: &configuration.NutsProxyConfiguration{HttpAddress: "https://helder.health", ActingPartyCN: "Helder"}, authValidator: MockValidator{}}
+		api := API{configuration: &configuration.NutsProxyConfiguration{HttpAddress: "https://helder.health", ActingPartyCN: "Helder"}, contractValidator: MockValidator{}}
 		router := api.Handler()
 		ts := httptest.NewServer(router)
 		defer ts.Close()
@@ -269,7 +270,7 @@ func TestGetContract(t *testing.T) {
 	})
 
 	t.Run("an unknown contract results a 404", func(t *testing.T) {
-		api := API{configuration: &configuration.NutsProxyConfiguration{HttpAddress: "https://helder.health", ActingPartyCN: "Helder"}, authValidator: MockValidator{}}
+		api := API{configuration: &configuration.NutsProxyConfiguration{HttpAddress: "https://helder.health", ActingPartyCN: "Helder"}, contractValidator: MockValidator{}}
 		router := api.Handler()
 		ts := httptest.NewServer(router)
 		defer ts.Close()
@@ -313,7 +314,12 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 }
 
 func TestAPI_GetSessionStatus(t *testing.T) {
-	api := API{configuration: &configuration.NutsProxyConfiguration{HttpAddress: "https://helder.health", ActingPartyCN: "Helder"}, authValidator: MockValidator{}}
+	api := API{configuration: &configuration.NutsProxyConfiguration{
+		HttpAddress: "https://helder.health",
+		ActingPartyCN: "Helder"},
+		contractValidator:      MockValidator{},
+		contractSessionHandler: MockValidator{},
+	}
 	router := api.Handler()
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -334,7 +340,7 @@ func TestAPI_GetSessionStatus(t *testing.T) {
 			t.Errorf("Handler returned the wrong httpStatus: got %v, expected %v", httpStatus, http.StatusOK)
 		}
 
-		var status SessionStatus
+		var status SessionStatusResult
 
 		if err := json.Unmarshal([]byte(body), &status); err != nil {
 			t.Errorf("Could not unmarshal SessionStatus response :'%v'", body)

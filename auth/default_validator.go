@@ -3,19 +3,10 @@ package auth
 import (
 	"encoding/base64"
 	"github.com/go-errors/errors"
-	"github.com/nuts-foundation/nuts-proxy/auth/irma"
-	irma2 "github.com/privacybydesign/irmago"
+	authIrma "github.com/nuts-foundation/nuts-proxy/auth/irma"
+	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
-)
-
-type ContractFormat string
-type ValidationResult string
-
-const (
-	Irma    ContractFormat   = "irma"
-	Valid   ValidationResult = "VALID"
-	Invalid ValidationResult = "INVALID"
 )
 
 type DefaultValidator struct{}
@@ -39,10 +30,10 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 
 func (v DefaultValidator) SessionStatus(id SessionId) *SessionStatusResult {
 	return &SessionStatusResult{
-		*irma.GetIrmaServer().GetSessionResult(string(id)),
+		*authIrma.GetIrmaServer().GetSessionResult(string(id)),
 	}
 }
 
-func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma2.Qr, string, error) {
-	return irma.GetIrmaServer().StartSession(request, handler)
+func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
+	return authIrma.GetIrmaServer().StartSession(request, handler)
 }

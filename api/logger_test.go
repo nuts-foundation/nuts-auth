@@ -24,7 +24,7 @@ func TestStructuredLogger_NewLogEntry(t *testing.T) {
 
 	logrusInstance := logrus.New()
 	logrusInstance.Out = buf
-	logMiddleware := NewStructuredLogger(logrusInstance)
+	logMiddleware := newStructuredLogger(logrusInstance)
 	ts := httptest.NewServer(logMiddleware(middleware.Recoverer(getTestHandler())))
 	defer ts.Close()
 

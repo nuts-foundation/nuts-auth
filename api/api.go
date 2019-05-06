@@ -62,7 +62,7 @@ func (api *API) Router() *chi.Mux {
 	// configure the router
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(NewStructuredLogger(api.config.Logger))
+	r.Use(newStructuredLogger(api.config.Logger))
 	r.Use(middleware.Recoverer)
 	r.Use(contentTypeMiddlewareFn("application/json"))
 	r.Get("/", rootHandler)
