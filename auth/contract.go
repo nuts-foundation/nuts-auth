@@ -149,7 +149,7 @@ func (c Contract) ValidateTimeFrame(params map[string]string) (bool, error) {
 
 	validFrom, err = parseTime(validFromStr, c.Language)
 	if err != nil {
-		return false, err
+		return false, errors.New("unable to parse valid_from")
 	}
 
 	if validToStr, ok = params["valid_to"]; !ok {
@@ -158,7 +158,7 @@ func (c Contract) ValidateTimeFrame(params map[string]string) (bool, error) {
 
 	validTo, err = parseTime(validToStr, c.Language)
 	if err != nil {
-		return false, err
+		return false, errors.New("unable to parse valid_to")
 	}
 
 	// All parsed, check time range

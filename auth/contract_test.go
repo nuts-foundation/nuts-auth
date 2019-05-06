@@ -256,4 +256,28 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("misformed time strings", func(t *testing.T) {
+
+		t.Run("a misformed valid_from returns an error", func(t *testing.T) {
+			validFromStr := "vandaag"
+			validToStr := monday.Format(timeInAmsterdam().Add(130*time.Minute), TimeLayout, monday.LocaleNlNL)
+			ok, err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
+			expected := "unable to parse valid_from"
+			if ok != false || err == nil || err.Error() != expected {
+				t.Error("expected an error")
+			}
+		})
+
+		t.Run("a misformed valid_to returns an error", func(t *testing.T) {
+			validFromStr := monday.Format(timeInAmsterdam().Add(130*time.Minute), TimeLayout, monday.LocaleNlNL)
+			validToStr := "morgen"
+			ok, err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
+			expected := "unable to parse valid_to"
+			if ok != false || err == nil || err.Error() != expected {
+				t.Error("expected an error")
+			}
+		})
+
+	})
 }
