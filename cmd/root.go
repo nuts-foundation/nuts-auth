@@ -63,7 +63,7 @@ func init() {
 	//rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-// initConfig reads in config file and ENV variables if set.
+// InitConfig reads in config file and ENV variables if set.
 func InitConfig(cmd *cobra.Command, args []string) {
 	if cfgFilePath == defaultCfgFilePath {
 		home, err := homedir.Dir()
