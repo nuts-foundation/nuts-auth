@@ -2,13 +2,18 @@ package auth
 
 import (
 	"encoding/base64"
+	irma2 "github.com/privacybydesign/irmago"
+	"github.com/privacybydesign/irmago/server"
+	"github.com/sirupsen/logrus"
+	"reflect"
+	"testing"
+	"time"
+
 	"github.com/bouk/monkey"
 	"github.com/nuts-foundation/nuts-proxy/auth/irma"
 	"github.com/nuts-foundation/nuts-proxy/configuration"
 	"github.com/nuts-foundation/nuts-proxy/testdata"
-	"reflect"
-	"testing"
-	"time"
+	"github.com/privacybydesign/irmago/server/irmaserver"
 )
 
 func TestValidateContract(t *testing.T) {
@@ -165,13 +170,73 @@ func TestValidateContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			patch := monkey.Patch(time.Now, func() time.Time { return tt.date })
 			defer patch.Unpatch()
-			got, err := DefaultValidator{}.ValidateContract(tt.args.contract, tt.args.format, tt.args.actingPartyCN)
+			got, err := DefaultValidator{IrmaServer: irma.GetIrmaServer()}.ValidateContract(tt.args.contract, tt.args.format, tt.args.actingPartyCN)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateContract() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ValidateContract() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDefaultValidator_SessionStatus(t *testing.T) {
+	_ = configuration.Initialize("../testdata", "testconfig")
+	irma.GetIrmaConfig()
+
+	signatureRequest := &irma2.SignatureRequest{
+		Message: "Ik ga akkoord",
+		DisclosureRequest: irma2.DisclosureRequest{
+			BaseRequest: irma2.BaseRequest{
+				Type: irma2.ActionSigning,
+			},
+			Content: irma2.AttributeDisjunctionList([]*irma2.AttributeDisjunction{{
+				Label:      "AGB-Code",
+				Attributes: []irma2.AttributeTypeIdentifier{irma2.NewAttributeTypeIdentifier("irma-demo.nuts.agb.agbcode")},
+			}}),
+		},
+	}
+
+	_, knownSessionId, _ := irma.GetIrmaServer().StartSession(signatureRequest, func(result *server.SessionResult) {
+		logrus.Infof("session done, result: %s", server.ToJson(result))
+	})
+
+	type fields struct {
+		IrmaServer *irmaserver.Server
+	}
+	type args struct {
+		id SessionId
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *SessionStatusResult
+	}{
+		{
+			"for an unknown session, it returns nil",
+			fields{irma.GetIrmaServer()},
+			args{"unknown sessionId"},
+			nil,
+		},
+		{
+			"for a known session it returns a status",
+			fields{irma.GetIrmaServer()},
+			args{SessionId(knownSessionId)},
+			&SessionStatusResult{
+				server.SessionResult{Token: knownSessionId, Status: server.StatusInitialized, Type: irma2.ActionSigning,},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := DefaultValidator{
+				IrmaServer: tt.fields.IrmaServer,
+			}
+			if got := v.SessionStatus(tt.args.id); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DefaultValidator.SessionStatus() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -67,7 +67,7 @@ func ServiceProviderCtxFn(config *configuration.NutsProxyConfiguration) func(htt
 		})
 	}
 }
-// GetSessionStatusHandler
+
 func (api API) GetSessionStatusHandler(writer http.ResponseWriter, r *http.Request) {
 	sessionId := auth.SessionId(chi.URLParam(r, "sessionId"))
 	sessionResult := api.contractSessionHandler.SessionStatus(sessionId)

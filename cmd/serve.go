@@ -36,7 +36,9 @@ var serveCmd = &cobra.Command{
 
 		apiConfig := &api.Config{Port: appConfig.HttpPort, Logger: logrus.StandardLogger(), BaseUrl: httpBaseUrl}
 		api := api.New(apiConfig)
-		authHandler := authvalidator.DefaultValidator{}
+		authHandler := authvalidator.DefaultValidator{
+			IrmaServer: irma.GetIrmaServer(),
+		}
 		api.Mount("/auth", auth.New(appConfig, authHandler, authHandler).Handler())
 		api.Mount("/auth/irmaclient", irma.GetIrmaServer().HandlerFunc())
 

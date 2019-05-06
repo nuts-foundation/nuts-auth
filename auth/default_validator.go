@@ -3,13 +3,14 @@ package auth
 import (
 	"encoding/base64"
 	"github.com/go-errors/errors"
-	authIrma "github.com/nuts-foundation/nuts-proxy/auth/irma"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
 )
 
-type DefaultValidator struct{}
+type DefaultValidator struct {
+	IrmaServer *irmaserver.Server
+}
 
 func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ValidationResponse, error) {
 	if format == Irma {
@@ -29,11 +30,12 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 }
 
 func (v DefaultValidator) SessionStatus(id SessionId) *SessionStatusResult {
-	return &SessionStatusResult{
-		*authIrma.GetIrmaServer().GetSessionResult(string(id)),
+	if result := v.IrmaServer.GetSessionResult(string(id)); result != nil {
+		return &SessionStatusResult{*result}
 	}
+	return nil
 }
 
 func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
-	return authIrma.GetIrmaServer().StartSession(request, handler)
+	return v.IrmaServer.StartSession(request, handler)
 }
