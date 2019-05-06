@@ -13,9 +13,9 @@ import (
 const TimeLayout = "Monday, 2 January 2006 15:04:05"
 
 type Contract struct {
-	Type               string   `json:"type"`
-	Version            string   `json:"version"`
-	Language           string   `json:"language"`
+	Type               Type     `json:"type"`
+	Version            Version  `json:"version"`
+	Language           Language `json:"language"`
 	SignerAttributes   []string `json:"signer_attributes"`
 	Template           string   `json:"template"`
 	TemplateAttributes []string `json:"template_attributes"`
@@ -23,16 +23,22 @@ type Contract struct {
 }
 
 type ContractSigningRequest struct {
-	Type               string    `json:"type"`
-	Version            string    `json:"version"`
-	Language           string    `json:"language"`
-	ValidFrom          time.Time `json:"valid_from"`
-	ValidTo            time.Time `json:"valid_to"`
+	Type Type `json:"type"`
+	Version Version `json:"version"`
+	Language Language `json:"language"`
+	// ValidFrom describes the time from which this contract should be considered valid
+	ValidFrom time.Time `json:"valid_from"`
+	// ValidFrom describes the time until this contract should be considered valid
+	ValidTo time.Time `json:"valid_to"`
+	// TemplateAttributes is an object containing extra template values. example: {"reason":"providing care"}
 	TemplateAttributes map[string]string
 }
 
+// Language of the contract in all caps. example: "NL"
 type Language string
+// Type of which contract to sign. example: "BehandelaarLogin"
 type Type string
+// Version of the contract. example: "v1"
 type Version string
 
 // EN:PractitionerLogin:v1 Contract
@@ -66,15 +72,15 @@ func ContractFromMessageContents(contents string) *Contract {
 		return nil
 	}
 
-	language := string(matchResult[1])
-	contractType := string(matchResult[2])
-	version := string(matchResult[3])
+	language := Language(matchResult[1])
+	contractType := Type(matchResult[2])
+	version := Version(matchResult[3])
 
 	return ContractByType(contractType, language, version)
 
 }
 
-func ContractByType(contractType string, language, version string) *Contract {
+func ContractByType(contractType Type, language Language, version Version) *Contract {
 	if version == "" {
 		version = "v1"
 	}
@@ -119,7 +125,7 @@ func (c Contract) ExtractParams(text string) (map[string]string, error) {
 	return result, nil
 }
 
-func parseTime(timeStr, language string) (*time.Time, error) {
+func parseTime(timeStr string, language Language) (*time.Time, error) {
 	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
 	parsedTime, err := monday.ParseInLocation(TimeLayout, timeStr, amsterdamLocation, monday.LocaleNlNL)
 	if err != nil {

@@ -1,3 +1,4 @@
+// Package auth provides API handlers for all authentication related operations
 package auth
 
 import (
@@ -16,14 +17,16 @@ import (
 )
 
 type API struct {
-	authValidator auth.Validator
-	configuration *configuration.NutsProxyConfiguration
+	contractValidator      auth.ContractValidator
+	contractSessionHandler auth.ContractSessionHandler
+	configuration          *configuration.NutsProxyConfiguration
 }
 
-func New(config *configuration.NutsProxyConfiguration, authService auth.Validator) *API {
+func New(config *configuration.NutsProxyConfiguration, validator auth.ContractValidator, handler auth.ContractSessionHandler) *API {
 	api := &API{
-		authValidator: authService,
-		configuration: config,
+		contractValidator:      validator,
+		contractSessionHandler: handler,
+		configuration:          config,
 	}
 	return api
 }
@@ -40,13 +43,15 @@ func (api API) Handler() http.Handler {
 	return r
 }
 
-type SessionStatus struct {
-	Status string `json:"status"`
-}
-
 // ActingPartyKey is the key that holds the common name of the current acting party in the request context.
 const ActingPartyKey = "actingParty"
 
+// ServiceProviderCtxFn returns the middleware that puts the acting party from the config into the http context.
+// In every http handler it can be used like this:
+//  func (api API) FooHandler(writer http.ResponseWriter, r *http.Request) {
+//	  ctx := r.Context()
+//	  actingParty, ok := ctx.Value(ActingPartyKey).(string)
+//  }
 func ServiceProviderCtxFn(config *configuration.NutsProxyConfiguration) func(http.Handler) http.Handler {
 	actingParty := config.ActingPartyCN
 
@@ -62,10 +67,10 @@ func ServiceProviderCtxFn(config *configuration.NutsProxyConfiguration) func(htt
 		})
 	}
 }
-
+// GetSessionStatusHandler
 func (api API) GetSessionStatusHandler(writer http.ResponseWriter, r *http.Request) {
 	sessionId := auth.SessionId(chi.URLParam(r, "sessionId"))
-	sessionResult := api.authValidator.SessionStatus(sessionId)
+	sessionResult := api.contractSessionHandler.SessionStatus(sessionId)
 	if sessionResult == nil {
 		http.Error(writer, "Session not found", http.StatusNotFound)
 		return
@@ -75,14 +80,14 @@ func (api API) GetSessionStatusHandler(writer http.ResponseWriter, r *http.Reque
 }
 
 func (api API) GetContractHandler(writer http.ResponseWriter, request *http.Request) {
-	contractType := chi.URLParam(request, "type")
+	contractType := auth.Type(chi.URLParam(request, "type"))
 
-	contractLanguage := request.URL.Query().Get("language")
+	contractLanguage := auth.Language(request.URL.Query().Get("language"))
 	if contractLanguage == "" {
-		contractLanguage = "NL"
+		contractLanguage = auth.Language("NL")
 	}
 
-	contractVersion := request.URL.Query().Get("version")
+	contractVersion := auth.Version(request.URL.Query().Get("version"))
 
 	contract := auth.ContractByType(contractType, contractLanguage, contractVersion)
 	if contract == nil {
@@ -93,14 +98,12 @@ func (api API) GetContractHandler(writer http.ResponseWriter, request *http.Requ
 	_, _ = writer.Write(contractJson)
 }
 
-type CreateSessionResult struct {
-	QrCodeInfo irma.Qr `json:"qr_code_info"`
-	SessionId  string  `json:"session_id"`
-}
-
+// CreateSessionHandler Initiates an IRMA signing session with the correct correct.
+// It reads auth.ContractSigningRequest from the body and writes auth.CreateSessionResult to the response
 func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request) {
-	var sessionRequest auth.ContractSigningRequest
+	var sessionRequest ContractSigningRequest
 	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&sessionRequest); err != nil {
 		logMsg := fmt.Sprintf("Could not decode json request parameters %v", r.Body)
 		logrus.Info(logMsg)
@@ -147,7 +150,7 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 		},
 	}
 
-	sessionPointer, token, err := api.authValidator.StartSession(signatureRequest, func(result *server.SessionResult) {
+	sessionPointer, token, err := api.contractSessionHandler.StartSession(signatureRequest, func(result *server.SessionResult) {
 		logrus.Infof("session done, result: %s", server.ToJson(result))
 	})
 	if err != nil {
@@ -170,21 +173,7 @@ func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request)
 	}
 }
 
-type ValidationRequest struct {
-	// ContractFormat specifies the type of format used for the contract, e.g. 'irma'
-	ContractFormat string `json:"contract_format"`
-	// The actual contract in string format to validate
-	ContractString string `json:"contract_string"`
-	// ActingPartyCN is the common name of the Acting party extracted from the client cert
-	ActingPartyCN string `json:"acting_party_cn"`
-}
-
-type ValidationResultResponse struct {
-	ValidationResult    string                     `json:"validation_result"`
-	DisclosedAttributes []*irma.DisclosedAttribute `json:"disclosed_attributes"`
-}
-
-func (api *API) ValidateContractHandler(writer http.ResponseWriter, r *http.Request) {
+func (api API) ValidateContractHandler(writer http.ResponseWriter, r *http.Request) {
 	var validationRequest ValidationRequest
 
 	body, err := ioutil.ReadAll(r.Body)
@@ -200,7 +189,7 @@ func (api *API) ValidateContractHandler(writer http.ResponseWriter, r *http.Requ
 		return
 	}
 	logrus.Debug(validationRequest)
-	validationResponse, err := api.authValidator.ValidateContract(validationRequest.ContractString, auth.ContractFormat(validationRequest.ContractFormat), validationRequest.ActingPartyCN)
+	validationResponse, err := api.contractValidator.ValidateContract(validationRequest.ContractString, auth.ContractFormat(validationRequest.ContractFormat), validationRequest.ActingPartyCN)
 	if err != nil {
 		//logMsg := "Unable to verify contract"
 		logrus.WithError(err).Info(err.Error())

@@ -8,16 +8,16 @@ import (
 	"time"
 )
 
-func NewStructuredLogger(logger *logrus.Logger) func(next http.Handler) http.Handler {
-	return middleware.RequestLogger(&StructuredLogger{logger})
+func newStructuredLogger(logger *logrus.Logger) func(next http.Handler) http.Handler {
+	return middleware.RequestLogger(&structuredLogger{logger})
 }
 
-type StructuredLogger struct {
+type structuredLogger struct {
 	Logger *logrus.Logger
 }
 
-func (l *StructuredLogger) NewLogEntry(r *http.Request) middleware.LogEntry {
-	entry := &StructuredLoggerEntry{Logger: logrus.NewEntry(l.Logger)}
+func (l *structuredLogger) NewLogEntry(r *http.Request) middleware.LogEntry {
+	entry := &structuredLoggerEntry{Logger: logrus.NewEntry(l.Logger)}
 	logFields := logrus.Fields{}
 
 	logFields["ts"] = time.Now().UTC().Format(time.RFC1123)
@@ -47,11 +47,11 @@ func (l *StructuredLogger) NewLogEntry(r *http.Request) middleware.LogEntry {
 	return entry
 }
 
-type StructuredLoggerEntry struct {
+type structuredLoggerEntry struct {
 	Logger logrus.FieldLogger
 }
 
-func (l *StructuredLoggerEntry) Write(status, bytes int, elapsed time.Duration) {
+func (l *structuredLoggerEntry) Write(status, bytes int, elapsed time.Duration) {
 	l.Logger = l.Logger.WithFields(logrus.Fields{
 		"resp_status": status, "resp_bytes_length": bytes,
 		"resp_elapsed_ms": float64(elapsed.Nanoseconds()) / 1000000.0,
@@ -60,7 +60,7 @@ func (l *StructuredLoggerEntry) Write(status, bytes int, elapsed time.Duration) 
 	l.Logger.Infoln("request complete")
 }
 
-func (l *StructuredLoggerEntry) Panic(v interface{}, stack []byte) {
+func (l *structuredLoggerEntry) Panic(v interface{}, stack []byte) {
 	l.Logger = l.Logger.WithFields(logrus.Fields{
 		"stack": string(stack),
 		"panic": fmt.Sprintf("%+v", v),
