@@ -6,6 +6,9 @@
     :target: https://codecov.io/gh/nuts-foundation/nuts-auth
     :alt: Test coverage
 
+.. image:: https://godoc.org/github.com/nuts-foundation/nuts-auth?status.svg
+    :target: https://godoc.org/github.com/nuts-foundation/nuts-auth
+    :alt: GoDoc
 
 Nuts Auth Service
 ==================
