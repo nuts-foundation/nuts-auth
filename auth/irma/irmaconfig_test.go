@@ -1,7 +1,7 @@
 package irma
 
 import (
-	"github.com/nuts-foundation/nuts-proxy/configuration"
+	"github.com/nuts-foundation/nuts-auth/configuration"
 	"sync"
 	"testing"
 )

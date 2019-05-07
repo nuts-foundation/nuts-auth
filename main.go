@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/nuts-foundation/nuts-proxy/cmd"
+	"github.com/nuts-foundation/nuts-auth/cmd"
 	"github.com/sirupsen/logrus"
 	"os"
 )

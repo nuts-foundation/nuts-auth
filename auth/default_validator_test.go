@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/bouk/monkey"
-	"github.com/nuts-foundation/nuts-proxy/auth/irma"
-	"github.com/nuts-foundation/nuts-proxy/configuration"
-	"github.com/nuts-foundation/nuts-proxy/testdata"
+	"github.com/nuts-foundation/nuts-auth/auth/irma"
+	"github.com/nuts-foundation/nuts-auth/configuration"
+	"github.com/nuts-foundation/nuts-auth/testdata"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 )
 

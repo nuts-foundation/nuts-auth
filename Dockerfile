@@ -1,7 +1,7 @@
 FROM golang:1.12 as builder
 
 ENV DEP_VERSION 0.5.1
-ENV SRC_PATH /go/src/github.com/nuts-foundation/nuts-proxy
+ENV SRC_PATH /go/src/github.com/nuts-foundation/nuts-auth
 ENV EXECUTABLE_NAME nuts-service-proxy
 
 RUN curl -fsSL -o /usr/local/bin/dep https://github.com/golang/dep/releases/download/v$DEP_VERSION/dep-linux-amd64 && chmod +x /usr/local/bin/dep

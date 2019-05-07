@@ -2,7 +2,7 @@ package irma
 
 import (
 	"fmt"
-	"github.com/nuts-foundation/nuts-proxy/configuration"
+	"github.com/nuts-foundation/nuts-auth/configuration"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"

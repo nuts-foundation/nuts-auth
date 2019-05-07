@@ -3,12 +3,12 @@
     :target: https://nuts-documentation.readthedocs.io/projects/nuts-service-proxy/en/latest/?badge=latest
     :alt: Documentation Status
 
-.. image:: https://travis-ci.com/nuts-foundation/nuts-proxy.svg?branch=master
-    :target: https://travis-ci.com/nuts-foundation/nuts-proxy
+.. image:: https://travis-ci.com/nuts-foundation/nuts-auth.svg?branch=master
+    :target: https://travis-ci.com/nuts-foundation/nuts-auth
     :alt: Test status
 
-.. image:: https://codecov.io/gh/nuts-foundation/nuts-proxy/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/nuts-foundation/nuts-proxy
+.. image:: https://codecov.io/gh/nuts-foundation/nuts-auth/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/nuts-foundation/nuts-auth
     :alt: Test coverage
 
 

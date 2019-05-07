@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/nuts-foundation/nuts-proxy/auth"
+	"github.com/nuts-foundation/nuts-auth/auth"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 )

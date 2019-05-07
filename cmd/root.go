@@ -3,14 +3,14 @@ package cmd
 import (
 	"fmt"
 	"github.com/mitchellh/go-homedir"
-	"github.com/nuts-foundation/nuts-proxy/configuration"
+	"github.com/nuts-foundation/nuts-auth/configuration"
 	"github.com/sirupsen/logrus"
 	"os"
 
 	"github.com/spf13/cobra"
 )
 
-const defaultCfgFile = "nuts-proxy-config"
+const defaultCfgFile = "nuts-auth-config"
 const defaultCfgFilePath = "$HOME"
 
 var (

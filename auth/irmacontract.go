@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	authirma "github.com/nuts-foundation/nuts-proxy/auth/irma"
+	authirma "github.com/nuts-foundation/nuts-auth/auth/irma"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/sirupsen/logrus"
 )

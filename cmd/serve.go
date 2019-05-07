@@ -1,11 +1,11 @@
 package cmd
 
 import (
-	"github.com/nuts-foundation/nuts-proxy/api"
-	"github.com/nuts-foundation/nuts-proxy/api/auth"
-	authvalidator "github.com/nuts-foundation/nuts-proxy/auth"
-	"github.com/nuts-foundation/nuts-proxy/auth/irma"
-	"github.com/nuts-foundation/nuts-proxy/configuration"
+	"github.com/nuts-foundation/nuts-auth/api"
+	"github.com/nuts-foundation/nuts-auth/api/auth"
+	authvalidator "github.com/nuts-foundation/nuts-auth/auth"
+	"github.com/nuts-foundation/nuts-auth/auth/irma"
+	"github.com/nuts-foundation/nuts-auth/configuration"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"net/url"
