@@ -1,0 +1,11 @@
+schemaVersion: "2.0.0"
+
+fileExistenceTests:
+  - name: "Binary present"
+    path: "/nuts-service-proxy"
+    shouldExist: true
+commandTests:
+  - name: "Binary returns version"
+    command: "/nuts-service-proxy"
+    args: ["version"]
+    expectedOutput: ["v0.1.0"]

@@ -5,7 +5,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+config.yaml
+conf
 .idea
+vendor
 
 # Docs
 docs/_build
@@ -64,3 +67,7 @@ typings/
 
 # next.js build output
 .next
+nuts_service_proxy
+coverage.txt
+profile.out
+main

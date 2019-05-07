@@ -1,0 +1,30 @@
+# Refer to https://golang.github.io/dep/docs/Gopkg.toml.html
+# for detailed Gopkg.toml documentation.
+
+[prune]
+  go-tests = true
+  unused-packages = true
+
+[[constraint]]
+  name = "github.com/go-chi/chi"
+  version = "4.0.2"
+
+[[constraint]]
+  name = "github.com/privacybydesign/irmago"
+  revision = "b8eadff382ff5d6101a66e99b91e03a6bc5f7d00"
+
+[[override]]
+  branch = "master"
+  name = "github.com/timshannon/bolthold"
+
+[[constraint]]
+  name = "github.com/cbroglie/mustache"
+  version = "1.0.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/goodsign/monday"
+
+[[constraint]]
+  name = "github.com/bouk/monkey"
+  version = "1.0.0"

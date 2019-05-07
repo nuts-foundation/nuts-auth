@@ -1,0 +1,16 @@
+apiVersion: skaffold/v1beta7
+kind: Config
+build:
+  artifacts:
+    - image: nuts/service-proxy
+  local:
+    push: false
+test:
+  - image: nuts/service-proxy
+    structureTests:
+      - k8s/test-*
+
+deploy:
+  kubectl:
+    manifests:
+      - k8s/k8s-*
