@@ -1,5 +1,5 @@
-.. image:: https://travis-ci.com/nuts-foundation/nuts-proxy.svg?branch=master
-    :target: https://travis-ci.com/nuts-foundation/nuts-proxy
+.. image:: https://travis-ci.com/nuts-foundation/nuts-auth.svg?branch=master
+    :target: https://travis-ci.com/nuts-foundation/nuts-auth
     :alt: Test status
 
 .. image:: https://codecov.io/gh/nuts-foundation/nuts-proxy/branch/master/graph/badge.svg
@@ -9,6 +9,10 @@
 .. image:: https://godoc.org/github.com/nuts-foundation/nuts-auth?status.svg
     :target: https://godoc.org/github.com/nuts-foundation/nuts-auth
     :alt: GoDoc
+
+.. image:: https://api.codacy.com/project/badge/Grade/e1c0eca9935049d590ab78f8c808cfa0
+    :target: https://www.codacy.com/app/nuts-foundation/nuts-auth?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=nuts-foundation/nuts-auth&amp;utm_campaign=Badge_Grade
+    :alt: Codacy Report
 
 Nuts Auth Service
 ==================
