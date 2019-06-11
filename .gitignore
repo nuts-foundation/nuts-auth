@@ -10,6 +10,9 @@ conf
 .idea
 vendor
 
+// ignore executable
+nuts-auth
+
 # Docs
 docs/_build
 
