@@ -76,6 +76,7 @@ func (api API) GetSessionStatusHandler(writer http.ResponseWriter, r *http.Reque
 		return
 	}
 	statusJson, _ := json.Marshal(sessionResult)
+	logrus.Info("statusJson:", statusJson)
 	_, _ = writer.Write(statusJson)
 }
 
@@ -189,7 +190,14 @@ func (api API) ValidateContractHandler(writer http.ResponseWriter, r *http.Reque
 		return
 	}
 	logrus.Debug(validationRequest)
-	validationResponse, err := api.contractValidator.ValidateContract(validationRequest.ContractString, auth.ContractFormat(validationRequest.ContractFormat), validationRequest.ActingPartyCN)
+	var validationResponse *auth.ValidationResponse
+
+	if validationRequest.ContractFormat == "irma" {
+		validationResponse, err = api.contractValidator.ValidateContract(validationRequest.ContractString, auth.ContractFormat(validationRequest.ContractFormat), validationRequest.ActingPartyCN)
+	} else if validationRequest.ContractFormat == "jwt" {
+		validationResponse, err = api.contractValidator.ValidateJwt(validationRequest.ContractString, validationRequest.ActingPartyCN)
+	}
+
 	if err != nil {
 		//logMsg := "Unable to verify contract"
 		logrus.WithError(err).Info(err.Error())

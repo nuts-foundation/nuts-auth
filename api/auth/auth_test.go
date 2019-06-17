@@ -42,6 +42,10 @@ func (v MockValidator) ValidateContract(b64EncodedContract string, format auth.C
 	return nil, errors.New("unknown contract format. Currently supported formats: IRMA")
 }
 
+func (MockValidator) ValidateJwt(string, string) (*auth.ValidationResponse, error) {
+	return nil, nil
+}
+
 func (v MockValidator) SessionStatus(id auth.SessionId) *auth.SessionStatusResult {
 	if id == "known_token" {
 		return &auth.SessionStatusResult{

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"github.com/gbrlsnchs/jwt/v3"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
@@ -18,6 +19,7 @@ const (
 
 type ContractValidator interface {
 	ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ValidationResponse, error)
+	ValidateJwt(contract string, actingPartyCN string) (*ValidationResponse, error)
 }
 
 type ContractSessionHandler interface {
@@ -33,4 +35,10 @@ type ValidationResponse struct {
 
 type SessionStatusResult struct {
 	server.SessionResult
+	NutsAuthToken string `json:"nuts_auth_token"`
+}
+
+type NutsJwt struct {
+	jwt.Payload
+	Contract SignedIrmaContract `json:"nuts_signature"`
 }

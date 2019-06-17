@@ -227,6 +227,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 			args{SessionId(knownSessionId)},
 			&SessionStatusResult{
 				server.SessionResult{Token: knownSessionId, Status: server.StatusInitialized, Type: irma2.ActionSigning,},
+				"",
 			},
 		},
 	}

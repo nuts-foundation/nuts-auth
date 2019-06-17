@@ -3,8 +3,10 @@ module github.com/nuts-foundation/nuts-auth
 go 1.12
 
 require (
+	github.com/bouk/monkey v1.0.1
 	github.com/bwesterb/go-atum v1.0.0 // indirect
 	github.com/cbroglie/mustache v1.0.1
+	github.com/gbrlsnchs/jwt/v3 v3.0.0-beta.0
 	github.com/go-chi/chi v4.0.2+incompatible
 	github.com/go-chi/cors v1.0.0
 	github.com/go-errors/errors v1.0.1
