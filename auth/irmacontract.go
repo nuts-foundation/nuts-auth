@@ -26,24 +26,31 @@ func ParseIrmaContract(rawContract string) (*SignedIrmaContract, error) {
 
 }
 
+// Verify the IRMA signature. This method only checks the IRMA crypto, not the contents of the contract.
 func (sc *SignedIrmaContract) verifySignature() (*ValidationResponse, error) {
+	// Actual verification
 	attributes, status, err := sc.IrmaContract.Verify(authirma.GetIrmaConfig(), nil)
+
+	// error handling
 	if err != nil {
 		logMsg := "Unable to verify contract signature"
 		logrus.WithError(err).Info(logMsg)
 		return nil, err
 	}
 
+	// wrapper around irma status result
 	validationResult := Invalid
 	if status == irma.ProofStatusValid {
 		validationResult = Valid
 	}
 
+	// take the attributes rawvalue and add them to a list.
 	disclosedAttributes := make(map[string]string, len(attributes))
 	for _, att := range attributes {
 		disclosedAttributes[att.Identifier.String()] = *att.RawValue
 	}
 
+	// Assemble and return the validation response
 	return &ValidationResponse{
 		validationResult,
 		Irma,
@@ -52,6 +59,8 @@ func (sc *SignedIrmaContract) verifySignature() (*ValidationResponse, error) {
 
 }
 
+// Validate the SignedIrmaContract looks at the irma crypto and the actual message such as:
+// Is the timeframe valid and does the common name corresponds with the contract message.
 func (sc *SignedIrmaContract) Validate(actingPartyCn string) (*ValidationResponse, error) {
 	// Verify signature:
 	verifiedContract, err := sc.verifySignature()
