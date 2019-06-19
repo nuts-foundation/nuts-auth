@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bouk/monkey"
 	"github.com/nuts-foundation/nuts-auth/auth/irma"
 	"github.com/nuts-foundation/nuts-auth/configuration"
 	"github.com/nuts-foundation/nuts-auth/testdata"
@@ -168,8 +167,9 @@ func TestValidateContract(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			patch := monkey.Patch(time.Now, func() time.Time { return tt.date })
-			defer patch.Unpatch()
+			//patch := monkey.Patch(time.Now, func() time.Time { return tt.date })
+			NowFunc = func() time.Time { return tt.date }
+			//defer patch.Unpatch()
 			got, err := DefaultValidator{IrmaServer: irma.GetIrmaServer()}.ValidateContract(tt.args.contract, tt.args.format, tt.args.actingPartyCN)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateContract() error = %v, wantErr %v", err, tt.wantErr)

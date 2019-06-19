@@ -41,6 +41,8 @@ type Type string
 // Version of the contract. example: "v1"
 type Version string
 
+var NowFunc = time.Now
+
 // EN:PractitionerLogin:v1 Contract
 var contracts = map[Language]map[Type]map[Version]*Contract{
 	"NL": {"BehandelaarLogin": {"v1": &Contract{
@@ -167,7 +169,7 @@ func (c Contract) ValidateTimeFrame(params map[string]string) (bool, error) {
 	}
 
 	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
-	now := time.Now()
+	now := NowFunc()
 	logrus.Infof("checking timeframe: now %v, validFrom: %v, validTo: %v", now, *validFrom, *validTo)
 
 	if now.In(amsterdamLocation).Before(*validFrom) {
