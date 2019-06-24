@@ -6,18 +6,37 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
+	"github.com/labstack/echo/v4"
+	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 )
 
-type API struct {
+type ApiWrapper struct {
 	config *Config
 	server *http.Server
 	router *chi.Mux
+	Auth *pkg.Auth
 }
 
-func (api *API) Start() {
+func (api *ApiWrapper) NutsAuthCreateSession(ctx echo.Context) error {
+	panic("implement me")
+}
+
+func (api *ApiWrapper) NutsAuthSessionRequestStatus(ctx echo.Context, id string) error {
+	panic("implement me")
+}
+
+func (api *ApiWrapper) NutsAuthValidateContract(ctx echo.Context) error {
+	panic("implement me")
+}
+
+func (api *ApiWrapper) NutsAuthGetContractByType(ctx echo.Context, contractType string, params NutsAuthGetContractByTypeParams) error {
+	panic("implement me")
+}
+
+func (api *ApiWrapper) Start() {
 	logrus.Infof("starting with httpPort: %d", api.config.Port)
 
 	err := api.server.ListenAndServe() // blocks
@@ -29,7 +48,7 @@ func (api *API) Start() {
 	}
 }
 
-func (api *API) Shutdown() {
+func (api *ApiWrapper) Shutdown() {
 	if api.server != nil {
 		logrus.Info("Shutting down the server")
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
@@ -42,9 +61,9 @@ func (api *API) Shutdown() {
 	}
 }
 
-func New(config *Config) *API {
+func New(config *Config) *ApiWrapper {
 
-	api := &API{
+	api := &ApiWrapper{
 		config: config,
 	}
 
@@ -59,7 +78,7 @@ func New(config *Config) *API {
 // Every request has a requestID
 // Panics get recovered and logged
 // Json is the default content type
-func (api *API) Router() *chi.Mux {
+func (api *ApiWrapper) Router() *chi.Mux {
 	// configure the router
 	r := chi.NewRouter()
 
@@ -86,7 +105,7 @@ func (api *API) Router() *chi.Mux {
 	return r
 }
 
-func (api *API) Mount(pattern string, handler http.Handler) {
+func (api *ApiWrapper) Mount(pattern string, handler http.Handler) {
 	api.router.Mount(pattern, handler)
 }
 
