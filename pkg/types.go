@@ -19,15 +19,21 @@ const (
 )
 
 type ContractSigningRequest struct {
-	Type     Type     `json:"type"`
-	Version  Version  `json:"version"`
-	Language Language `json:"language"`
+	Type     Type
+	Version  Version
+	Language Language
 	// ValidFrom describes the time from which this contract should be considered valid
-	ValidFrom time.Time `json:"valid_from"`
+	ValidFrom time.Time
 	// ValidFrom describes the time until this contract should be considered valid
-	ValidTo time.Time `json:"valid_to"`
+	ValidTo time.Time
 	// TemplateAttributes is an object containing extra template values. example: {"reason":"providing care"}
 	TemplateAttributes map[string]string
+}
+
+// CreateSessionResult contains the results needed to setup an irma flow
+type CreateSessionResult struct {
+	QrCodeInfo irma.Qr
+	SessionId  string
 }
 
 type ContractValidator interface {
@@ -56,12 +62,6 @@ type NutsJwt struct {
 	Contract SignedIrmaContract `json:"nuts_signature"`
 }
 
-// CreateSessionResult contains the results needed to setup an irma flow
-type CreateSessionResult struct {
-	QrCodeInfo irma.Qr `json:"qr_code_info"`
-	SessionId  string  `json:"session_id"`
-}
-
 type ValidationRequest struct {
 	// ContractFormat specifies the type of format used for the contract, e.g. 'irma'
 	ContractFormat string
@@ -81,4 +81,3 @@ type ValidationResultResponse struct {
 
 	DisclosedAttributes []*irma.DisclosedAttribute
 }
-
