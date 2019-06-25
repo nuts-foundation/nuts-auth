@@ -8,6 +8,7 @@ import (
 	"github.com/bouk/monkey"
 	"github.com/nuts-foundation/nuts-auth/auth"
 	"github.com/nuts-foundation/nuts-auth/configuration"
+	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/nuts-foundation/nuts-auth/testdata"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
@@ -25,14 +26,14 @@ import (
 
 type MockValidator struct{}
 
-func (v MockValidator) ValidateContract(b64EncodedContract string, format auth.ContractFormat, actingPartyCN string) (*auth.ValidationResponse, error) {
-	if format == auth.Irma {
+func (v MockValidator) ValidateContract(b64EncodedContract string, format pkg.ContractFormat, actingPartyCN string) (*pkg.ValidationResponse, error) {
+	if format == pkg.Irma {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
 			logrus.Error("Could not base64 decode contract_string")
 			return nil, err
 		}
-		signedContract, err := auth.ParseIrmaContract(string(contract))
+		signedContract, err := pkg.ParseIrmaContract(string(contract))
 		if err != nil {
 			return nil, err
 		}
@@ -42,13 +43,13 @@ func (v MockValidator) ValidateContract(b64EncodedContract string, format auth.C
 	return nil, errors.New("unknown contract format. Currently supported formats: IRMA")
 }
 
-func (MockValidator) ValidateJwt(string, string) (*auth.ValidationResponse, error) {
+func (MockValidator) ValidateJwt(string, string) (*pkg.ValidationResponse, error) {
 	return nil, nil
 }
 
-func (v MockValidator) SessionStatus(id auth.SessionId) *auth.SessionStatusResult {
+func (v MockValidator) SessionStatus(id pkg.SessionId) *pkg.SessionStatusResult {
 	if id == "known_token" {
-		return &auth.SessionStatusResult{
+		return &pkg.SessionStatusResult{
 			SessionResult: server.SessionResult{Status: server.StatusInitialized},
 		}
 	}
@@ -96,7 +97,7 @@ func TestCreateSessionHandler(t *testing.T) {
 	}
 
 	t.Run("with unknown acting party result in error", func(t *testing.T) {
-		sessionRequest := auth.ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
+		sessionRequest := pkg.ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
 		payload, _ := json.Marshal(sessionRequest)
 
 		rr := httptest.NewRecorder()
@@ -113,7 +114,7 @@ func TestCreateSessionHandler(t *testing.T) {
 	})
 
 	t.Run("with unknown contract type results in error", func(t *testing.T) {
-		sessionRequest := auth.ContractSigningRequest{Type: "Unknown type", Language: "NL"}
+		sessionRequest := pkg.ContractSigningRequest{Type: "Unknown type", Language: "NL"}
 		payload, _ := json.Marshal(sessionRequest)
 		rr := setupRequestRecorder(t, payload)
 
@@ -138,7 +139,7 @@ func TestCreateSessionHandler(t *testing.T) {
 	})
 
 	t.Run("valid request returns a qr code and sessionId", func(t *testing.T) {
-		sessionRequest := auth.ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
+		sessionRequest := pkg.ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
 		payload, _ := json.Marshal(sessionRequest)
 		rr := setupRequestRecorder(t, payload)
 

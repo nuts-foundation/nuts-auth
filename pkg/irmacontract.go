@@ -1,10 +1,9 @@
-package auth
+package pkg
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	authirma "github.com/nuts-foundation/nuts-auth/auth/irma"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/sirupsen/logrus"
 )
@@ -28,8 +27,9 @@ func ParseIrmaContract(rawContract string) (*SignedIrmaContract, error) {
 
 // Verify the IRMA signature. This method only checks the IRMA crypto, not the contents of the contract.
 func (sc *SignedIrmaContract) verifySignature() (*ValidationResponse, error) {
+	authEngine := AuthInstance()
 	// Actual verification
-	attributes, status, err := sc.IrmaContract.Verify(authirma.GetIrmaConfig(), nil)
+	attributes, status, err := sc.IrmaContract.Verify(GetIrmaConfig(authEngine.Config), nil)
 
 	// error handling
 	if err != nil {

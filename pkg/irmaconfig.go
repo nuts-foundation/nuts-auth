@@ -1,8 +1,7 @@
-package irma
+package pkg
 
 import (
 	"fmt"
-	"github.com/nuts-foundation/nuts-auth/configuration"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
@@ -11,12 +10,12 @@ import (
 	"sync"
 )
 
-var instance *irma.Configuration
+var irmaInstance *irma.Configuration
 var configOnce = new(sync.Once)
 
-func GetIrmaConfig() *irma.Configuration {
+func GetIrmaConfig(config AuthConfig) *irma.Configuration {
 	configOnce.Do(func() {
-		irmaConfigFolder := configuration.GetInstance().IrmaConfigPath
+		irmaConfigFolder := config.IrmaConfigPath
 		if irmaConfigFolder == "" {
 			var err error
 			irmaConfigFolder, err = ioutil.TempDir("", "irmaconfig")
@@ -34,22 +33,22 @@ func GetIrmaConfig() *irma.Configuration {
 			logrus.WithError(err).Panic("Could not download default schemes")
 			return
 		}
-		instance = config
+		irmaInstance = config
 	})
-	return instance
+	return irmaInstance
 }
 
 var irmaServer *irmaserver.Server
 var serverOnce = new(sync.Once)
 
-func GetIrmaServer() *irmaserver.Server {
+func GetIrmaServer(config AuthConfig) *irmaserver.Server {
 	serverOnce.Do(func() {
-		baseUrl := configuration.GetInstance().HttpAddress
+		baseUrl := config.PublicUrl
 
 		config := &server.Configuration{
 			URL:               fmt.Sprintf("%s/auth/irmaclient", baseUrl),
 			Logger:            logrus.StandardLogger(),
-			IrmaConfiguration: GetIrmaConfig(),
+			IrmaConfiguration: GetIrmaConfig(config),
 		}
 
 		logrus.Info("Initializing IRMA library...")

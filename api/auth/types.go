@@ -1,14 +1,14 @@
 package auth
 
 import (
-	"github.com/nuts-foundation/nuts-auth/auth"
+	"github.com/nuts-foundation/nuts-auth/pkg"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 )
 
 // ContractSigningRequest contains all information needed to start a session
 type ContractSigningRequest struct {
-	auth.ContractSigningRequest
+	pkg.ContractSigningRequest
 }
 
 // CreateSessionResult contains the results needed to setup an irma flow

@@ -1,4 +1,4 @@
-package auth
+package pkg
 
 import (
 	"fmt"
@@ -20,18 +20,6 @@ type Contract struct {
 	Template           string   `json:"template"`
 	TemplateAttributes []string `json:"template_attributes"`
 	Regexp             string   `json:"-"`
-}
-
-type ContractSigningRequest struct {
-	Type Type `json:"type"`
-	Version Version `json:"version"`
-	Language Language `json:"language"`
-	// ValidFrom describes the time from which this contract should be considered valid
-	ValidFrom time.Time `json:"valid_from"`
-	// ValidFrom describes the time until this contract should be considered valid
-	ValidTo time.Time `json:"valid_to"`
-	// TemplateAttributes is an object containing extra template values. example: {"reason":"providing care"}
-	TemplateAttributes map[string]string
 }
 
 // Language of the contract in all caps. example: "NL"

@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/nuts-foundation/nuts-auth/auth"
 	"github.com/nuts-foundation/nuts-auth/configuration"
+	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
@@ -17,12 +18,12 @@ import (
 )
 
 type API struct {
-	contractValidator      auth.ContractValidator
-	contractSessionHandler auth.ContractSessionHandler
+	contractValidator      pkg.ContractValidator
+	contractSessionHandler pkg.ContractSessionHandler
 	configuration          *configuration.NutsProxyConfiguration
 }
 
-func New(config *configuration.NutsProxyConfiguration, validator auth.ContractValidator, handler auth.ContractSessionHandler) *API {
+func New(config *configuration.NutsProxyConfiguration, validator pkg.ContractValidator, handler pkg.ContractSessionHandler) *API {
 	api := &API{
 		contractValidator:      validator,
 		contractSessionHandler: handler,
@@ -35,7 +36,6 @@ func (api API) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Route("/contract", func(r chi.Router) {
 		r.Use(ServiceProviderCtxFn(api.configuration))
-		r.Post("/session", api.CreateSessionHandler)
 		r.Get("/session/{sessionId}", api.GetSessionStatusHandler)
 		r.Get("/{type}", api.GetContractHandler)
 	})
@@ -69,7 +69,7 @@ func ServiceProviderCtxFn(config *configuration.NutsProxyConfiguration) func(htt
 }
 
 func (api API) GetSessionStatusHandler(writer http.ResponseWriter, r *http.Request) {
-	sessionId := auth.SessionId(chi.URLParam(r, "sessionId"))
+	sessionId := pkg.SessionId(chi.URLParam(r, "sessionId"))
 	sessionResult := api.contractSessionHandler.SessionStatus(sessionId)
 	if sessionResult == nil {
 		http.Error(writer, "Session not found", http.StatusNotFound)
@@ -99,80 +99,6 @@ func (api API) GetContractHandler(writer http.ResponseWriter, request *http.Requ
 	_, _ = writer.Write(contractJson)
 }
 
-// CreateSessionHandler Initiates an IRMA signing session with the correct correct.
-// It reads auth.ContractSigningRequest from the body and writes auth.CreateSessionResult to the response
-func (api API) CreateSessionHandler(writer http.ResponseWriter, r *http.Request) {
-	var sessionRequest ContractSigningRequest
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&sessionRequest); err != nil {
-		logMsg := fmt.Sprintf("Could not decode json request parameters %v", r.Body)
-		logrus.Info(logMsg)
-		http.Error(writer, logMsg, http.StatusBadRequest)
-		return
-	}
-	contract := auth.ContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
-	if contract == nil {
-		logMsg := fmt.Sprintf("Could not find contract with type %v", sessionRequest.Type)
-		logrus.Info(logMsg)
-		http.Error(writer, logMsg, http.StatusBadRequest)
-		return
-	}
-
-	ctx := r.Context()
-	actingParty, ok := ctx.Value(ActingPartyKey).(string)
-	if !ok {
-		// This should not happen since the context provides us with the value and does its own error handling
-		http.Error(writer, http.StatusText(422), 422)
-		return
-	}
-
-	message, err := contract.RenderTemplate(map[string]string{
-		"acting_party": actingParty,
-	}, 0, 60*time.Minute)
-	logrus.Infof("contractMessage: %v", message)
-	if err != nil {
-		logMsg := fmt.Sprintf("Could not render contract template of type %v: %v", contract.Type, err)
-		logrus.Error(logMsg)
-		http.Error(writer, logMsg, http.StatusBadRequest)
-		return
-	}
-	// TODO: put this in a separate service
-	signatureRequest := &irma.SignatureRequest{
-		Message: message,
-		DisclosureRequest: irma.DisclosureRequest{
-			BaseRequest: irma.BaseRequest{
-				Type: irma.ActionSigning,
-			},
-			Content: irma.AttributeDisjunctionList([]*irma.AttributeDisjunction{{
-				Label:      "AGB-Code",
-				Attributes: []irma.AttributeTypeIdentifier{irma.NewAttributeTypeIdentifier(contract.SignerAttributes[0])},
-			}}),
-		},
-	}
-
-	sessionPointer, token, err := api.contractSessionHandler.StartSession(signatureRequest, func(result *server.SessionResult) {
-		logrus.Infof("session done, result: %s", server.ToJson(result))
-	})
-	if err != nil {
-		logrus.Panic("error while creating session: ", err)
-		http.Error(writer, "Could not create a new session", http.StatusInternalServerError)
-	}
-
-	logrus.Infof("session created with token: %s", token)
-
-	//jsonSessionPointer, _ := json.Marshal(sessionPointer)
-	createSessionResult := CreateSessionResult{
-		QrCodeInfo: *sessionPointer,
-		SessionId:  token,
-	}
-	createSessionResultJson, _ := json.Marshal(createSessionResult)
-	writer.WriteHeader(http.StatusCreated)
-	_, err = writer.Write(createSessionResultJson)
-	if err != nil {
-		logrus.Panicf("Write failed: %v", err)
-	}
-}
 
 func (api API) ValidateContractHandler(writer http.ResponseWriter, r *http.Request) {
 	var validationRequest ValidationRequest
@@ -190,10 +116,10 @@ func (api API) ValidateContractHandler(writer http.ResponseWriter, r *http.Reque
 		return
 	}
 	logrus.Debug(validationRequest)
-	var validationResponse *auth.ValidationResponse
+	var validationResponse *pkg.ValidationResponse
 
 	if validationRequest.ContractFormat == "irma" {
-		validationResponse, err = api.contractValidator.ValidateContract(validationRequest.ContractString, auth.ContractFormat(validationRequest.ContractFormat), validationRequest.ActingPartyCN)
+		validationResponse, err = api.contractValidator.ValidateContract(validationRequest.ContractString, pkg.ContractFormat(validationRequest.ContractFormat), validationRequest.ActingPartyCN)
 	} else if validationRequest.ContractFormat == "jwt" {
 		validationResponse, err = api.contractValidator.ValidateJwt(validationRequest.ContractString, validationRequest.ActingPartyCN)
 	}

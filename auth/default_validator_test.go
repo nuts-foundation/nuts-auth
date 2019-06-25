@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/base64"
+	"github.com/nuts-foundation/nuts-auth/pkg"
 	irma2 "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
@@ -9,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nuts-foundation/nuts-auth/auth/irma"
 	"github.com/nuts-foundation/nuts-auth/configuration"
 	"github.com/nuts-foundation/nuts-auth/testdata"
 	"github.com/privacybydesign/irmago/server/irmaserver"
@@ -18,7 +18,7 @@ import (
 func TestValidateContract(t *testing.T) {
 	type args struct {
 		contract      string
-		format        ContractFormat
+		format        pkg.ContractFormat
 		actingPartyCN string
 	}
 	location, _ := time.LoadLocation("Europe/Amsterdam")
@@ -26,21 +26,21 @@ func TestValidateContract(t *testing.T) {
 		name    string
 		args    args
 		date    time.Time
-		want    *ValidationResponse
+		want    *pkg.ValidationResponse
 		wantErr bool
 	}{
 		{
 			"a valid contract should be valid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				Irma,
+				pkg.Irma,
 				"Helder",
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 26, 11, 46, 00, 0, location),
-			&ValidationResponse{
-				Valid,
-				Irma,
+			&pkg.ValidationResponse{
+				pkg.Valid,
+				pkg.Irma,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000001"},
 			},
 			false,
@@ -49,14 +49,14 @@ func TestValidateContract(t *testing.T) {
 			"a valid contract with the wrong actingPartyCn is invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				Irma,
+				pkg.Irma,
 				"Awesome ECD!!",
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 26, 11, 46, 00, 0, location),
-			&ValidationResponse{
-				Invalid,
-				Irma,
+			&pkg.ValidationResponse{
+				pkg.Invalid,
+				pkg.Irma,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000001"},
 			},
 			false,
@@ -65,7 +65,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid contract without a provided actingParty returns an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				Irma,
+				pkg.Irma,
 				"",
 			},
 			// contract is valid from 26 april 2019 11:45:30
@@ -77,14 +77,14 @@ func TestValidateContract(t *testing.T) {
 			"an expired contract should be invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				Irma,
+				pkg.Irma,
 				"Helder",
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 27, 11, 46, 00, 0, location),
-			&ValidationResponse{
-				Invalid,
-				Irma,
+			&pkg.ValidationResponse{
+				pkg.Invalid,
+				pkg.Irma,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000001"},
 			},
 			false,
@@ -93,14 +93,14 @@ func TestValidateContract(t *testing.T) {
 			"a forged contract it should be invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ForgedIrmaContract)),
-				Irma,
+				pkg.Irma,
 				"Helder",
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 27, 11, 46, 00, 0, location),
-			&ValidationResponse{
-				Invalid,
-				Irma,
+			&pkg.ValidationResponse{
+				pkg.Invalid,
+				pkg.Irma,
 				map[string]string{},
 			},
 			false,
@@ -109,7 +109,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid but unknown contract should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidUnknownIrmaContract)),
-				Irma,
+				pkg.Irma,
 				"Helder",
 			},
 			// contract is valid from 1 mei 2019 16:47:52
@@ -121,7 +121,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid json string which is not a contract should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.InvalidContract)),
-				Irma,
+				pkg.Irma,
 				"Helder",
 			},
 			time.Now(), // the contract does not have a valid date
@@ -132,7 +132,7 @@ func TestValidateContract(t *testing.T) {
 			"a random string should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte("some string which is not json")),
-				Irma,
+				pkg.Irma,
 				"Helder",
 			},
 			time.Now(), // the contract does not have a valid date
@@ -143,7 +143,7 @@ func TestValidateContract(t *testing.T) {
 			"an invalid base64 contract should give an error",
 			args{
 				"invalid base64",
-				Irma,
+				pkg.Irma,
 				"Helder",
 			},
 			time.Now(), // the contract does not have a valid date
@@ -163,14 +163,14 @@ func TestValidateContract(t *testing.T) {
 		},
 	}
 	_ = configuration.Initialize("../testdata", "testconfig")
-	irma.GetIrmaConfig()
+	pkg.GetIrmaConfig()
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			//patch := monkey.Patch(time.Now, func() time.Time { return tt.date })
 			NowFunc = func() time.Time { return tt.date }
 			//defer patch.Unpatch()
-			got, err := DefaultValidator{IrmaServer: irma.GetIrmaServer()}.ValidateContract(tt.args.contract, tt.args.format, tt.args.actingPartyCN)
+			got, err := pkg.DefaultValidator{IrmaServer: pkg.GetIrmaServer()}.ValidateContract(tt.args.contract, tt.args.format, tt.args.actingPartyCN)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateContract() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -184,7 +184,7 @@ func TestValidateContract(t *testing.T) {
 
 func TestDefaultValidator_SessionStatus(t *testing.T) {
 	_ = configuration.Initialize("../testdata", "testconfig")
-	irma.GetIrmaConfig()
+	pkg.GetIrmaConfig()
 
 	signatureRequest := &irma2.SignatureRequest{
 		Message: "Ik ga akkoord",
@@ -199,7 +199,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 		},
 	}
 
-	_, knownSessionId, _ := irma.GetIrmaServer().StartSession(signatureRequest, func(result *server.SessionResult) {
+	_, knownSessionId, _ := pkg.GetIrmaServer().StartSession(signatureRequest, func(result *server.SessionResult) {
 		logrus.Infof("session done, result: %s", server.ToJson(result))
 	})
 
@@ -207,25 +207,25 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 		IrmaServer *irmaserver.Server
 	}
 	type args struct {
-		id SessionId
+		id pkg.SessionId
 	}
 	tests := []struct {
 		name   string
 		fields fields
 		args   args
-		want   *SessionStatusResult
+		want   *pkg.SessionStatusResult
 	}{
 		{
 			"for an unknown session, it returns nil",
-			fields{irma.GetIrmaServer()},
+			fields{pkg.GetIrmaServer()},
 			args{"unknown sessionId"},
 			nil,
 		},
 		{
 			"for a known session it returns a status",
-			fields{irma.GetIrmaServer()},
-			args{SessionId(knownSessionId)},
-			&SessionStatusResult{
+			fields{pkg.GetIrmaServer()},
+			args{pkg.SessionId(knownSessionId)},
+			&pkg.SessionStatusResult{
 				server.SessionResult{Token: knownSessionId, Status: server.StatusInitialized, Type: irma2.ActionSigning,},
 				"",
 			},
@@ -233,7 +233,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := DefaultValidator{
+			v := pkg.DefaultValidator{
 				IrmaServer: tt.fields.IrmaServer,
 			}
 			if got := v.SessionStatus(tt.args.id); !reflect.DeepEqual(got, tt.want) {

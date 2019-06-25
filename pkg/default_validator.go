@@ -1,4 +1,4 @@
-package auth
+package pkg
 
 import (
 	"encoding/base64"
