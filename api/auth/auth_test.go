@@ -17,7 +17,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -65,106 +64,6 @@ func assertResponseCode(t *testing.T, rr httptest.ResponseRecorder, expectedCode
 	if status != expectedCode {
 		t.Errorf("Handler returned the wrong status: got %v, expected %v", status, expectedCode)
 	}
-}
-
-func TestCreateSessionHandler(t *testing.T) {
-	makeRequest := func(t *testing.T, payload []byte) *http.Request {
-		t.Helper()
-		req, err := http.NewRequest("POST", "/contract/session", bytes.NewBuffer(payload))
-		if err != nil {
-			t.Error("Unable to make new create session handler request", err)
-		}
-
-		return req
-	}
-
-	setupRequestRecorder := func(t *testing.T, payload []byte) (rr *httptest.ResponseRecorder) {
-		t.Helper()
-		rr = httptest.NewRecorder()
-		req := makeRequest(t, payload)
-
-		api := API{
-			configuration:          &configuration.NutsProxyConfiguration{ActingPartyCN: "Helder"},
-			contractValidator:      MockValidator{},
-			contractSessionHandler: MockValidator{},
-		}
-		router := api.Handler()
-
-		handler := http.Handler(router)
-
-		handler.ServeHTTP(rr, req)
-		return
-	}
-
-	t.Run("with unknown acting party result in error", func(t *testing.T) {
-		sessionRequest := pkg.ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
-		payload, _ := json.Marshal(sessionRequest)
-
-		rr := httptest.NewRecorder()
-		req := makeRequest(t, payload)
-
-		api := API{configuration: &configuration.NutsProxyConfiguration{ActingPartyCN: ""}}
-		router := api.Handler()
-
-		handler := http.Handler(router)
-
-		handler.ServeHTTP(rr, req)
-
-		assertResponseCode(t, *rr, http.StatusForbidden)
-	})
-
-	t.Run("with unknown contract type results in error", func(t *testing.T) {
-		sessionRequest := pkg.ContractSigningRequest{Type: "Unknown type", Language: "NL"}
-		payload, _ := json.Marshal(sessionRequest)
-		rr := setupRequestRecorder(t, payload)
-
-		assertResponseCode(t, *rr, http.StatusBadRequest)
-
-		message := rr.Body.String()
-		if !strings.Contains(message, "Could not find contract with type Unknown type") {
-			t.Errorf("Expected different error message: %v", message)
-		}
-	})
-	t.Run("with invalid json param returns a bad request", func(t *testing.T) {
-		payload := []byte("invalid paload")
-		rr := setupRequestRecorder(t, payload)
-
-		assertResponseCode(t, *rr, http.StatusBadRequest)
-
-		message := rr.Body.String()
-		if !strings.Contains(message, "Could not decode json request parameters") {
-			t.Errorf("Expected different error message: %v", message)
-		}
-
-	})
-
-	t.Run("valid request returns a qr code and sessionId", func(t *testing.T) {
-		sessionRequest := pkg.ContractSigningRequest{Type: "BehandelaarLogin", Language: "NL"}
-		payload, _ := json.Marshal(sessionRequest)
-		rr := setupRequestRecorder(t, payload)
-
-		assertResponseCode(t, *rr, http.StatusCreated)
-
-		response := CreateSessionResult{}
-
-		if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
-			t.Error("Could not unmarshal json qr code response", err)
-		}
-
-		if response.SessionId == "" {
-			t.Error("expected a sessionId in the response")
-		}
-
-		qr := response.QrCodeInfo
-
-		if qr.Type != irma.ActionSigning {
-			t.Errorf("Wrong kind of IRMA session type: got %v, expected %v", qr.Type, irma.ActionSigning)
-		}
-
-		if !strings.Contains(qr.URL, "/auth/irmaclient/") {
-			t.Errorf("Qr-code does not contain valid url: got %v, expected it to contain %v", qr.URL, "/auth/irmaclient/")
-		}
-	})
 }
 
 func TestValidateContract(t *testing.T) {

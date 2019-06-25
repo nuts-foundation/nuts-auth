@@ -24,7 +24,9 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.4.0
+	github.com/stretchr/testify v1.3.0
 	github.com/timshannon/bolthold v0.0.0-20190315152903-eed35b755671 // indirect
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
+	golang.org/x/xerrors v0.0.0-20190513163551-3ee3066db522
 	gopkg.in/antage/eventsource.v1 v1.0.0-20150318155416-803f4c5af225 // indirect
 )

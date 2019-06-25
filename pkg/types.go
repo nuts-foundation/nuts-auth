@@ -18,7 +18,7 @@ const (
 	Invalid ValidationResult = "INVALID"
 )
 
-type ContractSigningRequest struct {
+type CreateSessionRequest struct {
 	Type     Type
 	Version  Version
 	Language Language

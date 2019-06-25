@@ -6,6 +6,7 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/goodsign/monday"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
 	"regexp"
 	"time"
 )
@@ -31,6 +32,8 @@ type Version string
 
 var NowFunc = time.Now
 
+var ErrContractNotFound = errors.New("contract not found")
+
 // EN:PractitionerLogin:v1 Contract
 var contracts = map[Language]map[Type]map[Version]*Contract{
 	"NL": {"BehandelaarLogin": {"v1": &Contract{
@@ -53,13 +56,13 @@ var contracts = map[Language]map[Type]map[Version]*Contract{
 	}}},
 }
 
-func ContractFromMessageContents(contents string) *Contract {
+func ContractFromMessageContents(contents string) (*Contract, error) {
 	r, _ := regexp.Compile(`^(.{2}):(.+):(v\d+)`)
 
 	matchResult := r.FindSubmatch([]byte(contents))
 	if len(matchResult) != 4 {
-		logrus.Error("Could not extract type, language and version form contract text")
-		return nil
+		//logrus.Error("Could not extract type, language and version form contract text")
+		return nil, xerrors.Errorf("Could not extract type, language and version from contract text")
 	}
 
 	language := Language(matchResult[1])
@@ -70,16 +73,16 @@ func ContractFromMessageContents(contents string) *Contract {
 
 }
 
-func ContractByType(contractType Type, language Language, version Version) *Contract {
+func ContractByType(contractType Type, language Language, version Version) (*Contract, error) {
 	if version == "" {
 		version = "v1"
 	}
 	contract, ok := contracts[Language(language)][Type(contractType)][Version(version)]
 	if ok {
-		return contract
+		return contract, nil
 	}
-	logrus.Warnf("Contract with type '%s' language '%s' and version %s not found", contractType, language, version)
-	return nil
+
+	return nil, xerrors.Errorf("type %s, lang: %s, version: %s: %w", contractType, language, version, ErrContractNotFound)
 }
 
 func (c Contract) timeLocation() *time.Location {

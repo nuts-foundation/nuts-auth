@@ -11,27 +11,38 @@ type ApiWrapper struct {
 }
 
 func (api *ApiWrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
+	// bind params to a generated api format struct
 	params := new(ContractSigningRequest)
 	if err = ctx.Bind(params); err != nil {
 		return
 	}
 
-	sessionRequest := pkg.ContractSigningRequest{
-		Type: pkg.Type(params.Type),
-		Version: pkg.Version(params.Version),
+	// convert generated api format to internal struct
+	sessionRequest := pkg.CreateSessionRequest{
+		Type:     pkg.Type(params.Type),
+		Version:  pkg.Version(params.Version),
 		Language: pkg.Language(params.Language),
+		// FIXME: process the ValidFrom/To from request params
 		//ValidFrom: *params.ValidFrom,
 		//ValidTo: *params.ValidTo,
 	}
 
+	// FIXME: get the acting party from a JWT or config param
 	actingParty := "Fixme: fetch acting party from config or http-session"
 
+	// Initiate the actual session
 	result, err := api.Auth.CreateContractSession(sessionRequest, actingParty)
 	if err != nil {
 		return
 	}
 
-	return ctx.JSON(http.StatusCreated, result)
+	// convert internal result back to generated api format
+	answer := CreateSessionResult{
+		QrCodeInfo: IrmaQR{Irmaqr: string(result.QrCodeInfo.URL), U: string(result.QrCodeInfo.Type)},
+		SessionId:  result.SessionId,
+	}
+
+	return ctx.JSON(http.StatusCreated, answer)
 }
 
 func (api *ApiWrapper) NutsAuthSessionRequestStatus(ctx echo.Context, id string) error {

@@ -70,9 +70,9 @@ func (sc *SignedIrmaContract) Validate(actingPartyCn string) (*ValidationRespons
 
 	// Parse Nuts contract
 	contractMessage := sc.IrmaContract.Message
-	contract := ContractFromMessageContents(contractMessage)
-	if contract == nil {
-		return nil, errors.New("could not find contract")
+	contract, err := ContractFromMessageContents(contractMessage)
+	if err != nil {
+		return nil, err
 	}
 	params, err := contract.ExtractParams(contractMessage)
 	if err != nil {

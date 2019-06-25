@@ -13,6 +13,10 @@ import (
 const ConfAddress = "address"
 const PublicURL = "publicUrl"
 
+type AuthClient interface {
+	CreateContractSession(CreateSessionRequest, actingParty string) (*CreateSessionResult, error)
+}
+
 type Auth struct {
 	Config                 AuthConfig
 	configOnce             sync.Once
@@ -42,14 +46,9 @@ func AuthInstance() *Auth {
 func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
 
-		// TODO: Add more initialization here
-
 		auth.contractSessionHandler = DefaultValidator{
 			IrmaServer: GetIrmaServer(auth.Config),
 		}
-		//		authHandler := authvalidator.DefaultValidator{
-		//			IrmaServer: irma.GetIrmaServer(),
-		//		}
 
 		auth.configDone = true
 	})
@@ -57,21 +56,22 @@ func (auth *Auth) Configure() (err error) {
 	return err
 }
 
-func (auth Auth) CreateContractSession(sessionRequest ContractSigningRequest, actingParty string) (*CreateSessionResult, error) {
+// CreateContractSession creates a session based on an IRMA contract. This allows the user to permit the application to
+// use the Nuts Network in its name. The user can limit the application in time and scope. By signing it with IRMA other
+// nodes in the network can verify the validity of the contract.
+func (auth Auth) CreateContractSession(sessionRequest CreateSessionRequest, actingParty string) (*CreateSessionResult, error) {
 
 	// Step 1: Find the correct contract
-	contract := ContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
-	if contract == nil {
-		logMsg := fmt.Sprintf("Could not find contract with type %v", sessionRequest.Type)
-		logrus.Info(logMsg)
-		return nil, errors.New(logMsg)
+	contract, err := ContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
+	if err != nil {
+		return nil, err
 	}
 
 	// Step 2: Render the contract template with all the correct values
 	message, err := contract.RenderTemplate(map[string]string{
 		"acting_party": actingParty,
 	}, 0, 60*time.Minute)
-	logrus.Infof("contractMessage: %v", message)
+	logrus.Debugf("contractMessage: %v", message)
 	if err != nil {
 		logMsg := fmt.Sprintf("Could not render contract template of type %v: %v", contract.Type, err)
 		logrus.Error(logMsg)
@@ -97,10 +97,10 @@ func (auth Auth) CreateContractSession(sessionRequest ContractSigningRequest, ac
 		logrus.Infof("session done, result: %s", server.ToJson(result))
 	})
 	if err != nil {
-		logrus.Panic("error while creating session: ", err)
+		logrus.Error("error while creating session: ", err)
 		return nil, err
 	}
-	logrus.Infof("session created with token: %s", token)
+	logrus.Debug("session created with token: %s", token)
 
 	// Return the sessionPointer and sessionId
 	createSessionResult := &CreateSessionResult{
