@@ -40,7 +40,7 @@ func (api *ApiWrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
 
 	// convert internal result back to generated api format
 	answer := CreateSessionResult{
-		QrCodeInfo: IrmaQR{Irmaqr: string(result.QrCodeInfo.URL), U: string(result.QrCodeInfo.Type)},
+		QrCodeInfo: IrmaQR{U: string(result.QrCodeInfo.URL), Irmaqr: string(result.QrCodeInfo.Type)},
 		SessionId:  result.SessionId,
 	}
 
