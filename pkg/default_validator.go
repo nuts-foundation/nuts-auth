@@ -3,10 +3,10 @@ package pkg
 import (
 	"encoding/base64"
 	"github.com/gbrlsnchs/jwt/v3"
-	"github.com/go-errors/errors"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
 )
 
 type DefaultValidator struct {
@@ -16,11 +16,10 @@ type DefaultValidator struct {
 var hs256 = jwt.NewHMAC(jwt.SHA256, []byte("nuts"))
 
 func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ValidationResponse, error) {
-	if format == Irma {
+	if format == IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
-			logrus.Error("Could not base64 decode contract_string")
-			return nil, err
+			return nil, xerrors.Errorf("could not base64-decode contract: %w", err)
 		}
 		signedContract, err := ParseIrmaContract(string(contract))
 		if err != nil {
@@ -29,7 +28,7 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 
 		return signedContract.Validate(actingPartyCN)
 	}
-	return nil, errors.New("Unknown contract format. Currently supported formats: irma")
+	return nil, ErrUnknownContractFormat
 }
 
 func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResponse, error) {

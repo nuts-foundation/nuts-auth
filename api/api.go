@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-auth/pkg"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/xerrors"
 	"net/http"
 )
@@ -90,7 +91,38 @@ func (api *ApiWrapper) NutsAuthSessionRequestStatus(ctx echo.Context, id string)
 }
 
 func (api *ApiWrapper) NutsAuthValidateContract(ctx echo.Context) error {
-	panic("implement me")
+	params := &ValidationRequest{}
+	if err := ctx.Bind(params); err != nil {
+		return err
+	}
+	logrus.Debug(params)
+
+
+	validationRequest := pkg.ValidationRequest{
+		ContractFormat: pkg.ContractFormat(params.ContractFormat),
+		ContractString: params.ContractString,
+		ActingPartyCN:  params.ActingPartyCn,
+	}
+
+	validationResponse, err := api.Auth.ValidateContract(validationRequest)
+
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	// convert internal result back to generated api format
+	signerAttributes := make(map[string]interface{})
+	for k, v := range validationResponse.DisclosedAttributes {
+		signerAttributes[k] = v
+	}
+
+	answer := ValidationResult{
+		ContractFormat: string(validationResponse.ContractFormat),
+		SignerAttributes: signerAttributes,
+		ValidationResult: string(validationResponse.ValidationResult),
+	}
+
+	return ctx.JSON(http.StatusOK, answer)
 }
 
 func (api *ApiWrapper) NutsAuthGetContractByType(ctx echo.Context, contractType string, params NutsAuthGetContractByTypeParams) error {

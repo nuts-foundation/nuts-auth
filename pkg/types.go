@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"errors"
 	"github.com/gbrlsnchs/jwt/v3"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
@@ -12,10 +13,13 @@ type SessionId string
 type ContractFormat string
 type ValidationResult string
 
+var ErrUnknownContractFormat = errors.New("unknown contract format")
+
 const (
-	Irma    ContractFormat   = "irma"
-	Valid   ValidationResult = "VALID"
-	Invalid ValidationResult = "INVALID"
+	IrmaFormat ContractFormat   = "irma"
+	JwtFormat  ContractFormat   = "jwt"
+	Valid      ValidationResult = "VALID"
+	Invalid    ValidationResult = "INVALID"
 )
 
 type CreateSessionRequest struct {
@@ -64,7 +68,7 @@ type NutsJwt struct {
 
 type ValidationRequest struct {
 	// ContractFormat specifies the type of format used for the contract, e.g. 'irma'
-	ContractFormat string
+	ContractFormat ContractFormat
 
 	// The actual contract in string format to validate
 	ContractString string

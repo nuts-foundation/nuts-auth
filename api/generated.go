@@ -137,16 +137,16 @@ type Type string
 
 // ValidationRequest defines component schema for ValidationRequest.
 type ValidationRequest struct {
-	ActingPartyCn  *string `json:"acting_party_cn,omitempty"`
-	ContractFormat *string `json:"contract_format,omitempty"`
-	ContractString *string `json:"contract_string,omitempty"`
+	ActingPartyCn  string `json:"acting_party_cn"`
+	ContractFormat string `json:"contract_format"`
+	ContractString string `json:"contract_string"`
 }
 
 // ValidationResult defines component schema for ValidationResult.
 type ValidationResult struct {
-	ContractFormat   *string                 `json:"contract_format,omitempty"`
-	SignerAttributes *map[string]interface{} `json:"signer_attributes,omitempty"`
-	ValidationResult *string                 `json:"validation_result,omitempty"`
+	ContractFormat   string                 `json:"contract_format"`
+	SignerAttributes map[string]interface{} `json:"signer_attributes"`
+	ValidationResult string                 `json:"validation_result"`
 }
 
 // Version defines component schema for Version.

@@ -26,7 +26,7 @@ import (
 type MockValidator struct{}
 
 func (v MockValidator) ValidateContract(b64EncodedContract string, format pkg.ContractFormat, actingPartyCN string) (*pkg.ValidationResponse, error) {
-	if format == pkg.Irma {
+	if format == pkg.IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
 			logrus.Error("Could not base64 decode contract_string")

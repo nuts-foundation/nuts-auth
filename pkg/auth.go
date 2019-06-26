@@ -6,6 +6,7 @@ import (
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
 	"sync"
 	"time"
 )
@@ -24,6 +25,7 @@ type Auth struct {
 	configOnce             sync.Once
 	configDone             bool
 	contractSessionHandler ContractSessionHandler
+	contractValidator      ContractValidator
 }
 
 type AuthConfig struct {
@@ -48,10 +50,11 @@ func AuthInstance() *Auth {
 func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
 
-		auth.contractSessionHandler = DefaultValidator{
+		validator := DefaultValidator{
 			IrmaServer: GetIrmaServer(auth.Config),
 		}
-
+		auth.contractSessionHandler = validator
+		auth.contractValidator = validator
 		auth.configDone = true
 	})
 
@@ -118,4 +121,13 @@ func (auth *Auth) ContractByType(contractType ContractType, language Language, v
 
 func (auth *Auth) ContractSessionStatus(sessionId string) (*SessionStatusResult, error) {
 	return auth.contractSessionHandler.SessionStatus(SessionId(sessionId)), nil
+}
+
+func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResponse, error) {
+	if request.ContractFormat == IrmaFormat {
+		return auth.contractValidator.ValidateContract(request.ContractString, IrmaFormat, request.ActingPartyCN)
+	} else if request.ContractFormat == JwtFormat {
+		return auth.contractValidator.ValidateJwt(request.ContractString, request.ActingPartyCN)
+	}
+	return nil, xerrors.Errorf("format: %v, : %w", request.ContractFormat, ErrUnknownContractFormat)
 }

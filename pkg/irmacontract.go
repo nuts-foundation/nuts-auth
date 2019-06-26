@@ -53,7 +53,7 @@ func (sc *SignedIrmaContract) verifySignature() (*ValidationResponse, error) {
 	// Assemble and return the validation response
 	return &ValidationResponse{
 		validationResult,
-		Irma,
+		IrmaFormat,
 		disclosedAttributes,
 	}, nil
 

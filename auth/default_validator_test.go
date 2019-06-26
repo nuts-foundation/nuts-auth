@@ -33,14 +33,14 @@ func TestValidateContract(t *testing.T) {
 			"a valid contract should be valid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				pkg.Irma,
+				pkg.IrmaFormat,
 				"Helder",
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 26, 11, 46, 00, 0, location),
 			&pkg.ValidationResponse{
 				pkg.Valid,
-				pkg.Irma,
+				pkg.IrmaFormat,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000001"},
 			},
 			false,
@@ -49,14 +49,14 @@ func TestValidateContract(t *testing.T) {
 			"a valid contract with the wrong actingPartyCn is invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				pkg.Irma,
+				pkg.IrmaFormat,
 				"Awesome ECD!!",
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 26, 11, 46, 00, 0, location),
 			&pkg.ValidationResponse{
 				pkg.Invalid,
-				pkg.Irma,
+				pkg.IrmaFormat,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000001"},
 			},
 			false,
@@ -65,7 +65,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid contract without a provided actingParty returns an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				pkg.Irma,
+				pkg.IrmaFormat,
 				"",
 			},
 			// contract is valid from 26 april 2019 11:45:30
@@ -77,14 +77,14 @@ func TestValidateContract(t *testing.T) {
 			"an expired contract should be invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				pkg.Irma,
+				pkg.IrmaFormat,
 				"Helder",
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 27, 11, 46, 00, 0, location),
 			&pkg.ValidationResponse{
 				pkg.Invalid,
-				pkg.Irma,
+				pkg.IrmaFormat,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000001"},
 			},
 			false,
@@ -93,14 +93,14 @@ func TestValidateContract(t *testing.T) {
 			"a forged contract it should be invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ForgedIrmaContract)),
-				pkg.Irma,
+				pkg.IrmaFormat,
 				"Helder",
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 27, 11, 46, 00, 0, location),
 			&pkg.ValidationResponse{
 				pkg.Invalid,
-				pkg.Irma,
+				pkg.IrmaFormat,
 				map[string]string{},
 			},
 			false,
@@ -109,7 +109,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid but unknown contract should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidUnknownIrmaContract)),
-				pkg.Irma,
+				pkg.IrmaFormat,
 				"Helder",
 			},
 			// contract is valid from 1 mei 2019 16:47:52
@@ -121,7 +121,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid json string which is not a contract should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.InvalidContract)),
-				pkg.Irma,
+				pkg.IrmaFormat,
 				"Helder",
 			},
 			time.Now(), // the contract does not have a valid date
@@ -132,7 +132,7 @@ func TestValidateContract(t *testing.T) {
 			"a random string should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte("some string which is not json")),
-				pkg.Irma,
+				pkg.IrmaFormat,
 				"Helder",
 			},
 			time.Now(), // the contract does not have a valid date
@@ -143,7 +143,7 @@ func TestValidateContract(t *testing.T) {
 			"an invalid base64 contract should give an error",
 			args{
 				"invalid base64",
-				pkg.Irma,
+				pkg.IrmaFormat,
 				"Helder",
 			},
 			time.Now(), // the contract does not have a valid date
