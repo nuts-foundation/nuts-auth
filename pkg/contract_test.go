@@ -1,4 +1,4 @@
-package auth
+package pkg
 
 import (
 	"fmt"
@@ -11,29 +11,29 @@ import (
 
 func TestContractByType(t *testing.T) {
 	t.Run("It finds a known Dutch template", func(t *testing.T) {
-		want := Type("BehandelaarLogin")
-		if got := ContractByType(want, "NL", "v1"); got.Type != want {
+		want := ContractType("BehandelaarLogin")
+		if got, _ := ContractByType(want, "NL", "v1"); got.Type != want {
 			t.Errorf("ContractByType() = %v, want %v", got, want)
 		}
 	})
 
 	t.Run("It uses the latest version if no version is provided", func(t *testing.T) {
 		want := Version("v1")
-		if got := ContractByType("BehandelaarLogin", "NL", ""); got.Version != want {
+		if got, _ := ContractByType("BehandelaarLogin", "NL", ""); got.Version != want {
 			t.Errorf("Wrong language %v, want %v", got, want)
 		}
 	})
 
 	t.Run("It finds a known English template", func(t *testing.T) {
-		want := Type("PractitionerLogin")
-		if got := ContractByType(want, "EN", "v1"); got.Type != want {
+		want := ContractType("PractitionerLogin")
+		if got, _ := ContractByType(want, "EN", "v1"); got.Type != want {
 			t.Errorf("ContractByType() = %v, want %v", got, want)
 		}
 	})
 
 	t.Run("An unknown contract should return a nil", func(t *testing.T) {
-		want := Type("UnknownContract")
-		if got := ContractByType(want, "NL", "v1"); got != nil {
+		want := ContractType("UnknownContract")
+		if got, _ := ContractByType(want, "NL", "v1"); got != nil {
 			t.Errorf("ContractByType() = %v, want %v", got, nil)
 		}
 	})
@@ -41,8 +41,8 @@ func TestContractByType(t *testing.T) {
 
 func TestContractByContents(t *testing.T) {
 	t.Run("a correct triple returns the contract", func(t *testing.T) {
-		expected := contracts[Language("NL")][Type("BehandelaarLogin")][Version("v1")]
-		got := ContractFromMessageContents("NL:BehandelaarLogin:v1")
+		expected := contracts[Language("NL")][ContractType("BehandelaarLogin")][Version("v1")]
+		got, _ := ContractFromMessageContents("NL:BehandelaarLogin:v1")
 		if got != expected {
 			t.Errorf("Expected different contract. Expected: %v, got: %v", expected, got)
 		}
@@ -51,7 +51,7 @@ func TestContractByContents(t *testing.T) {
 	t.Run("an unknown triple returns a nil", func(t *testing.T) {
 		var expected *Contract = nil
 
-		got := ContractFromMessageContents("DE:BehandelaarLogin:v1")
+		got, _ := ContractFromMessageContents("DE:BehandelaarLogin:v1")
 		if got != expected {
 			t.Errorf("Expected different contract. Expected: %v, got: %v", expected, got)
 		}
@@ -60,7 +60,7 @@ func TestContractByContents(t *testing.T) {
 	t.Run("a valid triple other than at the start of the contents returns a nil", func(t *testing.T) {
 		var expected *Contract = nil
 
-		got := ContractFromMessageContents("some other text NL:BehandelaarLogin:v1")
+		got, _ := ContractFromMessageContents("some other text NL:BehandelaarLogin:v1")
 		if got != expected {
 			t.Errorf("Expected different contract. Expected: %v, got: %v", expected, got)
 		}
@@ -211,7 +211,7 @@ func TestContract_ValidateTimeFrame(t *testing.T) {
 
 			ok, err := contract.ValidateTimeFrame(map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr})
 			expected := "invalid time range"
-			if ok  || err == nil || err.Error() != expected {
+			if ok || err == nil || err.Error() != expected {
 				t.Errorf("expected '%v', got '%v'", expected, err)
 			}
 		})
