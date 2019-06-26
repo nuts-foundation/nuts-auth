@@ -100,7 +100,7 @@ func (auth Auth) CreateContractSession(sessionRequest CreateSessionRequest, acti
 		logrus.Error("error while creating session: ", err)
 		return nil, err
 	}
-	logrus.Debug("session created with token: %s", token)
+	logrus.Debugf("session created with token: %s", token)
 
 	// Return the sessionPointer and sessionId
 	createSessionResult := &CreateSessionResult{
