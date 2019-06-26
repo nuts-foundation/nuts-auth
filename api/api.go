@@ -19,7 +19,7 @@ func (api *ApiWrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
 
 	// convert generated api format to internal struct
 	sessionRequest := pkg.CreateSessionRequest{
-		Type:     pkg.Type(params.Type),
+		Type:     pkg.ContractType(params.Type),
 		Version:  pkg.Version(params.Version),
 		Language: pkg.Language(params.Language),
 		// FIXME: process the ValidFrom/To from request params

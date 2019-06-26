@@ -14,19 +14,19 @@ import (
 const TimeLayout = "Monday, 2 January 2006 15:04:05"
 
 type Contract struct {
-	Type               Type     `json:"type"`
-	Version            Version  `json:"version"`
-	Language           Language `json:"language"`
-	SignerAttributes   []string `json:"signer_attributes"`
-	Template           string   `json:"template"`
-	TemplateAttributes []string `json:"template_attributes"`
-	Regexp             string   `json:"-"`
+	Type               ContractType `json:"type"`
+	Version            Version      `json:"version"`
+	Language           Language     `json:"language"`
+	SignerAttributes   []string     `json:"signer_attributes"`
+	Template           string       `json:"template"`
+	TemplateAttributes []string     `json:"template_attributes"`
+	Regexp             string       `json:"-"`
 }
 
 // Language of the contract in all caps. example: "NL"
 type Language string
 // Type of which contract to sign. example: "BehandelaarLogin"
-type Type string
+type ContractType string
 // Version of the contract. example: "v1"
 type Version string
 
@@ -35,7 +35,7 @@ var NowFunc = time.Now
 var ErrContractNotFound = errors.New("contract not found")
 
 // EN:PractitionerLogin:v1 Contract
-var contracts = map[Language]map[Type]map[Version]*Contract{
+var contracts = map[Language]map[ContractType]map[Version]*Contract{
 	"NL": {"BehandelaarLogin": {"v1": &Contract{
 		Type:               "BehandelaarLogin",
 		Version:            "v1",
@@ -66,18 +66,18 @@ func ContractFromMessageContents(contents string) (*Contract, error) {
 	}
 
 	language := Language(matchResult[1])
-	contractType := Type(matchResult[2])
+	contractType := ContractType(matchResult[2])
 	version := Version(matchResult[3])
 
 	return ContractByType(contractType, language, version)
 
 }
 
-func ContractByType(contractType Type, language Language, version Version) (*Contract, error) {
+func ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {
 	if version == "" {
 		version = "v1"
 	}
-	contract, ok := contracts[Language(language)][Type(contractType)][Version(version)]
+	contract, ok := contracts[Language(language)][ContractType(contractType)][Version(version)]
 	if ok {
 		return contract, nil
 	}

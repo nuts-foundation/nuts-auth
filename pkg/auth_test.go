@@ -24,7 +24,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 		sut := Auth{
 			contractSessionHandler: MockContractSessionHandler{},
 		}
-		request := CreateSessionRequest{Type: Type("BehandelaarLogin"), Language: Language("NL") }
+		request := CreateSessionRequest{Type: ContractType("BehandelaarLogin"), Language: Language("NL") }
 		result, err := sut.CreateContractSession(request, "Demo EHR")
 
 		if err != nil {
@@ -39,7 +39,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 		sut := Auth{
 			contractSessionHandler: MockContractSessionHandler{},
 		}
-		request := CreateSessionRequest{Type: Type("ShadyDeal"), Language: Language("NL") }
+		request := CreateSessionRequest{Type: ContractType("ShadyDeal"), Language: Language("NL") }
 		result, err := sut.CreateContractSession(request, "Demo EHR")
 
 		assert.Nil(t, result, "result should be nil")

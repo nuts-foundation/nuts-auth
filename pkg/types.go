@@ -19,7 +19,7 @@ const (
 )
 
 type CreateSessionRequest struct {
-	Type     Type
+	Type     ContractType
 	Version  Version
 	Language Language
 	// ValidFrom describes the time from which this contract should be considered valid
