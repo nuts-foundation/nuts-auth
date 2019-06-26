@@ -15,6 +15,8 @@ const PublicURL = "publicUrl"
 
 type AuthClient interface {
 	CreateContractSession(CreateSessionRequest, actingParty string) (*CreateSessionResult, error)
+	ContractSessionStatus(sessionId string) (*SessionStatusResult, error)
+	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
 }
 
 type Auth struct {
@@ -112,4 +114,8 @@ func (auth Auth) CreateContractSession(sessionRequest CreateSessionRequest, acti
 
 func (auth *Auth) ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {
 	return ContractByType(contractType, language, version)
+}
+
+func (auth *Auth) ContractSessionStatus(sessionId string) (*SessionStatusResult, error) {
+	return auth.contractSessionHandler.SessionStatus(SessionId(sessionId)), nil
 }

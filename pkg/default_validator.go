@@ -84,6 +84,7 @@ func createJwt(contract *SignedIrmaContract) (string, error) {
 	}
 	token, err := jwt.Sign(header, payload, hs256)
 	if err != nil {
+		logrus.WithError(err).Error("could not sign jwt")
 		return "", nil
 	}
 	return string(token), nil

@@ -38,12 +38,10 @@ type CreateSessionResult struct {
 
 // DisclosedAttribute defines component schema for DisclosedAttribute.
 type DisclosedAttribute struct {
-	Error     *RemoteError           `json:"error,omitempty"`
-	Id        string                 `json:"id"`
-	Rawvalue  *string                `json:"rawvalue,omitempty"`
-	Signature *SignedMessage         `json:"signature,omitempty"`
-	Status    string                 `json:"status"`
-	Value     map[string]interface{} `json:"value"`
+	Identifier string                 `json:"identifier"`
+	Rawvalue   *string                `json:"rawvalue,omitempty"`
+	Status     string                 `json:"status"`
+	Value      map[string]interface{} `json:"value"`
 }
 
 // DisclosedAttributeIndex defines component schema for DisclosedAttributeIndex.

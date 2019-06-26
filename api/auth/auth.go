@@ -32,7 +32,6 @@ func (api API) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Route("/contract", func(r chi.Router) {
 		r.Use(ServiceProviderCtxFn(api.configuration))
-		r.Get("/session/{sessionId}", api.GetSessionStatusHandler)
 	})
 	r.Post("/contract/validate", api.ValidateContractHandler)
 	return r
@@ -61,18 +60,6 @@ func ServiceProviderCtxFn(config *configuration.NutsProxyConfiguration) func(htt
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
-}
-
-func (api API) GetSessionStatusHandler(writer http.ResponseWriter, r *http.Request) {
-	sessionId := pkg.SessionId(chi.URLParam(r, "sessionId"))
-	sessionResult := api.contractSessionHandler.SessionStatus(sessionId)
-	if sessionResult == nil {
-		http.Error(writer, "Session not found", http.StatusNotFound)
-		return
-	}
-	statusJson, _ := json.Marshal(sessionResult)
-	logrus.Info("statusJson:", statusJson)
-	_, _ = writer.Write(statusJson)
 }
 
 func (api API) ValidateContractHandler(writer http.ResponseWriter, r *http.Request) {

@@ -48,7 +48,45 @@ func (api *ApiWrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
 }
 
 func (api *ApiWrapper) NutsAuthSessionRequestStatus(ctx echo.Context, id string) error {
-	panic("implement me")
+	sessionId := id
+	sessionStatus, err := api.Auth.ContractSessionStatus(sessionId)
+	if err != nil {
+		return err
+	}
+
+	if sessionStatus == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "Session not found")
+	}
+
+	// convert internal result back to generated api format
+	var disclosedAttributes []DisclosedAttribute
+	for _, attr := range sessionStatus.Disclosed {
+		value := make(map[string]interface{})
+		for key, val := range map[string]string(attr.Value) {
+			value[key] = val
+		}
+
+		disclosedAttributes = append(disclosedAttributes, DisclosedAttribute{
+			Identifier: attr.Identifier.String(),
+			Value:      value,
+			Rawvalue:   attr.RawValue,
+			Status:     string(attr.Status),
+		})
+	}
+
+	nutsAuthToken := string(sessionStatus.NutsAuthToken)
+	proofStatus := string(sessionStatus.ProofStatus)
+
+	answer := SessionResult{
+		Disclosed:     disclosedAttributes,
+		NutsAuthToken: &nutsAuthToken,
+		ProofStatus:   &proofStatus,
+		Status:        string(sessionStatus.Status),
+		Token:         string(sessionStatus.Token),
+		Type:          string(sessionStatus.Type),
+	}
+
+	return ctx.JSON(http.StatusOK, answer)
 }
 
 func (api *ApiWrapper) NutsAuthValidateContract(ctx echo.Context) error {
