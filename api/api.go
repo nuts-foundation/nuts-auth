@@ -3,9 +3,11 @@ package api
 import (
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-auth/pkg"
+	"golang.org/x/xerrors"
 	"net/http"
 )
 
+// ApiWrapper bridges the generated api types and http logic to the internal types and logic
 type ApiWrapper struct {
 	Auth *pkg.Auth
 }
@@ -54,7 +56,31 @@ func (api *ApiWrapper) NutsAuthValidateContract(ctx echo.Context) error {
 }
 
 func (api *ApiWrapper) NutsAuthGetContractByType(ctx echo.Context, contractType string, params NutsAuthGetContractByTypeParams) error {
-	panic("implement me")
+	// convert generated data types to internal types
+	var contractLanguage pkg.Language
+	if params.Language != nil {
+		contractLanguage = pkg.Language(*params.Language)
+	}
+	contractVersion := pkg.Version(*params.Version)
+
+	// get contract
+	contract, err := api.Auth.ContractByType(pkg.ContractType(contractType), contractLanguage, contractVersion)
+	if xerrors.Is(err, pkg.ErrContractNotFound) {
+		return echo.NewHTTPError(http.StatusNotFound, err.Error())
+	} else if err != nil {
+		return err
+	}
+
+	// convert internal data types to generated api types
+	answer := Contract{
+		Language:           Language(contract.Language),
+		Template:           &contract.Template,
+		TemplateAttributes: contract.TemplateAttributes,
+		Type:               Type(contract.Type),
+		Version:            Version(contract.Version),
+	}
+
+	return ctx.JSON(http.StatusOK, answer)
 }
 
 //func (api *ApiWrapper) Start() {

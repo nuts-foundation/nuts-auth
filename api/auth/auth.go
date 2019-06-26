@@ -6,15 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi"
-	"github.com/nuts-foundation/nuts-auth/auth"
 	"github.com/nuts-foundation/nuts-auth/configuration"
 	"github.com/nuts-foundation/nuts-auth/pkg"
-	"github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
-	"time"
 )
 
 type API struct {
@@ -37,7 +33,6 @@ func (api API) Handler() http.Handler {
 	r.Route("/contract", func(r chi.Router) {
 		r.Use(ServiceProviderCtxFn(api.configuration))
 		r.Get("/session/{sessionId}", api.GetSessionStatusHandler)
-		r.Get("/{type}", api.GetContractHandler)
 	})
 	r.Post("/contract/validate", api.ValidateContractHandler)
 	return r
@@ -79,26 +74,6 @@ func (api API) GetSessionStatusHandler(writer http.ResponseWriter, r *http.Reque
 	logrus.Info("statusJson:", statusJson)
 	_, _ = writer.Write(statusJson)
 }
-
-func (api API) GetContractHandler(writer http.ResponseWriter, request *http.Request) {
-	contractType := auth.Type(chi.URLParam(request, "type"))
-
-	contractLanguage := auth.Language(request.URL.Query().Get("language"))
-	if contractLanguage == "" {
-		contractLanguage = auth.Language("NL")
-	}
-
-	contractVersion := auth.Version(request.URL.Query().Get("version"))
-
-	contract := auth.ContractByType(contractType, contractLanguage, contractVersion)
-	if contract == nil {
-		http.Error(writer, "could not find contract with this type, language and version", http.StatusNotFound)
-		return
-	}
-	contractJson, _ := json.Marshal(contract)
-	_, _ = writer.Write(contractJson)
-}
-
 
 func (api API) ValidateContractHandler(writer http.ResponseWriter, r *http.Request) {
 	var validationRequest ValidationRequest

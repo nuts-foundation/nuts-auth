@@ -109,3 +109,7 @@ func (auth Auth) CreateContractSession(sessionRequest CreateSessionRequest, acti
 	}
 	return createSessionResult, nil
 }
+
+func (auth *Auth) ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {
+	return ContractByType(contractType, language, version)
+}
