@@ -32,6 +32,7 @@ type Version string
 
 var NowFunc = time.Now
 
+// ErrContractNotFound is used when a certain combination of type, language and version cannot resolve to a contract
 var ErrContractNotFound = errors.New("contract not found")
 
 // EN:PractitionerLogin:v1 Contract
@@ -56,6 +57,8 @@ var contracts = map[Language]map[ContractType]map[Version]*Contract{
 	}}},
 }
 
+// ContractFromMessageContents finds the contract for a certain message.
+// Every message should begin with a special sequence like "NL:ContractName:version".
 func ContractFromMessageContents(contents string) (*Contract, error) {
 	r, _ := regexp.Compile(`^(.{2}):(.+):(v\d+)`)
 

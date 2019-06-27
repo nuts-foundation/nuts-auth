@@ -24,7 +24,7 @@ func TestValidateContract(t *testing.T) {
 		name    string
 		args    args
 		date    time.Time
-		want    *ValidationResponse
+		want    *ValidationResult
 		wantErr bool
 	}{
 		{
@@ -36,7 +36,7 @@ func TestValidateContract(t *testing.T) {
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 26, 11, 46, 00, 0, location),
-			&ValidationResponse{
+			&ValidationResult{
 				Valid,
 				IrmaFormat,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000001"},
@@ -52,7 +52,7 @@ func TestValidateContract(t *testing.T) {
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 26, 11, 46, 00, 0, location),
-			&ValidationResponse{
+			&ValidationResult{
 				Invalid,
 				IrmaFormat,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000001"},
@@ -80,7 +80,7 @@ func TestValidateContract(t *testing.T) {
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 27, 11, 46, 00, 0, location),
-			&ValidationResponse{
+			&ValidationResult{
 				Invalid,
 				IrmaFormat,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000001"},
@@ -96,7 +96,7 @@ func TestValidateContract(t *testing.T) {
 			},
 			// contract is valid from 26 april 2019 11:45:30
 			time.Date(2019, time.April, 27, 11, 46, 00, 0, location),
-			&ValidationResponse{
+			&ValidationResult{
 				Invalid,
 				IrmaFormat,
 				map[string]string{},
@@ -195,7 +195,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 		},
 	}
 
-	_, knownSessionId, _ := GetIrmaServer(AuthConfig{}).StartSession(signatureRequest, func(result *server.SessionResult) {
+	_, knownSessionID, _ := GetIrmaServer(AuthConfig{}).StartSession(signatureRequest, func(result *server.SessionResult) {
 		logrus.Infof("session done, result: %s", server.ToJson(result))
 	})
 
@@ -203,7 +203,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 		IrmaServer *irmaserver.Server
 	}
 	type args struct {
-		id SessionId
+		id SessionID
 	}
 	tests := []struct {
 		name   string
@@ -220,9 +220,9 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 		{
 			"for a known session it returns a status",
 			fields{GetIrmaServer(AuthConfig{})},
-			args{SessionId(knownSessionId)},
+			args{SessionID(knownSessionID)},
 			&SessionStatusResult{
-				server.SessionResult{Token: knownSessionId, Status: server.StatusInitialized, Type: irma2.ActionSigning,},
+				server.SessionResult{Token: knownSessionID, Status: server.StatusInitialized, Type: irma2.ActionSigning,},
 				"",
 			},
 		},

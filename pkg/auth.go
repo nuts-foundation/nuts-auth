@@ -11,15 +11,19 @@ import (
 	"time"
 )
 
+// ConfAddress is the config key for the address the http server listens on
 const ConfAddress = "address"
+// PublicURL is the config key for the public URL the http/irma server can be discovered
 const PublicURL = "publicUrl"
 
+// AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
 	CreateContractSession(CreateSessionRequest, actingParty string) (*CreateSessionResult, error)
 	ContractSessionStatus(sessionId string) (*SessionStatusResult, error)
 	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
 }
 
+// Auth is the main struct of the Auth service
 type Auth struct {
 	Config                 AuthConfig
 	configOnce             sync.Once
@@ -28,6 +32,7 @@ type Auth struct {
 	contractValidator      ContractValidator
 }
 
+// AuthConfig holds all the configuration params
 type AuthConfig struct {
 	Address        string
 	PublicUrl      string
@@ -37,6 +42,7 @@ type AuthConfig struct {
 var instance *Auth
 var oneBackend sync.Once
 
+// AuthInstance create an returns a singleton of the Auth struct
 func AuthInstance() *Auth {
 	oneBackend.Do(func() {
 		instance = &Auth{
@@ -47,6 +53,7 @@ func AuthInstance() *Auth {
 	return instance
 }
 
+// Configure the Auth struct by creating a validator and create an Irma server
 func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
 
@@ -64,7 +71,7 @@ func (auth *Auth) Configure() (err error) {
 // CreateContractSession creates a session based on an IRMA contract. This allows the user to permit the application to
 // use the Nuts Network in its name. The user can limit the application in time and scope. By signing it with IRMA other
 // nodes in the network can verify the validity of the contract.
-func (auth Auth) CreateContractSession(sessionRequest CreateSessionRequest, actingParty string) (*CreateSessionResult, error) {
+func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, actingParty string) (*CreateSessionResult, error) {
 
 	// Step 1: Find the correct contract
 	contract, err := ContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
@@ -115,19 +122,28 @@ func (auth Auth) CreateContractSession(sessionRequest CreateSessionRequest, acti
 	return createSessionResult, nil
 }
 
+// ContractByType returns a Contract of a certain type, language and version.
+// If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
 func (auth *Auth) ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {
 	return ContractByType(contractType, language, version)
 }
 
-func (auth *Auth) ContractSessionStatus(sessionId string) (*SessionStatusResult, error) {
-	return auth.contractSessionHandler.SessionStatus(SessionId(sessionId)), nil
+// ContractSessionStatus returns the current session status for a given sessionID.
+// If the session is not found, the error is an ErrSessionNotFound and SessionStatusResult is nil
+func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult, error) {
+	if sessionStatus := auth.contractSessionHandler.SessionStatus(SessionID(sessionID)); sessionStatus != nil {
+		return sessionStatus, nil
+	}
+	return nil, xerrors.Errorf("sessionID %s: %w",sessionID, ErrSessionNotFound)
 }
 
-func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResponse, error) {
+// ValidateContract validates a given contract. Currently two ContractType's are accepted: Irma and Jwt.
+// Both types should be passed as a base64 encoded string in the ContractString of the request paramContractString of the request param
+func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResult, error) {
 	if request.ContractFormat == IrmaFormat {
 		return auth.contractValidator.ValidateContract(request.ContractString, IrmaFormat, request.ActingPartyCN)
 	} else if request.ContractFormat == JwtFormat {
 		return auth.contractValidator.ValidateJwt(request.ContractString, request.ActingPartyCN)
 	}
-	return nil, xerrors.Errorf("format: %v, : %w", request.ContractFormat, ErrUnknownContractFormat)
+	return nil, xerrors.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
 }

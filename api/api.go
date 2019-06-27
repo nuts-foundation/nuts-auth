@@ -8,12 +8,14 @@ import (
 	"net/http"
 )
 
-// ApiWrapper bridges the generated api types and http logic to the internal types and logic
-type ApiWrapper struct {
+// Wrapper bridges the generated api types and http logic to the internal types and logic
+type Wrapper struct {
 	Auth *pkg.Auth
 }
 
-func (api *ApiWrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
+// NutsAuthCreateSession translates http params to internal format, creates a IRMA signing session
+// and returns the session pointer to the HTTP stack.
+func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
 	// bind params to a generated api format struct
 	params := new(ContractSigningRequest)
 	if err = ctx.Bind(params); err != nil {
@@ -48,9 +50,10 @@ func (api *ApiWrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
 	return ctx.JSON(http.StatusCreated, answer)
 }
 
-func (api *ApiWrapper) NutsAuthSessionRequestStatus(ctx echo.Context, id string) error {
-	sessionId := id
-	sessionStatus, err := api.Auth.ContractSessionStatus(sessionId)
+// NutsAuthSessionRequestStatus gets the current status or the IRMA signing session,
+// it translates the result to the api format and returns it to the HTTP stack
+func (api *Wrapper) NutsAuthSessionRequestStatus(ctx echo.Context, sessionID string) error {
+	sessionStatus, err := api.Auth.ContractSessionStatus(sessionID)
 	if err != nil {
 		return err
 	}
@@ -90,7 +93,10 @@ func (api *ApiWrapper) NutsAuthSessionRequestStatus(ctx echo.Context, id string)
 	return ctx.JSON(http.StatusOK, answer)
 }
 
-func (api *ApiWrapper) NutsAuthValidateContract(ctx echo.Context) error {
+// NutsAuthValidateContract translates the request params to an internal format, it
+// calls the engine's validator and translates the results to the API format and returns
+// the answer to the HTTP stack
+func (api *Wrapper) NutsAuthValidateContract(ctx echo.Context) error {
 	params := &ValidationRequest{}
 	if err := ctx.Bind(params); err != nil {
 		return err
@@ -125,7 +131,9 @@ func (api *ApiWrapper) NutsAuthValidateContract(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, answer)
 }
 
-func (api *ApiWrapper) NutsAuthGetContractByType(ctx echo.Context, contractType string, params NutsAuthGetContractByTypeParams) error {
+// NutsAuthGetContractByType calls the engines GetContractByType and translate the answer to
+// the API format and returns the the answer back to the HTTP stack
+func (api *Wrapper) NutsAuthGetContractByType(ctx echo.Context, contractType string, params NutsAuthGetContractByTypeParams) error {
 	// convert generated data types to internal types
 	var contractLanguage pkg.Language
 	if params.Language != nil {

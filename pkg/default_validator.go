@@ -15,7 +15,7 @@ type DefaultValidator struct {
 
 var hs256 = jwt.NewHMAC(jwt.SHA256, []byte("nuts"))
 
-func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ValidationResponse, error) {
+func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ValidationResult, error) {
 	if format == IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
@@ -31,7 +31,7 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 	return nil, ErrUnknownContractFormat
 }
 
-func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResponse, error) {
+func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResult, error) {
 	raw, err := jwt.Parse([]byte(token))
 	if err != nil {
 		logrus.Error("could not parse jwt", err)
@@ -44,7 +44,7 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 	}
 
 	var (
-		payload NutsJwt
+		payload nutsJwt
 	)
 
 	if _, err := raw.Decode(&payload); err != nil {
@@ -60,7 +60,7 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 	return payload.Contract.Validate(actingPartyCN)
 }
 
-func (v DefaultValidator) SessionStatus(id SessionId) *SessionStatusResult {
+func (v DefaultValidator) SessionStatus(id SessionID) *SessionStatusResult {
 	if result := v.IrmaServer.GetSessionResult(string(id)); result != nil {
 		var token string
 		if result.Signature != nil {
@@ -73,9 +73,14 @@ func (v DefaultValidator) SessionStatus(id SessionId) *SessionStatusResult {
 	return nil
 }
 
+type nutsJwt struct {
+	jwt.Payload
+	Contract SignedIrmaContract `json:"nuts_signature"`
+}
+
 func createJwt(contract *SignedIrmaContract) (string, error) {
 	header := jwt.Header{}
-	payload := NutsJwt{
+	payload := nutsJwt{
 		Payload: jwt.Payload{
 			Issuer: "nuts",
 		},

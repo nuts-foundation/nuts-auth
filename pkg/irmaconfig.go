@@ -13,6 +13,8 @@ import (
 var irmaInstance *irma.Configuration
 var configOnce = new(sync.Once)
 
+// GetIrmaConfig creates and returns an IRMA config.
+// The config sets the given irma path or a temporary folder. Then it downloads the schemas.
 func GetIrmaConfig(config AuthConfig) *irma.Configuration {
 	configOnce.Do(func() {
 		irmaConfigFolder := config.IrmaConfigPath
@@ -41,12 +43,14 @@ func GetIrmaConfig(config AuthConfig) *irma.Configuration {
 var irmaServer *irmaserver.Server
 var serverOnce = new(sync.Once)
 
+// GetIrmaServer creates and starts the irma server instance.
+// The server can be used by a IRMA client like the app to handle IRMA sessions
 func GetIrmaServer(config AuthConfig) *irmaserver.Server {
 	serverOnce.Do(func() {
-		baseUrl := config.PublicUrl
+		baseURL := config.PublicUrl
 
 		config := &server.Configuration{
-			URL:               fmt.Sprintf("%s/auth/irmaclient", baseUrl),
+			URL:               fmt.Sprintf("%s/auth/irmaclient", baseURL),
 			Logger:            logrus.StandardLogger(),
 			IrmaConfiguration: GetIrmaConfig(config),
 		}

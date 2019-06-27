@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// NewAuthEngine creates and returns a new AuthEngine instance.
 func NewAuthEngine() *nutsGo.Engine {
 
 	authBackend := pkg.AuthInstance()
@@ -24,7 +25,7 @@ func NewAuthEngine() *nutsGo.Engine {
 		FlagSet: flagSet(),
 		Name: "Auth",
 		Routes: func(router runtime.EchoRouter) {
-			api.RegisterHandlers(router, &api.ApiWrapper{Auth: authBackend})
+			api.RegisterHandlers(router, &api.Wrapper{Auth: authBackend})
 		},
 	}
 }
@@ -53,7 +54,7 @@ func cmd() *cobra.Command {
 			echoServer.Any("/auth/irmaclient/*", irmaEchoHandler)
 
 			// Mount the Nuts-Auth routes
-			api.RegisterHandlers(echoServer, &api.ApiWrapper{Auth:authEngine})
+			api.RegisterHandlers(echoServer, &api.Wrapper{Auth: authEngine})
 
 			// Start the server
 			logrus.Fatal(echoServer.Start(authEngine.Config.Address))
