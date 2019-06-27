@@ -37,10 +37,10 @@ package cmd
 //		apiConfig := &api.Config{Port: appConfig.HttpPort, Logger: logrus.StandardLogger(), BaseUrl: httpBaseUrl}
 //		api := api.New(apiConfig)
 //		authHandler := authvalidator.DefaultValidator{
-//			IrmaServer: irma.GetIrmaServer(),
+//			IrmaServer: irma.GetIrmaServer(AuthConfig{}),
 //		}
 //		api.Mount("/auth", auth.New(appConfig, authHandler, authHandler).Handler())
-//		api.Mount("/auth/irmaclient", irma.GetIrmaServer().HandlerFunc())
+//		api.Mount("/auth/irmaclient", irma.GetIrmaServer(AuthConfig{}).HandlerFunc())
 //
 //		go func() {
 //			<-stop

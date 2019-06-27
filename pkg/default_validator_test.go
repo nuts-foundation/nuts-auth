@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nuts-foundation/nuts-auth/configuration"
 	"github.com/nuts-foundation/nuts-auth/testdata"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 )
@@ -161,7 +160,6 @@ func TestValidateContract(t *testing.T) {
 			true,
 		},
 	}
-	_ = configuration.Initialize("../testdata", "testconfig")
 	GetIrmaConfig(AuthConfig{})
 
 	for _, tt := range tests {
@@ -182,7 +180,6 @@ func TestValidateContract(t *testing.T) {
 }
 
 func TestDefaultValidator_SessionStatus(t *testing.T) {
-	_ = configuration.Initialize("../testdata", "testconfig")
 	GetIrmaConfig(AuthConfig{})
 
 	signatureRequest := &irma2.SignatureRequest{
