@@ -11,8 +11,9 @@ import (
 	"time"
 )
 
-const TimeLayout = "Monday, 2 January 2006 15:04:05"
+const timeLayout = "Monday, 2 January 2006 15:04:05"
 
+// Contract stores the properties of a contract
 type Contract struct {
 	Type               ContractType `json:"type"`
 	Version            Version      `json:"version"`
@@ -25,11 +26,12 @@ type Contract struct {
 
 // Language of the contract in all caps. example: "NL"
 type Language string
-// Type of which contract to sign. example: "BehandelaarLogin"
+// ContractType contains type of the contract to sign. Example: "BehandelaarLogin"
 type ContractType string
 // Version of the contract. example: "v1"
 type Version string
 
+// NowFunc is used to store a function that returns the current time. This can be changed when you want to mock the current time.
 var NowFunc = time.Now
 
 // ErrContractNotFound is used when a certain combination of type, language and version cannot resolve to a contract
@@ -95,8 +97,8 @@ func (c Contract) timeLocation() *time.Location {
 }
 
 func (c Contract) renderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
-	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), TimeLayout, monday.LocaleNlNL)
-	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), TimeLayout, monday.LocaleNlNL)
+	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
+	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 
 	return mustache.Render(c.Template, vars)
 }
@@ -110,7 +112,7 @@ func (c Contract) extractParams(text string) (map[string]string, error) {
 	matches := matchResult[1:]
 
 	if len(matches) != len(c.TemplateAttributes) {
-		return nil, errors.New(fmt.Sprintf("amount of template attributes does not match the amount of params: found: %d, expected %d", len(matches), len(c.TemplateAttributes)))
+		return nil, fmt.Errorf("amount of template attributes does not match the amount of params: found: %d, expected %d", len(matches), len(c.TemplateAttributes))
 	}
 
 	result := make(map[string]string, len(matches))
@@ -124,7 +126,7 @@ func (c Contract) extractParams(text string) (map[string]string, error) {
 
 func parseTime(timeStr string, language Language) (*time.Time, error) {
 	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
-	parsedTime, err := monday.ParseInLocation(TimeLayout, timeStr, amsterdamLocation, monday.LocaleNlNL)
+	parsedTime, err := monday.ParseInLocation(timeLayout, timeStr, amsterdamLocation, monday.LocaleNlNL)
 	if err != nil {
 		logrus.WithError(err).Errorf("error parsing contract time %v", timeStr)
 		return nil, err
