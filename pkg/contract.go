@@ -75,7 +75,8 @@ func ContractFromMessageContents(contents string) (*Contract, error) {
 	return ContractByType(contractType, language, version)
 
 }
-
+// ContractByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
+// If no contract is found, the error vaule of ErrContractNotFound is returned.
 func ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {
 	if version == "" {
 		version = "v1"
@@ -93,14 +94,14 @@ func (c Contract) timeLocation() *time.Location {
 	return loc
 }
 
-func (c Contract) RenderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
+func (c Contract) renderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
 	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), TimeLayout, monday.LocaleNlNL)
 	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), TimeLayout, monday.LocaleNlNL)
 
 	return mustache.Render(c.Template, vars)
 }
 
-func (c Contract) ExtractParams(text string) (map[string]string, error) {
+func (c Contract) extractParams(text string) (map[string]string, error) {
 	r, _ := regexp.Compile(c.Regexp)
 	matchResult := r.FindSubmatch([]byte(text))
 	if len(matchResult) < 1 {
@@ -131,7 +132,7 @@ func parseTime(timeStr string, language Language) (*time.Time, error) {
 	return &parsedTime, nil
 }
 
-func (c Contract) ValidateTimeFrame(params map[string]string) (bool, error) {
+func (c Contract) validateTimeFrame(params map[string]string) (bool, error) {
 	var (
 		err                      error
 		ok                       bool

@@ -14,11 +14,12 @@ type SessionID string
 // ContractFormat describes the format of a signed contract. Based on the format an appropriate validator can be selected.
 type ContractFormat string
 
-// ValidationResults contains the outcome of the validation. It van be VALID or INVALID. This makes it human readable.
+// ValidationState contains the outcome of the validation. It van be VALID or INVALID. This makes it human readable.
 type ValidationState string
 
 // ErrUnknownContractFormat is returned when the contract format is unknown
 var ErrUnknownContractFormat = errors.New("unknown contract format")
+
 // ErrSessionNotFound is returned when there is no contract signing session found for a certain SessionID
 var ErrSessionNotFound = errors.New("session not found")
 

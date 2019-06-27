@@ -19,7 +19,7 @@ const PublicURL = "publicUrl"
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
 	CreateContractSession(CreateSessionRequest, actingParty string) (*CreateSessionResult, error)
-	ContractSessionStatus(sessionId string) (*SessionStatusResult, error)
+	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
 	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
 }
 
@@ -80,7 +80,7 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 	}
 
 	// Step 2: Render the contract template with all the correct values
-	message, err := contract.RenderTemplate(map[string]string{
+	message, err := contract.renderTemplate(map[string]string{
 		"acting_party": actingParty,
 	}, 0, 60*time.Minute)
 	logrus.Debugf("contractMessage: %v", message)

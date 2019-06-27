@@ -74,13 +74,13 @@ func (sc *SignedIrmaContract) Validate(actingPartyCn string) (*ValidationResult,
 	if err != nil {
 		return nil, err
 	}
-	params, err := contract.ExtractParams(contractMessage)
+	params, err := contract.extractParams(contractMessage)
 	if err != nil {
 		return nil, err
 	}
 
 	// Validate timeframe
-	ok, err := contract.ValidateTimeFrame(params)
+	ok, err := contract.validateTimeFrame(params)
 	if !ok|| err != nil {
 		verifiedContract.ValidationResult = Invalid
 		return verifiedContract, err
