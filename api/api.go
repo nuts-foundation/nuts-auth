@@ -40,9 +40,8 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
 	if err != nil {
 		if xerrors.Is(err, pkg.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		} else {
-			return
 		}
+		return
 	}
 
 	// convert internal result back to generated api format
@@ -107,7 +106,6 @@ func (api *Wrapper) NutsAuthValidateContract(ctx echo.Context) error {
 	}
 	logrus.Debug(params)
 
-
 	validationRequest := pkg.ValidationRequest{
 		ContractFormat: pkg.ContractFormat(params.ContractFormat),
 		ContractString: params.ContractString,
@@ -127,7 +125,7 @@ func (api *Wrapper) NutsAuthValidateContract(ctx echo.Context) error {
 	}
 
 	answer := ValidationResult{
-		ContractFormat: string(validationResponse.ContractFormat),
+		ContractFormat:   string(validationResponse.ContractFormat),
 		SignerAttributes: signerAttributes,
 		ValidationResult: string(validationResponse.ValidationResult),
 	}

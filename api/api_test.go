@@ -43,7 +43,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		jsonData, _ := json.Marshal(params)
 
 		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
-			json.Unmarshal(jsonData, f)
+			_ := json.Unmarshal(jsonData, f)
 		})
 		echoMock.EXPECT().JSON(http.StatusCreated, CreateSessionResult{
 			QrCodeInfo: IrmaQR{U: "http://example.com/auth/irmaclient/123",
@@ -92,7 +92,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 
 		jsonData, _ := json.Marshal(params)
 		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
-			json.Unmarshal(jsonData, f)
+			_ := json.Unmarshal(jsonData, f)
 		})
 
 		err := wrapper.NutsAuthCreateSession(echoMock)

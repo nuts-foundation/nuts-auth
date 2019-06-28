@@ -15,6 +15,9 @@ type DefaultValidator struct {
 
 var hs256 = jwt.NewHMAC(jwt.SHA256, []byte("nuts"))
 
+// ValidateContract is the entrypoint for contract validation.
+// It decodes the base64 encoded contract, parses the contract string, and validates the contract.
+// Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
 func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ValidationResult, error) {
 	if format == IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
@@ -31,6 +34,7 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 	return nil, ErrUnknownContractFormat
 }
 
+// ValidateJwt validates a JWT formatted contract.
 func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResult, error) {
 	raw, err := jwt.Parse([]byte(token))
 	if err != nil {
@@ -60,6 +64,8 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 	return payload.Contract.Validate(actingPartyCN)
 }
 
+// SessionStatus returns the current status of a certain session.
+// It returns nil if the session is not found
 func (v DefaultValidator) SessionStatus(id SessionID) *SessionStatusResult {
 	if result := v.IrmaServer.GetSessionResult(string(id)); result != nil {
 		var token string
@@ -94,6 +100,8 @@ func createJwt(contract *SignedIrmaContract) (string, error) {
 	return string(token), nil
 }
 
+// StartSession starts an irma session.
+// This is mainly a wrapper around the irma.IrmaServer.StartSession
 func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
 	return v.IrmaServer.StartSession(request, handler)
 }
