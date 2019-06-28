@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"github.com/privacybydesign/irmago/server"
 	"net/http"
 	"testing"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/nuts-foundation/nuts-go/mock"
 	irma "github.com/privacybydesign/irmago"
+	"github.com/privacybydesign/irmago/server"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -122,7 +122,7 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 				Token:  "YRnWbPJ7ffKCnf9cP51e",
 				Type:   "signing",
 				Disclosed: []*irma.DisclosedAttribute{
-					{Value: irma.TranslatedString(map[string]string{"nl": "00000001"}),},
+					{Value: irma.TranslatedString(map[string]string{"nl": "00000001"})},
 				},
 				ProofStatus: irma.ProofStatusValid,
 			},
@@ -130,12 +130,12 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 		}, nil)
 
 		echoMock.EXPECT().JSON(http.StatusOK, SessionResult{
-			Status: "INITIALIZED",
-			Token:  "YRnWbPJ7ffKCnf9cP51e",
-			Type:   "signing",
-			Disclosed: []DisclosedAttribute{{ Value: map[string]interface{}{"nl":"00000001"}}},
+			Status:        "INITIALIZED",
+			Token:         "YRnWbPJ7ffKCnf9cP51e",
+			Type:          "signing",
+			Disclosed:     []DisclosedAttribute{{Value: map[string]interface{}{"nl": "00000001"}}},
 			NutsAuthToken: &nutsAuthToken,
-			ProofStatus: &proofStatus,
+			ProofStatus:   &proofStatus,
 		})
 		wrapper := Wrapper{Auth: authMock}
 		err := wrapper.NutsAuthSessionRequestStatus(echoMock, sessionID)
@@ -159,3 +159,46 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, httpError.Code)
 	})
 }
+
+func TestWrapper_NutsAuthValidateContract(t *testing.T) {
+	t.Run("ValidateContract", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		echoMock := mock.NewMockContext(ctrl)
+		authMock := mock2.NewMockAuthClient(ctrl)
+
+		params := ValidationRequest{
+			ActingPartyCn:  "DemoEHR",
+			ContractFormat: "jwt",
+			ContractString: "base64encodedContractString",
+		}
+
+		jsonData, _ := json.Marshal(params)
+		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+			_ = json.Unmarshal(jsonData, f)
+		})
+
+		echoMock.EXPECT().JSON(http.StatusOK, ValidationResult{
+			ContractFormat:   "jwt",
+			ValidationResult: "VALID",
+			SignerAttributes: map[string]interface{}{"nl": "00000007"},
+		})
+
+		authMock.EXPECT().ValidateContract(pkg.ValidationRequest{
+			ActingPartyCN:  "DemoEHR",
+			ContractFormat: "jwt",
+			ContractString: "base64encodedContractString",
+		}).Return(&pkg.ValidationResult{
+			ValidationResult:    "VALID",
+			ContractFormat:      "jwt",
+			DisclosedAttributes: map[string]string{"nl": "00000007"},
+		}, nil)
+
+		wrapper := Wrapper{Auth: authMock}
+		err := wrapper.NutsAuthValidateContract(echoMock)
+
+		assert.Nil(t, err)
+	})
+
+}
+

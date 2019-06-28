@@ -15,10 +15,10 @@ type Wrapper struct {
 
 // NutsAuthCreateSession translates http params to internal format, creates a IRMA signing session
 // and returns the session pointer to the HTTP stack.
-func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
+func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) error {
 	// bind params to a generated api format struct
 	params := new(ContractSigningRequest)
-	if err = ctx.Bind(params); err != nil {
+	if err := ctx.Bind(params); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Could not parse request body")
 	}
 
@@ -41,7 +41,7 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
 		if xerrors.Is(err, pkg.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
-		return
+		return err
 	}
 
 	// convert internal result back to generated api format
@@ -118,7 +118,6 @@ func (api *Wrapper) NutsAuthValidateContract(ctx echo.Context) error {
 	}
 
 	validationResponse, err := api.Auth.ValidateContract(validationRequest)
-
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
