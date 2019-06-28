@@ -3,6 +3,10 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"github.com/privacybydesign/irmago/server"
+	"net/http"
+	"testing"
+
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
 	mock2 "github.com/nuts-foundation/nuts-auth/mock"
@@ -10,8 +14,6 @@ import (
 	"github.com/nuts-foundation/nuts-go/mock"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"testing"
 )
 
 func TestWrapper_NutsAuthCreateSession(t *testing.T) {
@@ -26,11 +28,12 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			Type:     "BehandelaarLogin",
 			Version:  "v1",
 			Language: "NL",
+			// FIXME: use actual actingPartyCN here
 		}, gomock.Any()).Return(&pkg.CreateSessionResult{
 			QrCodeInfo: irma.Qr{
 				URL:  "http://example.com/auth/irmaclient/123",
 				Type: irma.Action("signing")},
-			SessionId: "abc-sessionid",
+			SessionID: "abc-sessionid",
 		}, nil)
 
 		wrapper := Wrapper{Auth: authMock}
@@ -43,7 +46,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		jsonData, _ := json.Marshal(params)
 
 		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
-			_ := json.Unmarshal(jsonData, f)
+			_ = json.Unmarshal(jsonData, f)
 		})
 		echoMock.EXPECT().JSON(http.StatusCreated, CreateSessionResult{
 			QrCodeInfo: IrmaQR{U: "http://example.com/auth/irmaclient/123",
@@ -92,12 +95,67 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 
 		jsonData, _ := json.Marshal(params)
 		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
-			_ := json.Unmarshal(jsonData, f)
+			_ = json.Unmarshal(jsonData, f)
 		})
 
 		err := wrapper.NutsAuthCreateSession(echoMock)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
+	})
+}
+
+func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
+	t.Run("get status of a known session", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		echoMock := mock.NewMockContext(ctrl)
+		authMock := mock2.NewMockAuthClient(ctrl)
+
+		sessionID := "123"
+		nutsAuthToken := "123.456.123"
+		proofStatus := "VALID"
+
+		authMock.EXPECT().ContractSessionStatus(sessionID).Return(&pkg.SessionStatusResult{
+			SessionResult: server.SessionResult{
+				Status: "INITIALIZED",
+				Token:  "YRnWbPJ7ffKCnf9cP51e",
+				Type:   "signing",
+				Disclosed: []*irma.DisclosedAttribute{
+					{Value: irma.TranslatedString(map[string]string{"nl": "00000001"}),},
+				},
+				ProofStatus: irma.ProofStatusValid,
+			},
+			NutsAuthToken: nutsAuthToken,
+		}, nil)
+
+		echoMock.EXPECT().JSON(http.StatusOK, SessionResult{
+			Status: "INITIALIZED",
+			Token:  "YRnWbPJ7ffKCnf9cP51e",
+			Type:   "signing",
+			Disclosed: []DisclosedAttribute{{ Value: map[string]interface{}{"nl":"00000001"}}},
+			NutsAuthToken: &nutsAuthToken,
+			ProofStatus: &proofStatus,
+		})
+		wrapper := Wrapper{Auth: authMock}
+		err := wrapper.NutsAuthSessionRequestStatus(echoMock, sessionID)
+		assert.Nil(t, err)
+	})
+
+	t.Run("try to get a status of an unknown session", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		echoMock := mock.NewMockContext(ctrl)
+		authMock := mock2.NewMockAuthClient(ctrl)
+
+		sessionID := "123"
+
+		authMock.EXPECT().ContractSessionStatus(sessionID).Return(nil, pkg.ErrSessionNotFound)
+		wrapper := Wrapper{Auth: authMock}
+
+		err := wrapper.NutsAuthSessionRequestStatus(echoMock, sessionID)
+		assert.IsType(t, &echo.HTTPError{}, err)
+		httpError := err.(*echo.HTTPError)
+		assert.Equal(t, http.StatusNotFound, httpError.Code)
 	})
 }

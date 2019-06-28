@@ -47,7 +47,7 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
 	// convert internal result back to generated api format
 	answer := CreateSessionResult{
 		QrCodeInfo: IrmaQR{U: string(result.QrCodeInfo.URL), Irmaqr: string(result.QrCodeInfo.Type)},
-		SessionId:  result.SessionId,
+		SessionId:  result.SessionID,
 	}
 
 	return ctx.JSON(http.StatusCreated, answer)
@@ -55,14 +55,14 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
 
 // NutsAuthSessionRequestStatus gets the current status or the IRMA signing session,
 // it translates the result to the api format and returns it to the HTTP stack
+// If the session is not found it returns a 404
 func (api *Wrapper) NutsAuthSessionRequestStatus(ctx echo.Context, sessionID string) error {
 	sessionStatus, err := api.Auth.ContractSessionStatus(sessionID)
 	if err != nil {
+		if xerrors.Is(err, pkg.ErrSessionNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return err
-	}
-
-	if sessionStatus == nil {
-		return echo.NewHTTPError(http.StatusNotFound, "Session not found")
 	}
 
 	// convert internal result back to generated api format
@@ -85,12 +85,17 @@ func (api *Wrapper) NutsAuthSessionRequestStatus(ctx echo.Context, sessionID str
 	proofStatus := string(sessionStatus.ProofStatus)
 
 	answer := SessionResult{
-		Disclosed:     disclosedAttributes,
-		NutsAuthToken: &nutsAuthToken,
-		ProofStatus:   &proofStatus,
-		Status:        string(sessionStatus.Status),
-		Token:         string(sessionStatus.Token),
-		Type:          string(sessionStatus.Type),
+		Disclosed: disclosedAttributes,
+		Status:    string(sessionStatus.Status),
+		Token:     string(sessionStatus.Token),
+		Type:      string(sessionStatus.Type),
+	}
+	if nutsAuthToken != "" {
+		answer.NutsAuthToken = &nutsAuthToken
+	}
+
+	if proofStatus != "" {
+		answer.ProofStatus = &proofStatus
 	}
 
 	return ctx.JSON(http.StatusOK, answer)

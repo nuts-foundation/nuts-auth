@@ -118,7 +118,7 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 	// Return the sessionPointer and sessionId
 	createSessionResult := &CreateSessionResult{
 		QrCodeInfo: *sessionPointer,
-		SessionId:  token,
+		SessionID:  token,
 	}
 	return createSessionResult, nil
 }

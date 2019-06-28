@@ -65,7 +65,7 @@ type CreateSessionRequest struct {
 // CreateSessionResult contains the results needed to setup an irma flow
 type CreateSessionResult struct {
 	QrCodeInfo irma.Qr
-	SessionId  string
+	SessionID  string
 }
 
 // SessionStatusResult contains the current state of a session. If the session is DONE it also contains a JWT in the NutsAuthToken
