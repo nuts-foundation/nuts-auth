@@ -10,7 +10,7 @@ import (
 
 // Wrapper bridges the generated api types and http logic to the internal types and logic
 type Wrapper struct {
-	Auth *pkg.Auth
+	Auth pkg.AuthClient
 }
 
 // NutsAuthCreateSession translates http params to internal format, creates a IRMA signing session
@@ -19,7 +19,7 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
 	// bind params to a generated api format struct
 	params := new(ContractSigningRequest)
 	if err = ctx.Bind(params); err != nil {
-		return
+		return echo.NewHTTPError(http.StatusBadRequest, "Could not parse request body")
 	}
 
 	// convert generated api format to internal struct
@@ -38,7 +38,11 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) (err error) {
 	// Initiate the actual session
 	result, err := api.Auth.CreateContractSession(sessionRequest, actingParty)
 	if err != nil {
-		return
+		if xerrors.Is(err, pkg.ErrContractNotFound) {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		} else {
+			return
+		}
 	}
 
 	// convert internal result back to generated api format

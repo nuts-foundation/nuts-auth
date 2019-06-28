@@ -24,7 +24,7 @@ func (v MockContractSessionHandler) StartSession(request interface{}, handler ir
 func TestAuth_CreateContractSession(t *testing.T) {
 	t.Run("Create a new session", func(t *testing.T) {
 		sut := Auth{
-			contractSessionHandler: MockContractSessionHandler{},
+			ContractSessionHandler: MockContractSessionHandler{},
 		}
 		request := CreateSessionRequest{Type: ContractType("BehandelaarLogin"), Language: Language("NL")}
 		result, err := sut.CreateContractSession(request, "Demo EHR")
@@ -39,7 +39,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 
 	t.Run("Unknown contract returns an error", func(t *testing.T) {
 		sut := Auth{
-			contractSessionHandler: MockContractSessionHandler{},
+			ContractSessionHandler: MockContractSessionHandler{},
 		}
 		request := CreateSessionRequest{Type: ContractType("ShadyDeal"), Language: Language("NL")}
 		result, err := sut.CreateContractSession(request, "Demo EHR")

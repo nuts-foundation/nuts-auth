@@ -18,9 +18,10 @@ const PublicURL = "publicUrl"
 
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
-	CreateContractSession(CreateSessionRequest, actingParty string) (*CreateSessionResult, error)
+	CreateContractSession(sessionRequest CreateSessionRequest, actingParty string) (*CreateSessionResult, error)
 	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
 	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
+	ValidateContract(request ValidationRequest) (*ValidationResult, error)
 }
 
 // Auth is the main struct of the Auth service
@@ -28,8 +29,8 @@ type Auth struct {
 	Config                 AuthConfig
 	configOnce             sync.Once
 	configDone             bool
-	contractSessionHandler ContractSessionHandler
-	contractValidator      ContractValidator
+	ContractSessionHandler ContractSessionHandler
+	ContractValidator      ContractValidator
 }
 
 // AuthConfig holds all the configuration params
@@ -60,8 +61,8 @@ func (auth *Auth) Configure() (err error) {
 		validator := DefaultValidator{
 			IrmaServer: GetIrmaServer(auth.Config),
 		}
-		auth.contractSessionHandler = validator
-		auth.contractValidator = validator
+		auth.ContractSessionHandler = validator
+		auth.ContractValidator = validator
 		auth.configDone = true
 	})
 
@@ -105,7 +106,7 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 	}
 
 	// Step 4: Start an IRMA session
-	sessionPointer, token, err := auth.contractSessionHandler.StartSession(signatureRequest, func(result *server.SessionResult) {
+	sessionPointer, token, err := auth.ContractSessionHandler.StartSession(signatureRequest, func(result *server.SessionResult) {
 		logrus.Infof("session done, result: %s", server.ToJson(result))
 	})
 	if err != nil {
@@ -131,7 +132,7 @@ func (auth *Auth) ContractByType(contractType ContractType, language Language, v
 // ContractSessionStatus returns the current session status for a given sessionID.
 // If the session is not found, the error is an ErrSessionNotFound and SessionStatusResult is nil
 func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult, error) {
-	if sessionStatus := auth.contractSessionHandler.SessionStatus(SessionID(sessionID)); sessionStatus != nil {
+	if sessionStatus := auth.ContractSessionHandler.SessionStatus(SessionID(sessionID)); sessionStatus != nil {
 		return sessionStatus, nil
 	}
 	return nil, xerrors.Errorf("sessionID %s: %w",sessionID, ErrSessionNotFound)
@@ -141,9 +142,9 @@ func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult,
 // Both types should be passed as a base64 encoded string in the ContractString of the request paramContractString of the request param
 func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResult, error) {
 	if request.ContractFormat == IrmaFormat {
-		return auth.contractValidator.ValidateContract(request.ContractString, IrmaFormat, request.ActingPartyCN)
+		return auth.ContractValidator.ValidateContract(request.ContractString, IrmaFormat, request.ActingPartyCN)
 	} else if request.ContractFormat == JwtFormat {
-		return auth.contractValidator.ValidateJwt(request.ContractString, request.ActingPartyCN)
+		return auth.ContractValidator.ValidateJwt(request.ContractString, request.ActingPartyCN)
 	}
 	return nil, xerrors.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
 }

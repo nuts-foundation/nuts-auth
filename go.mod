@@ -11,6 +11,7 @@ require (
 	github.com/go-chi/chi v4.0.2+incompatible
 	github.com/go-chi/cors v1.0.0
 	github.com/go-errors/errors v1.0.1
+	github.com/golang/mock v1.3.1
 	github.com/goodsign/monday v0.0.0-20190214151228-5432518a29cd
 	github.com/hashicorp/go-retryablehttp v0.5.4 // indirect
 	github.com/jasonlvhit/gocron v0.0.0-20190603000501-f1cf2bd73e84 // indirect
