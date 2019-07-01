@@ -8,10 +8,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// SignedIrmaContract holds the contract and additional methods to parse and validate.
 type SignedIrmaContract struct {
 	IrmaContract irma.SignedMessage
 }
 
+// ParseIrmaContract parses a json string containing a signed irma contract.
 func ParseIrmaContract(rawContract string) (*SignedIrmaContract, error) {
 	signedContract := &SignedIrmaContract{}
 

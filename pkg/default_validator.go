@@ -9,6 +9,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// DefaultValidator validates contracts using the irma logic.
 type DefaultValidator struct {
 	IrmaServer *irmaserver.Server
 }

@@ -124,7 +124,7 @@ func (c Contract) extractParams(text string) (map[string]string, error) {
 	return result, nil
 }
 
-func parseTime(timeStr string, language Language) (*time.Time, error) {
+func parseTime(timeStr string, _ Language) (*time.Time, error) {
 	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
 	parsedTime, err := monday.ParseInLocation(timeLayout, timeStr, amsterdamLocation, monday.LocaleNlNL)
 	if err != nil {

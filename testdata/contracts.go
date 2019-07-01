@@ -1,18 +1,5 @@
 package testdata
 
-import (
-	"encoding/base64"
-	"fmt"
-)
-
-func ConstructValidationContract(contract, actingParty string) string {
-	return fmt.Sprintf(`{
-	"contract_format": "irma",
-    "contract_string": "%s",
-	"acting_party_cn": "%s"
-}`, base64.StdEncoding.EncodeToString([]byte(contract)), actingParty)
-}
-
 const InvalidContract = `
     { "thisdatas": "smellz bad"}
 	`

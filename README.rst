@@ -28,7 +28,7 @@ For more information about how to use the server type ``go run main.go``
 
 Documentation
 =============
-The spec of this service is provided in the ``docs`` folder. The latest version is hosted on `Read the docs <https://nuts-service-proxy.readthedocs.io/en/latest/`_.
+The spec of this service is provided in the ``docs`` folder. The latest version is hosted on `Read the docs <https://nuts-documentation.readthedocs.io/en/latest/>`_.
 
 
 Development

@@ -58,7 +58,7 @@ func TestContractByContents(t *testing.T) {
 	})
 
 	t.Run("a valid triple other than at the start of the contents returns a nil", func(t *testing.T) {
-		var expected *Contract = nil
+		var expected *Contract
 
 		got, _ := ContractFromMessageContents("some other text NL:BehandelaarLogin:v1")
 		if got != expected {
