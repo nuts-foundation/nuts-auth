@@ -69,8 +69,9 @@ func flagSet() *pflag.FlagSet {
 
 	flags.String(pkg.ConfAddress, "localhost:1323", "Interface and port for http server to bind to")
 	flags.String(pkg.PublicURL, "", "Public URL which can be reached by a users IRMA client")
-
-	// TODO: add all the global auth command flags
+	flags.String(pkg.ConfMode, "server", "server or client, when client it uses the HttpClient")
+	flags.String(pkg.ConfIrmaConfigPath, "", "path to IRMA config folder. If not set, a tmp folder is created.")
+	flags.Bool(pkg.ConfAutoUpdateIrmaSchemas, false, "set if you want to skip the auto download of the irma schemas every 60 minutes.")
 
 	return flags
 }

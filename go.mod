@@ -18,7 +18,7 @@ require (
 	github.com/labstack/echo/v4 v4.1.5
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/nuts-foundation/nuts-go v0.0.0-20190617132826-3363f29b0d05
+	github.com/nuts-foundation/nuts-go v0.0.0-20190628134400-701efb28f5f6
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
 	github.com/privacybydesign/irmago v0.2.0
 	github.com/sirupsen/logrus v1.4.2

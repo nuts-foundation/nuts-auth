@@ -13,8 +13,18 @@ import (
 
 // ConfAddress is the config key for the address the http server listens on
 const ConfAddress = "address"
+
 // PublicURL is the config key for the public URL the http/irma server can be discovered
 const PublicURL = "publicUrl"
+
+// ConfMode is the config name for the engine mode
+const ConfMode = "mode"
+
+// ConfIrmaConfigPath is the config key to provide the irma configuration path
+const ConfIrmaConfigPath = "irmaConfigPath"
+
+// ConfAutoUpdateIrmaSchemas is the config key to provide an option to skip auto updating the irma schemas
+const ConfAutoUpdateIrmaSchemas = "skipAutoUpdateIrmaSchemas"
 
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
@@ -35,9 +45,11 @@ type Auth struct {
 
 // AuthConfig holds all the configuration params
 type AuthConfig struct {
-	Address        string
-	PublicUrl      string
-	IrmaConfigPath string
+	Mode                      string
+	Address                   string
+	PublicUrl                 string
+	IrmaConfigPath            string
+	SkipAutoUpdateIrmaSchemas bool
 }
 
 var instance *Auth
@@ -57,7 +69,6 @@ func AuthInstance() *Auth {
 // Configure the Auth struct by creating a validator and create an Irma server
 func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
-
 		validator := DefaultValidator{
 			IrmaServer: GetIrmaServer(auth.Config),
 		}
@@ -135,7 +146,7 @@ func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult,
 	if sessionStatus := auth.ContractSessionHandler.SessionStatus(SessionID(sessionID)); sessionStatus != nil {
 		return sessionStatus, nil
 	}
-	return nil, xerrors.Errorf("sessionID %s: %w",sessionID, ErrSessionNotFound)
+	return nil, xerrors.Errorf("sessionID %s: %w", sessionID, ErrSessionNotFound)
 }
 
 // ValidateContract validates a given contract. Currently two ContractType's are accepted: Irma and Jwt.

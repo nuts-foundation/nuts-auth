@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/nuts-foundation/nuts-auth/engine"
 	nutsGo "github.com/nuts-foundation/nuts-go/pkg"
+	"github.com/sirupsen/logrus"
 	"os"
 )
 
@@ -40,9 +41,9 @@ func Execute() {
 		panic(err)
 	}
 
-	c.PrintConfig()
+	c.PrintConfig(logrus.StandardLogger())
 
-	if err:= c.InjectIntoEngine(e); err != nil {
+	if err := c.InjectIntoEngine(e); err != nil {
 		panic(err)
 	}
 
