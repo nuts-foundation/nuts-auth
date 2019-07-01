@@ -25,7 +25,7 @@ func GetIrmaConfig(config AuthConfig) *irma.Configuration {
 			logrus.WithError(err).Panic("Could not create irma config")
 			return
 		}
-		if config.SkipAutoUpdateIrmaSchemas == false {
+		if !config.SkipAutoUpdateIrmaSchemas {
 			logrus.Infof("Downloading irma schemas. If this annoys you or you want to pin the schemas, set %s", ConfAutoUpdateIrmaSchemas)
 			if err := irmaConfig.DownloadDefaultSchemes(); err != nil {
 				logrus.WithError(err).Panic("Could not download default schemes")
@@ -78,7 +78,9 @@ func irmaConfigDir(config AuthConfig) (path string) {
 			logrus.Panic("Could not create irma tmp dir")
 		}
 	}
-	ensureDirectoryExists(path)
+	if err := ensureDirectoryExists(path); err != nil {
+		logrus.WithError(err).Panic("Could not create irma config directory")
+	}
 	return
 }
 
