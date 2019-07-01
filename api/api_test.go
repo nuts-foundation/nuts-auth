@@ -202,3 +202,65 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 
 }
 
+func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
+	t.Run("get known contact", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		echoMock := mock.NewMockContext(ctrl)
+		authMock := mock2.NewMockAuthClient(ctrl)
+
+		cType := "KnownContract"
+		cVersion := "v1"
+		cLanguage := "NL"
+		params := NutsAuthGetContractByTypeParams{
+			Version: &cVersion,
+			Language: &cLanguage,
+		}
+
+		contract := pkg.Contract{
+			Type: pkg.ContractType(cType),
+			Version: pkg.Version(cVersion),
+			Language: pkg.Language(cLanguage),
+			TemplateAttributes: []string{"party"},
+			Template: "ik geen toestemming aan {{party}}",
+
+		}
+
+		answer := Contract{
+			Type: Type(cType),
+			Template: &contract.Template,
+			Version: Version(cVersion),
+			TemplateAttributes: []string{"party"},
+			Language: Language(cLanguage),
+		}
+
+		authMock.EXPECT().ContractByType(pkg.ContractType(cType), pkg.Language(cLanguage), pkg.Version(cVersion)).Return(&contract, nil)
+		echoMock.EXPECT().JSON(http.StatusOK, answer)
+
+
+		wrapper := Wrapper{Auth: authMock}
+		err := wrapper.NutsAuthGetContractByType(echoMock, cType, params)
+
+		assert.Nil(t, err)
+	})
+
+	t.Run("get an unknown contract", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		echoMock := mock.NewMockContext(ctrl)
+		authMock := mock2.NewMockAuthClient(ctrl)
+
+		cType := "UnknownContract"
+		params := NutsAuthGetContractByTypeParams{ }
+
+		authMock.EXPECT().ContractByType(pkg.ContractType(cType), pkg.Language(""), pkg.Version("")).Return(nil, pkg.ErrContractNotFound)
+
+		wrapper := Wrapper{Auth: authMock}
+		err := wrapper.NutsAuthGetContractByType(echoMock, cType, params)
+
+		assert.IsType(t, &echo.HTTPError{}, err)
+		httpError := err.(*echo.HTTPError)
+		assert.Equal(t, http.StatusNotFound, httpError.Code)
+
+	})
+}

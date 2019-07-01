@@ -141,11 +141,17 @@ func (api *Wrapper) NutsAuthValidateContract(ctx echo.Context) error {
 // the API format and returns the the answer back to the HTTP stack
 func (api *Wrapper) NutsAuthGetContractByType(ctx echo.Context, contractType string, params NutsAuthGetContractByTypeParams) error {
 	// convert generated data types to internal types
-	var contractLanguage pkg.Language
+	var (
+		contractLanguage pkg.Language
+		contractVersion  pkg.Version
+	)
 	if params.Language != nil {
 		contractLanguage = pkg.Language(*params.Language)
 	}
-	contractVersion := pkg.Version(*params.Version)
+
+	if params.Version != nil {
+		contractVersion = pkg.Version(*params.Version)
+	}
 
 	// get contract
 	contract, err := api.Auth.ContractByType(pkg.ContractType(contractType), contractLanguage, contractVersion)
