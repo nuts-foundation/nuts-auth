@@ -26,6 +26,9 @@ const ConfIrmaConfigPath = "irmaConfigPath"
 // ConfAutoUpdateIrmaSchemas is the config key to provide an option to skip auto updating the irma schemas
 const ConfAutoUpdateIrmaSchemas = "skipAutoUpdateIrmaSchemas"
 
+// ConfActingPartyCN is the config key to provide the Acting party common name
+const ConfActingPartyCN = "actingPartyCn"
+
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
 	CreateContractSession(sessionRequest CreateSessionRequest, actingParty string) (*CreateSessionResult, error)
@@ -50,6 +53,7 @@ type AuthConfig struct {
 	PublicUrl                 string
 	IrmaConfigPath            string
 	SkipAutoUpdateIrmaSchemas bool
+	ActingPartyCn             string
 }
 
 var instance *Auth
@@ -69,6 +73,10 @@ func AuthInstance() *Auth {
 // Configure the Auth struct by creating a validator and create an Irma server
 func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
+		if auth.Config.ActingPartyCn == "" {
+			panic("actingPartyCn for auth must be provided")
+		}
+
 		validator := DefaultValidator{
 			IrmaServer: GetIrmaServer(auth.Config),
 		}
@@ -93,7 +101,7 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 
 	// Step 2: Render the contract template with all the correct values
 	message, err := contract.renderTemplate(map[string]string{
-		"acting_party": actingParty,
+		"acting_party": auth.Config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
 	}, 0, 60*time.Minute)
 	logrus.Debugf("contractMessage: %v", message)
 	if err != nil {

@@ -32,11 +32,11 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) error {
 		//ValidTo: *params.ValidTo,
 	}
 
-	// FIXME: get the acting party from a JWT or config param
-	actingParty := "Fixme: fetch acting party from config or http-session"
+	// TODO: make it possible to provide the acting party via a JWT or other secure way
+	//actingParty := "Demo EHR"
 
 	// Initiate the actual session
-	result, err := api.Auth.CreateContractSession(sessionRequest, actingParty)
+	result, err := api.Auth.CreateContractSession(sessionRequest, "")
 	if err != nil {
 		if xerrors.Is(err, pkg.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
