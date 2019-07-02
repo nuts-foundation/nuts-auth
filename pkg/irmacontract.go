@@ -126,6 +126,7 @@ func validateActingParty(params map[string]string, actingParty string) (bool, er
 		return true, nil
 	}
 
+	logrus.Infof("expected actingParty %s not equal to contract %s", actingParty, actingPartyFromContract)
 	// false by default
 	return false, nil
 }

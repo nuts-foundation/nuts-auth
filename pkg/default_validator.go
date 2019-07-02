@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"encoding/base64"
+	"errors"
 	"github.com/gbrlsnchs/jwt/v3"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
@@ -35,17 +36,17 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 	return nil, ErrUnknownContractFormat
 }
 
+var ErrInvalidContract = errors.New("invalid contract")
+
 // ValidateJwt validates a JWT formatted contract.
 func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResult, error) {
 	raw, err := jwt.Parse([]byte(token))
 	if err != nil {
-		logrus.Error("could not parse jwt", err)
-		return nil, err
+		return nil, xerrors.Errorf("could not parse jwt: %w", ErrInvalidContract)
 	}
 
 	if err := raw.Verify(hs256); err != nil {
-		logrus.Error("could not verify jwt", err)
-		return nil, err
+		return nil, xerrors.Errorf("could not verify jwt: %w", ErrInvalidContract)
 	}
 
 	var (
@@ -58,8 +59,7 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 	}
 
 	if payload.Issuer != "nuts" {
-		logrus.Error("Jwt does not has the `nuts` issuer")
-		return nil, err
+		return nil, xerrors.Errorf("jwt does not have the nuts issuer: %w", ErrInvalidContract)
 	}
 
 	return payload.Contract.Validate(actingPartyCN)
