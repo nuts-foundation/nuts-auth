@@ -12,6 +12,19 @@ import (
 	"github.com/spf13/pflag"
 )
 
+type EchoRouter interface {
+	CONNECT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	DELETE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	GET(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	HEAD(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	OPTIONS(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	PATCH(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	POST(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	PUT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	TRACE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	Any(path string, h echo.HandlerFunc, mi ...echo.MiddlewareFunc) []*echo.Route
+}
+
 // NewAuthEngine creates and returns a new AuthEngine instance.
 func NewAuthEngine() *nutsGo.Engine {
 
@@ -25,6 +38,13 @@ func NewAuthEngine() *nutsGo.Engine {
 		FlagSet: flagSet(),
 		Name: "Auth",
 		Routes: func(router runtime.EchoRouter) {
+			// Mount the irma-app routes
+			routerWithAny := router.(EchoRouter)
+			irmaClientHandler := pkg.GetIrmaServer(authBackend.Config).HandlerFunc()
+			irmaEchoHandler := echo.WrapHandler(irmaClientHandler)
+			routerWithAny.Any("/auth/irmaclient/*", irmaEchoHandler)
+
+			// Mount the Auth-api routes
 			api.RegisterHandlers(router, &api.Wrapper{Auth: authBackend})
 		},
 	}
