@@ -74,3 +74,4 @@ nuts_service_proxy
 coverage.txt
 profile.out
 main
+nuts.yaml

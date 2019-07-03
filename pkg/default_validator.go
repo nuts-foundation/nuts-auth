@@ -1,26 +1,30 @@
-package auth
+package pkg
 
 import (
 	"encoding/base64"
+	"errors"
 	"github.com/gbrlsnchs/jwt/v3"
-	"github.com/go-errors/errors"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
 )
 
+// DefaultValidator validates contracts using the irma logic.
 type DefaultValidator struct {
 	IrmaServer *irmaserver.Server
 }
 
 var hs256 = jwt.NewHMAC(jwt.SHA256, []byte("nuts"))
 
-func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ValidationResponse, error) {
-	if format == Irma {
+// ValidateContract is the entrypoint for contract validation.
+// It decodes the base64 encoded contract, parses the contract string, and validates the contract.
+// Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
+func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ValidationResult, error) {
+	if format == IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
-			logrus.Error("Could not base64 decode contract_string")
-			return nil, err
+			return nil, xerrors.Errorf("could not base64-decode contract: %w", err)
 		}
 		signedContract, err := ParseIrmaContract(string(contract))
 		if err != nil {
@@ -29,23 +33,24 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 
 		return signedContract.Validate(actingPartyCN)
 	}
-	return nil, errors.New("Unknown contract format. Currently supported formats: irma")
+	return nil, ErrUnknownContractFormat
 }
 
-func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResponse, error) {
+var ErrInvalidContract = errors.New("invalid contract")
+
+// ValidateJwt validates a JWT formatted contract.
+func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResult, error) {
 	raw, err := jwt.Parse([]byte(token))
 	if err != nil {
-		logrus.Error("could not parse jwt", err)
-		return nil, err
+		return nil, xerrors.Errorf("could not parse jwt: %w", ErrInvalidContract)
 	}
 
 	if err := raw.Verify(hs256); err != nil {
-		logrus.Error("could not verify jwt", err)
-		return nil, err
+		return nil, xerrors.Errorf("could not verify jwt: %w", ErrInvalidContract)
 	}
 
 	var (
-		payload NutsJwt
+		payload nutsJwt
 	)
 
 	if _, err := raw.Decode(&payload); err != nil {
@@ -54,14 +59,15 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 	}
 
 	if payload.Issuer != "nuts" {
-		logrus.Error("Jwt does not has the `nuts` issuer")
-		return nil, err
+		return nil, xerrors.Errorf("jwt does not have the nuts issuer: %w", ErrInvalidContract)
 	}
 
 	return payload.Contract.Validate(actingPartyCN)
 }
 
-func (v DefaultValidator) SessionStatus(id SessionId) *SessionStatusResult {
+// SessionStatus returns the current status of a certain session.
+// It returns nil if the session is not found
+func (v DefaultValidator) SessionStatus(id SessionID) *SessionStatusResult {
 	if result := v.IrmaServer.GetSessionResult(string(id)); result != nil {
 		var token string
 		if result.Signature != nil {
@@ -74,9 +80,14 @@ func (v DefaultValidator) SessionStatus(id SessionId) *SessionStatusResult {
 	return nil
 }
 
+type nutsJwt struct {
+	jwt.Payload
+	Contract SignedIrmaContract `json:"nuts_signature"`
+}
+
 func createJwt(contract *SignedIrmaContract) (string, error) {
 	header := jwt.Header{}
-	payload := NutsJwt{
+	payload := nutsJwt{
 		Payload: jwt.Payload{
 			Issuer: "nuts",
 		},
@@ -84,11 +95,14 @@ func createJwt(contract *SignedIrmaContract) (string, error) {
 	}
 	token, err := jwt.Sign(header, payload, hs256)
 	if err != nil {
+		logrus.WithError(err).Error("could not sign jwt")
 		return "", nil
 	}
 	return string(token), nil
 }
 
+// StartSession starts an irma session.
+// This is mainly a wrapper around the irma.IrmaServer.StartSession
 func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
 	return v.IrmaServer.StartSession(request, handler)
 }

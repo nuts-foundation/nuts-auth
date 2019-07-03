@@ -1,4 +1,4 @@
-package auth
+package pkg
 
 import (
 	"fmt"
@@ -6,45 +6,39 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/goodsign/monday"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/xerrors"
 	"regexp"
 	"time"
 )
 
-const TimeLayout = "Monday, 2 January 2006 15:04:05"
+const timeLayout = "Monday, 2 January 2006 15:04:05"
 
+// Contract stores the properties of a contract
 type Contract struct {
-	Type               Type     `json:"type"`
-	Version            Version  `json:"version"`
-	Language           Language `json:"language"`
-	SignerAttributes   []string `json:"signer_attributes"`
-	Template           string   `json:"template"`
-	TemplateAttributes []string `json:"template_attributes"`
-	Regexp             string   `json:"-"`
-}
-
-type ContractSigningRequest struct {
-	Type Type `json:"type"`
-	Version Version `json:"version"`
-	Language Language `json:"language"`
-	// ValidFrom describes the time from which this contract should be considered valid
-	ValidFrom time.Time `json:"valid_from"`
-	// ValidFrom describes the time until this contract should be considered valid
-	ValidTo time.Time `json:"valid_to"`
-	// TemplateAttributes is an object containing extra template values. example: {"reason":"providing care"}
-	TemplateAttributes map[string]string
+	Type               ContractType `json:"type"`
+	Version            Version      `json:"version"`
+	Language           Language     `json:"language"`
+	SignerAttributes   []string     `json:"signer_attributes"`
+	Template           string       `json:"template"`
+	TemplateAttributes []string     `json:"template_attributes"`
+	Regexp             string       `json:"-"`
 }
 
 // Language of the contract in all caps. example: "NL"
 type Language string
-// Type of which contract to sign. example: "BehandelaarLogin"
-type Type string
+// ContractType contains type of the contract to sign. Example: "BehandelaarLogin"
+type ContractType string
 // Version of the contract. example: "v1"
 type Version string
 
+// NowFunc is used to store a function that returns the current time. This can be changed when you want to mock the current time.
 var NowFunc = time.Now
 
+// ErrContractNotFound is used when a certain combination of type, language and version cannot resolve to a contract
+var ErrContractNotFound = errors.New("contract not found")
+
 // EN:PractitionerLogin:v1 Contract
-var contracts = map[Language]map[Type]map[Version]*Contract{
+var contracts = map[Language]map[ContractType]map[Version]*Contract{
 	"NL": {"BehandelaarLogin": {"v1": &Contract{
 		Type:               "BehandelaarLogin",
 		Version:            "v1",
@@ -65,33 +59,36 @@ var contracts = map[Language]map[Type]map[Version]*Contract{
 	}}},
 }
 
-func ContractFromMessageContents(contents string) *Contract {
+// ContractFromMessageContents finds the contract for a certain message.
+// Every message should begin with a special sequence like "NL:ContractName:version".
+func ContractFromMessageContents(contents string) (*Contract, error) {
 	r, _ := regexp.Compile(`^(.{2}):(.+):(v\d+)`)
 
 	matchResult := r.FindSubmatch([]byte(contents))
 	if len(matchResult) != 4 {
-		logrus.Error("Could not extract type, language and version form contract text")
-		return nil
+		//logrus.Error("Could not extract type, language and version form contract text")
+		return nil, xerrors.Errorf("Could not extract type, language and version from contract text")
 	}
 
 	language := Language(matchResult[1])
-	contractType := Type(matchResult[2])
+	contractType := ContractType(matchResult[2])
 	version := Version(matchResult[3])
 
 	return ContractByType(contractType, language, version)
 
 }
-
-func ContractByType(contractType Type, language Language, version Version) *Contract {
+// ContractByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
+// If no contract is found, the error vaule of ErrContractNotFound is returned.
+func ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {
 	if version == "" {
 		version = "v1"
 	}
-	contract, ok := contracts[Language(language)][Type(contractType)][Version(version)]
+	contract, ok := contracts[Language(language)][ContractType(contractType)][Version(version)]
 	if ok {
-		return contract
+		return contract, nil
 	}
-	logrus.Warnf("Contract with type '%s' language '%s' and version %s not found", contractType, language, version)
-	return nil
+
+	return nil, xerrors.Errorf("type %s, lang: %s, version: %s: %w", contractType, language, version, ErrContractNotFound)
 }
 
 func (c Contract) timeLocation() *time.Location {
@@ -99,14 +96,14 @@ func (c Contract) timeLocation() *time.Location {
 	return loc
 }
 
-func (c Contract) RenderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
-	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), TimeLayout, monday.LocaleNlNL)
-	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), TimeLayout, monday.LocaleNlNL)
+func (c Contract) renderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
+	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
+	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 
 	return mustache.Render(c.Template, vars)
 }
 
-func (c Contract) ExtractParams(text string) (map[string]string, error) {
+func (c Contract) extractParams(text string) (map[string]string, error) {
 	r, _ := regexp.Compile(c.Regexp)
 	matchResult := r.FindSubmatch([]byte(text))
 	if len(matchResult) < 1 {
@@ -115,7 +112,7 @@ func (c Contract) ExtractParams(text string) (map[string]string, error) {
 	matches := matchResult[1:]
 
 	if len(matches) != len(c.TemplateAttributes) {
-		return nil, errors.New(fmt.Sprintf("amount of template attributes does not match the amount of params: found: %d, expected %d", len(matches), len(c.TemplateAttributes)))
+		return nil, fmt.Errorf("amount of template attributes does not match the amount of params: found: %d, expected %d", len(matches), len(c.TemplateAttributes))
 	}
 
 	result := make(map[string]string, len(matches))
@@ -127,9 +124,9 @@ func (c Contract) ExtractParams(text string) (map[string]string, error) {
 	return result, nil
 }
 
-func parseTime(timeStr string, language Language) (*time.Time, error) {
+func parseTime(timeStr string, _ Language) (*time.Time, error) {
 	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
-	parsedTime, err := monday.ParseInLocation(TimeLayout, timeStr, amsterdamLocation, monday.LocaleNlNL)
+	parsedTime, err := monday.ParseInLocation(timeLayout, timeStr, amsterdamLocation, monday.LocaleNlNL)
 	if err != nil {
 		logrus.WithError(err).Errorf("error parsing contract time %v", timeStr)
 		return nil, err
@@ -137,7 +134,7 @@ func parseTime(timeStr string, language Language) (*time.Time, error) {
 	return &parsedTime, nil
 }
 
-func (c Contract) ValidateTimeFrame(params map[string]string) (bool, error) {
+func (c Contract) validateTimeFrame(params map[string]string) (bool, error) {
 	var (
 		err                      error
 		ok                       bool

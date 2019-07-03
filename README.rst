@@ -17,26 +17,13 @@
 Nuts Auth Service
 ==================
 
+Copy the ``./testdata/testconfig.yaml`` to ``./nuts.yaml`` and change the contents.
 
-Start the server with ``go run main.go serve -p 3000``
+Start the server with ``go run main.go serve``
 
-Copy the ``testfonfig.yaml`` from the testdata directory and change its values.
-
-Start the server with ``go run main.go serve --config-file config --config-file-path .``
-
-For more information about how to use the server type ``go run main.go``
+For more information about how to use the server type ``go run main.go --help``
 
 Documentation
 =============
-The spec of this service is provided in the ``docs`` folder. The latest version is hosted on `Read the docs <https://nuts-service-proxy.readthedocs.io/en/latest/`_.
+The spec of this service is provided in the ``docs`` folder. The latest version is hosted on `Read the docs <https://nuts-documentation.readthedocs.io/en/latest/>`_.
 
-
-Development
-===========
-
-A skaffold file is provided in k8s. Install a local kubernetes cluster and run ``skaffold dev -f k8s/skaffold.yaml``
-to build, test and run the docker image.
-
-For testing the docker binary you need to install https://github.com/GoogleContainerTools/container-structure-test .
-
-If you do not want to test the docker image, include ``--skip-tests``.

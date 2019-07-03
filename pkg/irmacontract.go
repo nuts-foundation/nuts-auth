@@ -1,18 +1,19 @@
-package auth
+package pkg
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	authirma "github.com/nuts-foundation/nuts-auth/auth/irma"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/sirupsen/logrus"
 )
 
+// SignedIrmaContract holds the contract and additional methods to parse and validate.
 type SignedIrmaContract struct {
 	IrmaContract irma.SignedMessage
 }
 
+// ParseIrmaContract parses a json string containing a signed irma contract.
 func ParseIrmaContract(rawContract string) (*SignedIrmaContract, error) {
 	signedContract := &SignedIrmaContract{}
 
@@ -27,9 +28,10 @@ func ParseIrmaContract(rawContract string) (*SignedIrmaContract, error) {
 }
 
 // Verify the IRMA signature. This method only checks the IRMA crypto, not the contents of the contract.
-func (sc *SignedIrmaContract) verifySignature() (*ValidationResponse, error) {
+func (sc *SignedIrmaContract) verifySignature() (*ValidationResult, error) {
+	authEngine := AuthInstance()
 	// Actual verification
-	attributes, status, err := sc.IrmaContract.Verify(authirma.GetIrmaConfig(), nil)
+	attributes, status, err := sc.IrmaContract.Verify(GetIrmaConfig(authEngine.Config), nil)
 
 	// error handling
 	if err != nil {
@@ -51,9 +53,9 @@ func (sc *SignedIrmaContract) verifySignature() (*ValidationResponse, error) {
 	}
 
 	// Assemble and return the validation response
-	return &ValidationResponse{
+	return &ValidationResult{
 		validationResult,
-		Irma,
+		IrmaFormat,
 		disclosedAttributes,
 	}, nil
 
@@ -61,7 +63,7 @@ func (sc *SignedIrmaContract) verifySignature() (*ValidationResponse, error) {
 
 // Validate the SignedIrmaContract looks at the irma crypto and the actual message such as:
 // Is the timeframe valid and does the common name corresponds with the contract message.
-func (sc *SignedIrmaContract) Validate(actingPartyCn string) (*ValidationResponse, error) {
+func (sc *SignedIrmaContract) Validate(actingPartyCn string) (*ValidationResult, error) {
 	// Verify signature:
 	verifiedContract, err := sc.verifySignature()
 	if err != nil {
@@ -70,17 +72,17 @@ func (sc *SignedIrmaContract) Validate(actingPartyCn string) (*ValidationRespons
 
 	// Parse Nuts contract
 	contractMessage := sc.IrmaContract.Message
-	contract := ContractFromMessageContents(contractMessage)
-	if contract == nil {
-		return nil, errors.New("could not find contract")
+	contract, err := ContractFromMessageContents(contractMessage)
+	if err != nil {
+		return nil, err
 	}
-	params, err := contract.ExtractParams(contractMessage)
+	params, err := contract.extractParams(contractMessage)
 	if err != nil {
 		return nil, err
 	}
 
 	// Validate timeframe
-	ok, err := contract.ValidateTimeFrame(params)
+	ok, err := contract.validateTimeFrame(params)
 	if !ok|| err != nil {
 		verifiedContract.ValidationResult = Invalid
 		return verifiedContract, err
@@ -124,6 +126,7 @@ func validateActingParty(params map[string]string, actingParty string) (bool, er
 		return true, nil
 	}
 
+	logrus.Infof("expected actingParty %s not equal to contract %s", actingParty, actingPartyFromContract)
 	// false by default
 	return false, nil
 }
