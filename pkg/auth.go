@@ -74,7 +74,13 @@ func AuthInstance() *Auth {
 func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
 		if auth.Config.ActingPartyCn == "" {
-			panic("actingPartyCn for auth must be provided")
+			logrus.Error("actingPartyCn for auth must be provided")
+			logrus.Exit(1)
+		}
+
+		if auth.Config.PublicUrl == "" {
+			logrus.Error("publicUrl for auth must be provided")
+			logrus.Exit(1)
 		}
 
 		validator := DefaultValidator{
