@@ -1,0 +1,379 @@
+openapi: 3.0.0
+info:
+  title: Nuts Service API Proxy
+  version: 0.0.1
+paths:
+  '/auth/contract/session':
+    post:
+      operationId: nuts-auth-create-session
+      summary: CreateSessionHandler Initiates an IRMA signing session with the correct contract.
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContractSigningRequest"
+      responses:
+        '400':
+          description: the given information is invalid
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ErrorString"
+        '201':
+          description: session with given info for signature has been created and resulting info can be used to render a QR code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateSessionResult"
+  /auth/contract/session/{id}:
+    get:
+      operationId: nuts-auth-session-request-status
+      summary: returns the result of the contract request
+      tags:
+        - auth
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The result contains session information such as the session status, type, possible errors and disclosed attributes or attribute-based signature if appropriate to the session type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResult"
+        '404':
+          description: session id not found
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ErrorString"
+  /auth/contract/validate:
+    post:
+      operationId: nuts-auth-validate-contract
+      summary: Validate a Nuts Security Contract
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationRequest"
+      responses:
+        '200':
+          description: if the token is valid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResult"
+        '400':
+          description: the given information is invalid
+          content:
+            text/plain:
+              example: could not decode json
+              schema:
+                $ref: "#/components/schemas/ErrorString"
+  /auth/contract/{contractType}:
+    get:
+      operationId: nuts-auth-get-contract-by-type
+      summary: Get a contract by type and version
+      tags:
+        - auth
+      parameters:
+        - name: contractType
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          description: The version of this contract. If omitted, the most recent version will be returned
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: language
+          in: query
+          required: false
+          schema:
+            type: string
+            default: nl
+      responses:
+        '404':
+          description: if no contract exists
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ErrorString"
+        '200':
+          description: Returns the contract of this type, version and language
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contract"
+components:
+  schemas:
+    ErrorString:
+      type: string
+      description: "A plain text error message"
+    Type:
+      type: string
+      description: "Type of which contract to sign"
+      example: "BehandelaarLogin"
+    Language:
+      type: string
+      description: "Language of the contract in all caps"
+      example: "NL"
+    Version:
+      type: string
+      description: "Version of the contract"
+      example: "v1"
+    Contract:
+      required:
+        - type
+        - version
+        - language
+      properties:
+        type:
+          $ref: "#/components/schemas/Type"
+        language:
+          $ref: "#/components/schemas/Language"
+        version:
+          $ref: "#/components/schemas/Version"
+        signer_attributes:
+          type: array
+          example:
+          items:
+            type: string
+        template:
+          type: string
+          example: ik verklaar dat ${acting_party} namens mij request mag maken
+        template_attributes:
+          type: array
+          items:
+            type: string
+          example: [ "irma-demo.MijnOverheid.ageLower.over12",
+                     "irma-demo.MijnOverheid.fullName"
+          ]
+    ContractSigningRequest:
+      required:
+        - type
+        - version
+        - language
+      properties:
+        type:
+          $ref: "#/components/schemas/Type"
+        language:
+          $ref: "#/components/schemas/Language"
+        version:
+          $ref: "#/components/schemas/Version"
+        valid_from:
+          type: string
+          format: 'date-time'
+          description: "ValidFrom describes the time from which this contract should be considered valid"
+          example: "2019-06-24T14:32:00Z02:00"
+        valid_to:
+          type: string
+          format: 'date-time'
+          description: "ValidTo describes the time until this contract should be considered valid"
+          example: "2019-12-24T14:32:00Z02:00"
+    CreateSessionResult:
+      description: CreateSessionResult contains the results needed to setup an irma flow
+      required:
+        - qr_code_info
+        - session_id
+      properties:
+        qr_code_info:
+          $ref: "#/components/schemas/IrmaQR"
+        session_id:
+          type: string
+          description: a session identifier
+    IrmaQR:
+      description: Qr contains the data of an IRMA session QR (as generated by irma_js), suitable for NewSession()
+      required:
+        - u
+        - irmaqr
+      properties:
+        u:
+          type: string
+          description: Server with which to perform the session (URL)
+        irmaqr:
+          type: string
+          enum: [disclosing, signing, issuing]
+    ValidationRequest:
+      description: Validate validity of session token
+      required:
+        - contract_format
+        - contract_string
+        - acting_party_cn
+      properties:
+        contract_format:
+          description: ContractFormat specifies the type of format used for the contract
+          type: string
+          enum: [irma, JWT]
+        contract_string:
+          description: Base64 encoded contracts, either Irma signature or a JWT
+          type : string
+        acting_party_cn:
+          description: ActingPartyCN is the common name of the Acting party extracted from the client cert
+          type: string
+    ValidationResult:
+      required:
+        - validation_result
+        - contract_format
+        - signer_attributes
+      properties:
+        validation_result:
+          type: string
+          enum: [VALID, INVALID]
+        contract_format:
+          type: string
+        signer_attributes:
+          type: object
+          additionalProperties:
+            type: string
+          example: {
+            "irma-demo.MijnOverheid.ageLower.over12": "yes",
+            "irma-demo.MijnOverheid.fullName": "present"}
+    SessionResult:
+      description: result of irma signature request, including disclosed attributes or errors
+      required:
+        - token
+        - status
+        - type
+      properties:
+        token:
+          type: string
+          description: the token originally given in the request
+        status:
+          type: string
+          enum: [INITIALIZED, CONNECTED, CANCELLED, DONE, TIMEOUT]
+        type:
+          type: string
+        proofStatus:
+          type: string
+          enum: [VALID, INVALID, INVALID_TIMESTAMP, UNMATCHED_REQUEST, MISSING_ATTRIBUTES, EXPIRED]
+        disclosed:
+          type: array
+          items:
+            $ref: "#/components/schemas/DisclosedAttribute"
+        signature:
+          $ref: "#/components/schemas/SignedMessage"
+        error:
+          $ref: "#/components/schemas/RemoteError"
+        nuts_auth_token:
+          type: string
+          description: Base64 encoded JWT that can be used as Bearer Token
+    DisclosedAttribute:
+      required:
+        - value
+        - identifier
+        - status
+      properties:
+        rawvalue:
+          type: string
+        value:
+          type: object
+          additionalProperties:
+            type: string
+        identifier:
+          type: string
+        status:
+          type: string
+          enum: [PRESENT, EXTRA, MISSING, INVALID_VALUE]
+    RemoteError:
+      properties:
+        status:
+          type: integer
+        error:
+          type: string
+        description:
+          type: string
+        message:
+          type: string
+        stacktrace:
+          type: string
+    SignedMessage:
+      properties:
+        signature:
+          type: array
+          items:
+            $ref: "#/components/schemas/Proof"
+        indices:
+          type: array
+          items:
+            type: array
+            items:
+              $ref: "#/components/schemas/DisclosedAttributeIndex"
+        nonce:
+          type: number
+        context:
+          type: number
+        message:
+          type: string
+        timestamp:
+          $ref: "#/components/schemas/Timestamp"
+    Proof:
+      oneOf:
+        - $ref: "#/components/schemas/ProofU"
+        - $ref: "#/components/schemas/ProofS"
+        - $ref: "#/components/schemas/ProofD"
+        - $ref: "#/components/schemas/ProofP"
+    DisclosedAttributeIndex:
+      properties:
+        cred:
+          type: integer
+        attr:
+          type: integer
+    Timestamp:
+      properties:
+        time:
+          type: integer
+          format: int64
+    ProofU:
+      properties:
+        U:
+          type: number
+        c:
+          type: number
+        v_prime_response:
+          type: number
+        s_response:
+          type: number
+    ProofP:
+      properties:
+        P:
+          type: number
+        c:
+          type: number
+        s_response:
+          type: number
+    ProofS:
+      properties:
+        c:
+          type: number
+        e_response:
+          type: number
+    ProofD:
+      properties:
+        c:
+          type: number
+        A:
+          type: number
+        e_response:
+          type: number
+        v_response:
+          type: number
+        a_responses:
+          type: object
+          additionalProperties:
+            type: number
+        a_disclosed:
+          type: object
+          additionalProperties:
+            type: number
