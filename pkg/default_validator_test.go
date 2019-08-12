@@ -101,7 +101,7 @@ func TestValidateContract(t *testing.T) {
 			&ValidationResult{
 				Invalid,
 				IrmaFormat,
-				map[string]string{},
+				nil,
 			},
 			false,
 		},
@@ -190,10 +190,13 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 			BaseRequest: irma2.BaseRequest{
 				Type: irma2.ActionSigning,
 			},
-			Content: irma2.AttributeDisjunctionList([]*irma2.AttributeDisjunction{{
-				Label:      "AGB-Code",
-				Attributes: []irma2.AttributeTypeIdentifier{irma2.NewAttributeTypeIdentifier("irma-demo.nuts.agb.agbcode")},
-			}}),
+			Disclose: irma2.AttributeConDisCon{
+				irma2.AttributeDisCon{
+					irma2.AttributeCon{
+						irma2.NewAttributeRequest("irma-demo.nuts.agb.agbcode"),
+					},
+				},
+			},
 		},
 	}
 
@@ -291,7 +294,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.True(t, xerrors.Is(err, ErrInvalidContract))
-		assert.Equal(t,  "could not verify jwt: invalid contract", err.Error())
+		assert.Equal(t, "could not verify jwt: invalid contract", err.Error())
 	})
 
 	t.Run("wrong issuer", func(t *testing.T) {
@@ -302,7 +305,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.True(t, xerrors.Is(err, ErrInvalidContract))
-		assert.Equal(t,  "jwt does not have the nuts issuer: invalid contract", err.Error())
+		assert.Equal(t, "jwt does not have the nuts issuer: invalid contract", err.Error())
 
 	})
 }

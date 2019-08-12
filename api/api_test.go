@@ -121,8 +121,8 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 				Status: "INITIALIZED",
 				Token:  "YRnWbPJ7ffKCnf9cP51e",
 				Type:   "signing",
-				Disclosed: []*irma.DisclosedAttribute{
-					{Value: irma.TranslatedString(map[string]string{"nl": "00000001"})},
+				Disclosed: [][]*irma.DisclosedAttribute{
+					{{Value: irma.TranslatedString(map[string]string{"nl": "00000001"})}},
 				},
 				ProofStatus: irma.ProofStatusValid,
 			},

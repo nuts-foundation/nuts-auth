@@ -120,16 +120,12 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 	}
 
 	// Step 3: Put the contract in an IMRA envelope
-	signatureRequest := &irma.SignatureRequest{
-		Message: message,
-		DisclosureRequest: irma.DisclosureRequest{
-			BaseRequest: irma.BaseRequest{
-				Type: irma.ActionSigning,
+	signatureRequest := irma.NewSignatureRequest(message)
+	signatureRequest.Disclose = irma.AttributeConDisCon{
+		irma.AttributeDisCon{
+			irma.AttributeCon{
+				irma.NewAttributeRequest(contract.SignerAttributes[0]),
 			},
-			Content: irma.AttributeDisjunctionList([]*irma.AttributeDisjunction{{
-				Label:      "AGB-Code",
-				Attributes: []irma.AttributeTypeIdentifier{irma.NewAttributeTypeIdentifier(contract.SignerAttributes[0])},
-			}}),
 		},
 	}
 

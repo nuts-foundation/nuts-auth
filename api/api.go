@@ -67,18 +67,20 @@ func (api *Wrapper) NutsAuthSessionRequestStatus(ctx echo.Context, sessionID str
 
 	// convert internal result back to generated api format
 	var disclosedAttributes []DisclosedAttribute
-	for _, attr := range sessionStatus.Disclosed {
-		value := make(map[string]interface{})
-		for key, val := range map[string]string(attr.Value) {
-			value[key] = val
-		}
+	if len(sessionStatus.Disclosed) > 0 {
+		for _, attr := range sessionStatus.Disclosed[0] {
+			value := make(map[string]interface{})
+			for key, val := range map[string]string(attr.Value) {
+				value[key] = val
+			}
 
-		disclosedAttributes = append(disclosedAttributes, DisclosedAttribute{
-			Identifier: attr.Identifier.String(),
-			Value:      value,
-			Rawvalue:   attr.RawValue,
-			Status:     string(attr.Status),
-		})
+			disclosedAttributes = append(disclosedAttributes, DisclosedAttribute{
+				Identifier: attr.Identifier.String(),
+				Value:      value,
+				Rawvalue:   attr.RawValue,
+				Status:     string(attr.Status),
+			})
+		}
 	}
 
 	nutsAuthToken := string(sessionStatus.NutsAuthToken)

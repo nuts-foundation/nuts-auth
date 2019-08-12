@@ -46,10 +46,14 @@ func (sc *SignedIrmaContract) verifySignature() (*ValidationResult, error) {
 		validationResult = Valid
 	}
 
-	// take the attributes rawvalue and add them to a list.
-	disclosedAttributes := make(map[string]string, len(attributes))
-	for _, att := range attributes {
-		disclosedAttributes[att.Identifier.String()] = *att.RawValue
+	var disclosedAttributes map[string]string
+
+	if len(attributes) > 0 {
+		// take the attributes rawvalue and add them to a list.
+		disclosedAttributes = make(map[string]string, len(attributes[0]))
+		for _, att := range attributes[0] {
+			disclosedAttributes[att.Identifier.String()] = *att.RawValue
+		}
 	}
 
 	// Assemble and return the validation response
@@ -83,7 +87,7 @@ func (sc *SignedIrmaContract) Validate(actingPartyCn string) (*ValidationResult,
 
 	// Validate timeframe
 	ok, err := contract.validateTimeFrame(params)
-	if !ok|| err != nil {
+	if !ok || err != nil {
 		verifiedContract.ValidationResult = Invalid
 		return verifiedContract, err
 	}
