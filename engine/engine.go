@@ -23,6 +23,7 @@ type EchoRouter interface {
 	PUT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 	TRACE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 	Any(path string, h echo.HandlerFunc, mi ...echo.MiddlewareFunc) []*echo.Route
+    Use(middleware ...echo.MiddlewareFunc)
 }
 
 // NewAuthEngine creates and returns a new AuthEngine instance.
@@ -46,6 +47,13 @@ func NewAuthEngine() *nutsGo.Engine {
 
 			// Mount the Auth-api routes
 			api.RegisterHandlers(router, &api.Wrapper{Auth: authBackend})
+
+			config := pkg.AuthInstance().Config
+
+			if config.EnableCORS {
+				logrus.Debug("enabling CORS")
+				routerWithAny.Use(middleware.CORS())
+			}
 		},
 	}
 }
@@ -67,6 +75,10 @@ func cmd() *cobra.Command {
 			echoServer := echo.New()
 			echoServer.HideBanner = true
 			echoServer.Use(middleware.Logger())
+
+			if authEngine.Config.EnableCORS {
+				echoServer.Use(middleware.CORS())
+			}
 
 			// Mount the irma-app routes
 			irmaClientHandler := pkg.GetIrmaServer(authEngine.Config).HandlerFunc()
@@ -93,6 +105,7 @@ func flagSet() *pflag.FlagSet {
 	flags.String(pkg.ConfIrmaConfigPath, "", "path to IRMA config folder. If not set, a tmp folder is created.")
 	flags.String(pkg.ConfActingPartyCN, "", "The acting party Common name used in contracts")
 	flags.Bool(pkg.ConfAutoUpdateIrmaSchemas, false, "set if you want to skip the auto download of the irma schemas every 60 minutes.")
+	flags.Bool(pkg.ConfEnableCORS, false, "Set if you want to allow CORS requests. This is useful when you want browsers to directly communicate with the nuts node.")
 
 	return flags
 }

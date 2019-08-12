@@ -26,6 +26,8 @@ const ConfIrmaConfigPath = "irmaConfigPath"
 // ConfAutoUpdateIrmaSchemas is the config key to provide an option to skip auto updating the irma schemas
 const ConfAutoUpdateIrmaSchemas = "skipAutoUpdateIrmaSchemas"
 
+const ConfEnableCORS = "enableCORS"
+
 // ConfActingPartyCN is the config key to provide the Acting party common name
 const ConfActingPartyCN = "actingPartyCn"
 
@@ -54,6 +56,7 @@ type AuthConfig struct {
 	IrmaConfigPath            string
 	SkipAutoUpdateIrmaSchemas bool
 	ActingPartyCn             string
+	EnableCORS                bool
 }
 
 var instance *Auth
