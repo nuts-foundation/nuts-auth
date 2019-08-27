@@ -1,7 +1,7 @@
-.. _nuts-consent-bridge-api:
+.. _nuts-consent-auth-api:
 
 Nuts Auth API
-=======================
+=============
 
 .. raw:: html
 
