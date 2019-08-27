@@ -5,7 +5,7 @@ Nuts Auth JWT specification
 
 The JWT is specified as:
 
-.. json::
+.. code-block:: json
 
     {
         "iss": "nuts",
