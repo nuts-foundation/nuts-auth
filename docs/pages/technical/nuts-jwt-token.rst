@@ -10,7 +10,6 @@ The JWT is specified as:
     {
         "iss": "nuts",
         "sub": "urn:oid:2.16.840.1.113883.2.4.6.1",
-        "aud": "urn:oid:2.16.840.1.113883.2.4.6.1",
         "nuts_signature": {...irma based signature...}
     }
 
@@ -25,7 +24,3 @@ The issuer in the JWT is always *nuts*.
 Sub
 ---
 The subject must be the urn of the legal entity which private key was used in the signature.
-
-Aud
----
-The audience must contain a single string with the urn of the legal entity from which information is requested.
