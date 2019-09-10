@@ -6,7 +6,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nuts-foundation/nuts-auth/api"
 	"github.com/nuts-foundation/nuts-auth/pkg"
-	nutsGo "github.com/nuts-foundation/nuts-go/pkg"
+	nutsGo "github.com/nuts-foundation/nuts-go-core"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"

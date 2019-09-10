@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/nuts-foundation/nuts-auth/engine"
-	nutsGo "github.com/nuts-foundation/nuts-go/pkg"
+	nutsGo "github.com/nuts-foundation/nuts-go-core"
 	"github.com/sirupsen/logrus"
 	"os"
 )

@@ -10,7 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 	mock2 "github.com/nuts-foundation/nuts-auth/mock"
 	"github.com/nuts-foundation/nuts-auth/pkg"
-	"github.com/nuts-foundation/nuts-go/mock"
+	"github.com/nuts-foundation/nuts-go-core/mock"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/stretchr/testify/assert"
