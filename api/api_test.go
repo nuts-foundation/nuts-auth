@@ -169,7 +169,7 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 
 		params := ValidationRequest{
 			ActingPartyCn:  "DemoEHR",
-			ContractFormat: "jwt",
+			ContractFormat: "JWT",
 			ContractString: "base64encodedContractString",
 		}
 
@@ -179,18 +179,18 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 		})
 
 		echoMock.EXPECT().JSON(http.StatusOK, ValidationResult{
-			ContractFormat:   "jwt",
+			ContractFormat:   string(pkg.JwtFormat),
 			ValidationResult: "VALID",
 			SignerAttributes: map[string]interface{}{"nl": "00000007"},
 		})
 
 		authMock.EXPECT().ValidateContract(pkg.ValidationRequest{
 			ActingPartyCN:  "DemoEHR",
-			ContractFormat: "jwt",
+			ContractFormat: pkg.JwtFormat,
 			ContractString: "base64encodedContractString",
 		}).Return(&pkg.ValidationResult{
 			ValidationResult:    "VALID",
-			ContractFormat:      "jwt",
+			ContractFormat:      pkg.JwtFormat,
 			DisclosedAttributes: map[string]string{"nl": "00000007"},
 		}, nil)
 

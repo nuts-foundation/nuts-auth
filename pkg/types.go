@@ -39,7 +39,7 @@ const (
 	// IrmaFormat is used to indicate a contract is in he form of a base64 encoded IRMA signature
 	IrmaFormat ContractFormat = "irma"
 	// JwtFormat is used to indicate a contract in in the form of a Jwt encoded signature
-	JwtFormat ContractFormat = "jwt"
+	JwtFormat ContractFormat = "JWT"
 	// Valid is used to indicate a contract was valid on the time of testing
 	Valid ValidationState = "VALID"
 	// Invalid is used to indicate a contract was invalid on the time of testing
