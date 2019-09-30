@@ -1,12 +1,11 @@
 package pkg
 
 import (
+	"errors"
 	"fmt"
 	"github.com/cbroglie/mustache"
-	"github.com/go-errors/errors"
 	"github.com/goodsign/monday"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
 	"regexp"
 	"time"
 )
@@ -67,7 +66,7 @@ func ContractFromMessageContents(contents string) (*Contract, error) {
 	matchResult := r.FindSubmatch([]byte(contents))
 	if len(matchResult) != 4 {
 		//logrus.Error("Could not extract type, language and version form contract text")
-		return nil, xerrors.Errorf("Could not extract type, language and version from contract text")
+		return nil, errors.New("Could not extract type, language and version from contract text")
 	}
 
 	language := Language(matchResult[1])
@@ -88,7 +87,7 @@ func ContractByType(contractType ContractType, language Language, version Versio
 		return contract, nil
 	}
 
-	return nil, xerrors.Errorf("type %s, lang: %s, version: %s: %w", contractType, language, version, ErrContractNotFound)
+	return nil, fmt.Errorf("type %s, lang: %s, version: %s: %w", contractType, language, version, ErrContractNotFound)
 }
 
 func (c Contract) timeLocation() *time.Location {

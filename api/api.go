@@ -1,10 +1,10 @@
 package api
 
 import (
+	"errors"
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
 	"net/http"
 )
 
@@ -38,7 +38,7 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) error {
 	// Initiate the actual session
 	result, err := api.Auth.CreateContractSession(sessionRequest, "")
 	if err != nil {
-		if xerrors.Is(err, pkg.ErrContractNotFound) {
+		if errors.Is(err, pkg.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 		return err
@@ -59,7 +59,7 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) error {
 func (api *Wrapper) NutsAuthSessionRequestStatus(ctx echo.Context, sessionID string) error {
 	sessionStatus, err := api.Auth.ContractSessionStatus(sessionID)
 	if err != nil {
-		if xerrors.Is(err, pkg.ErrSessionNotFound) {
+		if errors.Is(err, pkg.ErrSessionNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
 		return err
@@ -157,7 +157,7 @@ func (api *Wrapper) NutsAuthGetContractByType(ctx echo.Context, contractType str
 
 	// get contract
 	contract, err := api.Auth.ContractByType(pkg.ContractType(contractType), contractLanguage, contractVersion)
-	if xerrors.Is(err, pkg.ErrContractNotFound) {
+	if errors.Is(err, pkg.ErrContractNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	} else if err != nil {
 		return err

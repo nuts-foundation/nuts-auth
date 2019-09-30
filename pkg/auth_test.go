@@ -3,10 +3,10 @@ package pkg
 import (
 	"testing"
 
+	"errors"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/xerrors"
 )
 
 type MockContractSessionHandler struct{}
@@ -46,7 +46,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 
 		assert.Nil(t, result, "result should be nil")
 		assert.NotNil(t, err, "expected an error")
-		assert.True(t, xerrors.Is(err, ErrContractNotFound), "expected ErrContractNotFound")
+		assert.True(t, errors.Is(err, ErrContractNotFound), "expected ErrContractNotFound")
 	})
 }
 
@@ -69,6 +69,6 @@ func TestAuth_ContractByType(t *testing.T) {
 
 		assert.Nil(t, result)
 		assert.NotNil(t, err)
-		assert.True(t, xerrors.Is(err, ErrContractNotFound), "expected ErrContractNotFound")
+		assert.True(t, errors.Is(err, ErrContractNotFound), "expected ErrContractNotFound")
 	})
 }

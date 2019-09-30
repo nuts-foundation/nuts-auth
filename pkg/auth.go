@@ -1,12 +1,11 @@
 package pkg
 
 import (
+	"errors"
 	"fmt"
-	"github.com/go-errors/errors"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
 	"sync"
 	"time"
 )
@@ -159,7 +158,7 @@ func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult,
 	if sessionStatus := auth.ContractSessionHandler.SessionStatus(SessionID(sessionID)); sessionStatus != nil {
 		return sessionStatus, nil
 	}
-	return nil, xerrors.Errorf("sessionID %s: %w", sessionID, ErrSessionNotFound)
+	return nil, fmt.Errorf("sessionID %s: %w", sessionID, ErrSessionNotFound)
 }
 
 // ValidateContract validates a given contract. Currently two ContractType's are accepted: Irma and Jwt.
@@ -170,5 +169,5 @@ func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResult
 	} else if request.ContractFormat == JwtFormat {
 		return auth.ContractValidator.ValidateJwt(request.ContractString, request.ActingPartyCN)
 	}
-	return nil, xerrors.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
+	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
 }

@@ -3,11 +3,11 @@ package pkg
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"github.com/gbrlsnchs/jwt/v3"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
 )
 
 // DefaultValidator validates contracts using the irma logic.
@@ -24,7 +24,7 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 	if format == IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
-			return nil, xerrors.Errorf("could not base64-decode contract: %w", err)
+			return nil, fmt.Errorf("could not base64-decode contract: %w", err)
 		}
 		signedContract, err := ParseIrmaContract(string(contract))
 		if err != nil {
@@ -42,11 +42,11 @@ var ErrInvalidContract = errors.New("invalid contract")
 func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResult, error) {
 	raw, err := jwt.Parse([]byte(token))
 	if err != nil {
-		return nil, xerrors.Errorf("could not parse jwt: %w", ErrInvalidContract)
+		return nil, fmt.Errorf("could not parse jwt: %w", ErrInvalidContract)
 	}
 
 	if err := raw.Verify(hs256); err != nil {
-		return nil, xerrors.Errorf("could not verify jwt: %w", ErrInvalidContract)
+		return nil, fmt.Errorf("could not verify jwt: %w", ErrInvalidContract)
 	}
 
 	var (
@@ -59,7 +59,7 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 	}
 
 	if payload.Issuer != "nuts" {
-		return nil, xerrors.Errorf("jwt does not have the nuts issuer: %w", ErrInvalidContract)
+		return nil, fmt.Errorf("jwt does not have the nuts issuer: %w", ErrInvalidContract)
 	}
 
 	return payload.Contract.Validate(actingPartyCN)

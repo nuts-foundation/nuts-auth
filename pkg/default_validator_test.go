@@ -2,8 +2,8 @@ package pkg
 
 import (
 	"encoding/base64"
+	"errors"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/xerrors"
 	"reflect"
 	"testing"
 	"time"
@@ -282,7 +282,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		assert.Nil(t, result)
 		assert.Error(t, err)
-		assert.True(t, xerrors.Is(err, ErrInvalidContract))
+		assert.True(t, errors.Is(err, ErrInvalidContract))
 	})
 
 	t.Run("invalid signature jwt", func(t *testing.T) {
@@ -293,7 +293,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		assert.Nil(t, result)
 		assert.Error(t, err)
-		assert.True(t, xerrors.Is(err, ErrInvalidContract))
+		assert.True(t, errors.Is(err, ErrInvalidContract))
 		assert.Equal(t, "could not verify jwt: invalid contract", err.Error())
 	})
 
@@ -304,7 +304,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		result, err := validator.ValidateJwt(token, "Demo EHR")
 		assert.Nil(t, result)
 		assert.Error(t, err)
-		assert.True(t, xerrors.Is(err, ErrInvalidContract))
+		assert.True(t, errors.Is(err, ErrInvalidContract))
 		assert.Equal(t, "jwt does not have the nuts issuer: invalid contract", err.Error())
 
 	})
