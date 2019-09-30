@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"errors"
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/sirupsen/logrus"

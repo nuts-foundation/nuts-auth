@@ -7,7 +7,6 @@ require (
 	github.com/cbroglie/mustache v1.0.1
 	github.com/deepmap/oapi-codegen v1.3.0
 	github.com/gbrlsnchs/jwt/v3 v3.0.0-rc.0
-	github.com/go-errors/errors v1.0.1
 	github.com/golang/mock v1.3.1
 	github.com/goodsign/monday v0.0.0-20190708072354-9bcb46af8546
 	github.com/hashicorp/go-retryablehttp v0.6.2 // indirect

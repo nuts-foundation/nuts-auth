@@ -40,6 +40,7 @@ var ErrInvalidContract = errors.New("invalid contract")
 
 // ValidateJwt validates a JWT formatted contract.
 func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResult, error) {
+
 	var (
 		payload nutsJwt
 	)

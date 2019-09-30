@@ -88,7 +88,7 @@ func ContractByType(contractType ContractType, language Language, version Versio
 		return contract, nil
 	}
 
-	return nil, fmt.Errorf("%w: type %s, lang: %s, version: %s", ErrContractNotFound, contractType, language, version)
+	return nil, fmt.Errorf("type %s, lang: %s, version: %s: %w", contractType, language, version, ErrContractNotFound)
 }
 
 func (c Contract) timeLocation() *time.Location {
