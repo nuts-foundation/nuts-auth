@@ -26,6 +26,5 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/timshannon/bolthold v0.0.0-20190315152903-eed35b755671 // indirect
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
-	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
 	gopkg.in/antage/eventsource.v1 v1.0.0-20150318155416-803f4c5af225 // indirect
 )
