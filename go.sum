@@ -158,6 +158,8 @@ github.com/nuts-foundation/nuts-go-core v0.0.0-20190930094343-ad57ce520f04/go.mo
 github.com/nuts-foundation/nuts-go-core v0.0.0-20190930124029-15d73212af23/go.mod h1:WPt6Av9tRtzyOOLb5Z8exADSj1bv+CwR6IqA55PFHYI=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20191014142450-dd0fd3a25ffb/go.mod h1:tPPkfE9y+T+jTc8klZ0B8FXtc23p9NIpg5BjI+FIiEs=
 github.com/nuts-foundation/nuts-registry v0.0.0-20190930131730-7e9ee2095c31/go.mod h1:lnLWx/6iwG2E2Q2gJPe3QwryBmFFvmH6nU0rJfTtsEo=
+github.com/nuts-foundation/nuts-registry v0.0.0-20191002100100-29a58b456d39 h1:gMp2YIX1CVF3MCvyo5bUYgUdnjZXbreM5WArLktCYaU=
+github.com/nuts-foundation/nuts-registry v0.0.0-20191002100100-29a58b456d39/go.mod h1:lnLWx/6iwG2E2Q2gJPe3QwryBmFFvmH6nU0rJfTtsEo=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.10.1 h1:q/mM8GF/n0shIN8SaAZ0V+jnLPzen6WIVZdiwrRlMlo=
@@ -177,6 +179,7 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 h1:oAuMlkE0npptr2iDtt8S7StydQBXmi0m2Jw2rlyiNPk=
 github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9/go.mod h1:hyxnm8M7jWk3P54LDik5aJD69BLhVRjo/ajrjQBng8k=
+github.com/privacybydesign/irmago v0.3.2-0.20190927180712-d245f8d29e59/go.mod h1:hzlZrdhrquTapBHXYU9vmXzRSsKM/Nhtqt1J9ALh59A=
 github.com/privacybydesign/irmago v0.4.0/go.mod h1:hzlZrdhrquTapBHXYU9vmXzRSsKM/Nhtqt1J9ALh59A=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v0.9.3/go.mod h1:/TN21ttK/J9q6uSwhBd54HahCDft0ttaMvbicHlPoso=
