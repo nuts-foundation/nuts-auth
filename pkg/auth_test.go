@@ -13,7 +13,7 @@ type MockContractSessionHandler struct{}
 
 const qrURL = "https://api.helder.health/auth/irmaclient/123-session-ref-123"
 
-func (v MockContractSessionHandler) SessionStatus(SessionID) *SessionStatusResult {
+func (v MockContractSessionHandler) SessionStatus(SessionID, string) *SessionStatusResult {
 	panic("implement me")
 }
 

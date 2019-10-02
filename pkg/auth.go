@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mdp/qrterminal/v3"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
@@ -89,6 +91,8 @@ func (auth *Auth) Configure() (err error) {
 
 		validator := DefaultValidator{
 			IrmaServer: GetIrmaServer(auth.Config),
+			registry: registry.RegistryInstance(),
+			crypto: crypto.CryptoInstance(),
 		}
 		auth.ContractSessionHandler = validator
 		auth.ContractValidator = validator
@@ -112,6 +116,7 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 	// Step 2: Render the contract template with all the correct values
 	message, err := contract.renderTemplate(map[string]string{
 		"acting_party": auth.Config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
+		"legal_entity": sessionRequest.LegalEntity,
 	}, 0, 60*time.Minute)
 	logrus.Debugf("contractMessage: %v", message)
 	if err != nil {
@@ -168,7 +173,7 @@ func (auth *Auth) ContractByType(contractType ContractType, language Language, v
 // ContractSessionStatus returns the current session status for a given sessionID.
 // If the session is not found, the error is an ErrSessionNotFound and SessionStatusResult is nil
 func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult, error) {
-	if sessionStatus := auth.ContractSessionHandler.SessionStatus(SessionID(sessionID)); sessionStatus != nil {
+	if sessionStatus := auth.ContractSessionHandler.SessionStatus(SessionID(sessionID), ""); sessionStatus != nil {
 		return sessionStatus, nil
 	}
 	return nil, fmt.Errorf("sessionID %s: %w", sessionID, ErrSessionNotFound)

@@ -3,31 +3,20 @@ module github.com/nuts-foundation/nuts-auth
 go 1.13
 
 require (
-	github.com/bwesterb/go-atum v1.0.1 // indirect
+	github.com/bwesterb/go-atum v1.0.1
 	github.com/cbroglie/mustache v1.0.1
 	github.com/deepmap/oapi-codegen v1.3.0
 	github.com/gbrlsnchs/jwt/v3 v3.0.0-rc.0
-	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/golang/mock v1.3.1
 	github.com/goodsign/monday v0.0.0-20190708072354-9bcb46af8546
-	github.com/hashicorp/go-retryablehttp v0.6.2 // indirect
-	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.11
-	github.com/magiconair/properties v1.8.1 // indirect
-	github.com/mattn/go-colorable v0.1.4 // indirect
-	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mdp/qrterminal/v3 v3.0.0
-	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
+	github.com/nuts-foundation/nuts-crypto v0.0.0-20191001143430-29f6ebc292f0
 	github.com/nuts-foundation/nuts-go-core v0.0.0-20191014142450-dd0fd3a25ffb
-	github.com/pelletier/go-toml v1.5.0 // indirect
-	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
+	github.com/nuts-foundation/nuts-registry v0.0.0-20190930131730-7e9ee2095c31
 	github.com/privacybydesign/irmago v0.4.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
-	github.com/timshannon/bolthold v0.0.0-20191009161117-ccb01ed9dec4 // indirect
-	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
-	gopkg.in/antage/eventsource.v1 v1.0.0-20150318155416-803f4c5af225 // indirect
 )

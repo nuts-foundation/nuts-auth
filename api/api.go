@@ -14,9 +14,9 @@ type Wrapper struct {
 	Auth pkg.AuthClient
 }
 
-// NutsAuthCreateSession translates http params to internal format, creates a IRMA signing session
+// CreateSession translates http params to internal format, creates a IRMA signing session
 // and returns the session pointer to the HTTP stack.
-func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) error {
+func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	// bind params to a generated api format struct
 	params := new(ContractSigningRequest)
 	if err := ctx.Bind(params); err != nil {
@@ -28,6 +28,7 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) error {
 		Type:     pkg.ContractType(params.Type),
 		Version:  pkg.Version(params.Version),
 		Language: pkg.Language(params.Language),
+		LegalEntity: string(params.LegalEntity),
 		// FIXME: process the ValidFrom/To from request params
 		//ValidFrom: *params.ValidFrom,
 		//ValidTo: *params.ValidTo,
@@ -55,10 +56,10 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) error {
 	return ctx.JSON(http.StatusCreated, answer)
 }
 
-// NutsAuthSessionRequestStatus gets the current status or the IRMA signing session,
+// SessionRequestStatus gets the current status or the IRMA signing session,
 // it translates the result to the api format and returns it to the HTTP stack
 // If the session is not found it returns a 404
-func (api *Wrapper) NutsAuthSessionRequestStatus(ctx echo.Context, sessionID string) error {
+func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) error {
 	sessionStatus, err := api.Auth.ContractSessionStatus(sessionID)
 	if err != nil {
 		if errors.Is(err, pkg.ErrSessionNotFound) {
@@ -71,14 +72,14 @@ func (api *Wrapper) NutsAuthSessionRequestStatus(ctx echo.Context, sessionID str
 	var disclosedAttributes []DisclosedAttribute
 	if len(sessionStatus.Disclosed) > 0 {
 		for _, attr := range sessionStatus.Disclosed[0] {
-			value := make(map[string]interface{})
+			value := make(map[string]string)
 			for key, val := range map[string]string(attr.Value) {
 				value[key] = val
 			}
 
 			disclosedAttributes = append(disclosedAttributes, DisclosedAttribute{
 				Identifier: attr.Identifier.String(),
-				Value:      value,
+				Value:      DisclosedAttribute_Value{value},
 				Rawvalue:   attr.RawValue,
 				Status:     string(attr.Status),
 			})
@@ -89,7 +90,7 @@ func (api *Wrapper) NutsAuthSessionRequestStatus(ctx echo.Context, sessionID str
 	proofStatus := string(sessionStatus.ProofStatus)
 
 	answer := SessionResult{
-		Disclosed: disclosedAttributes,
+		Disclosed: &disclosedAttributes,
 		Status:    string(sessionStatus.Status),
 		Token:     string(sessionStatus.Token),
 		Type:      string(sessionStatus.Type),
@@ -105,10 +106,10 @@ func (api *Wrapper) NutsAuthSessionRequestStatus(ctx echo.Context, sessionID str
 	return ctx.JSON(http.StatusOK, answer)
 }
 
-// NutsAuthValidateContract translates the request params to an internal format, it
+// ValidateContract translates the request params to an internal format, it
 // calls the engine's validator and translates the results to the API format and returns
 // the answer to the HTTP stack
-func (api *Wrapper) NutsAuthValidateContract(ctx echo.Context) error {
+func (api *Wrapper) ValidateContract(ctx echo.Context) error {
 	params := &ValidationRequest{}
 	if err := ctx.Bind(params); err != nil {
 		return err
@@ -127,23 +128,23 @@ func (api *Wrapper) NutsAuthValidateContract(ctx echo.Context) error {
 	}
 
 	// convert internal result back to generated api format
-	signerAttributes := make(map[string]interface{})
+	signerAttributes := make(map[string]string)
 	for k, v := range validationResponse.DisclosedAttributes {
 		signerAttributes[k] = v
 	}
 
 	answer := ValidationResult{
 		ContractFormat:   string(validationResponse.ContractFormat),
-		SignerAttributes: signerAttributes,
+		SignerAttributes: ValidationResult_SignerAttributes{AdditionalProperties:signerAttributes},
 		ValidationResult: string(validationResponse.ValidationResult),
 	}
 
 	return ctx.JSON(http.StatusOK, answer)
 }
 
-// NutsAuthGetContractByType calls the engines GetContractByType and translate the answer to
+// GetContractByType calls the engines GetContractByType and translate the answer to
 // the API format and returns the the answer back to the HTTP stack
-func (api *Wrapper) NutsAuthGetContractByType(ctx echo.Context, contractType string, params NutsAuthGetContractByTypeParams) error {
+func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, params GetContractByTypeParams) error {
 	// convert generated data types to internal types
 	var (
 		contractLanguage pkg.Language
@@ -169,7 +170,7 @@ func (api *Wrapper) NutsAuthGetContractByType(ctx echo.Context, contractType str
 	answer := Contract{
 		Language:           Language(contract.Language),
 		Template:           &contract.Template,
-		TemplateAttributes: contract.TemplateAttributes,
+		TemplateAttributes: &contract.TemplateAttributes,
 		Type:               Type(contract.Type),
 		Version:            Version(contract.Version),
 	}
