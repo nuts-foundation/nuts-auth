@@ -80,7 +80,7 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 	if _, err := jwt.Verify([]byte(token), verifier, &payload); err != nil {
 		return nil, fmt.Errorf("could not verify jwt: %w", err)
 	}
-
+	// @Context problem!!!
 	return payload.Contract.Validate(actingPartyCN)
 }
 
