@@ -365,8 +365,6 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 
 		tokenString, err := validator.createJwt(&c, "urn:oid:2.16.840.1.113883.2.4.6.1:00000000")
 
-		println(tokenString)
-
 		if assert.Nil(t, err) && assert.NotEmpty(t, tokenString) {
 			result, err := validator.ValidateJwt(tokenString, "Demo EHR")
 			if assert.Nil(t, err) && assert.NotNil(t, result) {
