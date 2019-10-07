@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/sirupsen/logrus"
@@ -19,7 +20,7 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) error {
 	// bind params to a generated api format struct
 	params := new(ContractSigningRequest)
 	if err := ctx.Bind(params); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Could not parse request body")
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
 	}
 
 	// convert generated api format to internal struct
