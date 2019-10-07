@@ -14,6 +14,7 @@ require (
 	github.com/jasonlvhit/gocron v0.0.0-20190603000501-f1cf2bd73e84 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.10
+	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/nuts-foundation/nuts-go-core v0.0.0-20190910094535-86aabc399861
 	github.com/onsi/ginkgo v1.10.1 // indirect
