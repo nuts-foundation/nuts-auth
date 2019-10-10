@@ -41,6 +41,7 @@ func (api *Wrapper) NutsAuthCreateSession(ctx echo.Context) error {
 		if errors.Is(err, pkg.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
+		logrus.WithError(err).Error("error while creating contract session")
 		return err
 	}
 

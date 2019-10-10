@@ -1,7 +1,6 @@
 package pkg
 
 import (
-	"errors"
 	"fmt"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
@@ -113,9 +112,7 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 	}, 0, 60*time.Minute)
 	logrus.Debugf("contractMessage: %v", message)
 	if err != nil {
-		logMsg := fmt.Sprintf("Could not render contract template of type %v: %v", contract.Type, err)
-		logrus.Error(logMsg)
-		return nil, errors.New(logMsg)
+		return nil, fmt.Errorf("could not render contract template: %w", err)
 	}
 
 	// Step 3: Put the contract in an IMRA envelope
@@ -130,11 +127,10 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 
 	// Step 4: Start an IRMA session
 	sessionPointer, token, err := auth.ContractSessionHandler.StartSession(signatureRequest, func(result *server.SessionResult) {
-		logrus.Infof("session done, result: %s", server.ToJson(result))
+		logrus.Debugf("session done, result: %s", server.ToJson(result))
 	})
 	if err != nil {
-		logrus.Error("error while creating session: ", err)
-		return nil, err
+		return nil, fmt.Errorf("error while creating session: %w", err)
 	}
 	logrus.Debugf("session created with token: %s", token)
 
