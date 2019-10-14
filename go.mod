@@ -11,10 +11,15 @@ require (
 	github.com/goodsign/monday v0.0.0-20190708072354-9bcb46af8546
 	github.com/hashicorp/go-retryablehttp v0.6.2 // indirect
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
+	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/labstack/echo/v4 v4.1.11
+	github.com/magiconair/properties v1.8.1 // indirect
+	github.com/mattn/go-colorable v0.1.4 // indirect
+	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
-	github.com/nuts-foundation/nuts-go-core v0.0.0-20191014075953-7f2c5401a541
+	github.com/nuts-foundation/nuts-go-core v0.0.0-20191014142450-dd0fd3a25ffb
+	github.com/pelletier/go-toml v1.5.0 // indirect
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
 	github.com/privacybydesign/irmago v0.4.0
 	github.com/sirupsen/logrus v1.4.2
