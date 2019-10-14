@@ -76,17 +76,23 @@ func AuthInstance() *Auth {
 	return instance
 }
 
+// ErrMissingActingParty is returned when the actingPartyCn is missing from the config
+var ErrMissingActingParty = errors.New("missing actingPartyCn")
+
+// ErrMissingPublicUrl is returned when the publicUrl is missing from the config
+var ErrMissingPublicUrl = errors.New("missing publicUrl")
+
 // Configure the Auth struct by creating a validator and create an Irma server
 func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
 		if auth.Config.ActingPartyCn == "" {
-			logrus.Error("actingPartyCn for auth must be provided")
-			logrus.Exit(1)
+			err = ErrMissingActingParty
+			return
 		}
 
 		if auth.Config.PublicUrl == "" {
-			logrus.Error("publicUrl for auth must be provided")
-			logrus.Exit(1)
+			err = ErrMissingPublicUrl
+			return
 		}
 
 		validator := DefaultValidator{

@@ -72,3 +72,48 @@ func TestAuth_ContractByType(t *testing.T) {
 		assert.True(t, errors.Is(err, ErrContractNotFound), "expected ErrContractNotFound")
 	})
 }
+
+func TestAuthInstance(t *testing.T) {
+	t.Run("Same instance is returned", func(t *testing.T) {
+		assert.Equal(t, AuthInstance(), AuthInstance())
+	})
+
+	t.Run("default config is used", func(t *testing.T) {
+		assert.Equal(t, AuthInstance().Config, AuthConfig{})
+	})
+}
+
+func TestAuth_Configure(t *testing.T) {
+	t.Run("Configure returns error on missing actingPartyCn", func(t *testing.T) {
+		i := &Auth{
+			Config: AuthConfig{
+				PublicUrl: "url",
+			},
+		}
+
+		assert.Equal(t, ErrMissingActingParty, i.Configure())
+	})
+
+	t.Run("Configure returns error on missing publicUrl", func(t *testing.T) {
+		i := &Auth{
+			Config: AuthConfig{
+				ActingPartyCn: "url",
+			},
+		}
+
+		assert.Equal(t, ErrMissingPublicUrl, i.Configure())
+	})
+
+	t.Run("Configure returns no error on valid config", func(t *testing.T) {
+		i := &Auth{
+			Config: AuthConfig{
+				PublicUrl: "url",
+				ActingPartyCn: "url",
+				IrmaConfigPath: "../testdata/irma",
+				SkipAutoUpdateIrmaSchemas: true,
+			},
+		}
+
+		assert.Nil(t, i.Configure())
+	})
+}
