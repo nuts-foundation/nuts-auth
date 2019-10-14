@@ -13,6 +13,7 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.6.2 // indirect
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
 	github.com/labstack/echo/v4 v4.1.11
+	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/nuts-foundation/nuts-go-core v0.0.0-20191014075953-7f2c5401a541
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
