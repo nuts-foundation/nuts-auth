@@ -113,17 +113,40 @@ func (v DefaultValidator) createJwt(contract *SignedIrmaContract, legalEntity st
 		Contract: *contract,
 	}
 
-	// todo ugly?
-	var claims map[string]interface{}
-	jsonString, _ := json.Marshal(payload)
-	json.Unmarshal(jsonString, &claims)
-	tokenString, err := v.crypto.SignJwtFor(claims, types.LegalEntity{URI: legalEntity})
-
+	claims, err := convertPayloadToClaims(payload)
 	if err != nil {
-		logrus.WithError(err).Error("could not sign jwt")
+		err = fmt.Errorf("could not construct claims: %w", err)
+		logrus.Error(err)
+		return "", err
+	}
+
+	tokenString, err := v.crypto.SignJwtFor(claims, types.LegalEntity{URI: legalEntity})
+	if err != nil {
+		err = fmt.Errorf("could not sign jwt: %w", err)
+		logrus.Error(err)
 		return "", err
 	}
 	return tokenString, nil
+}
+
+func convertPayloadToClaims(payload nutsJwt) (map[string]interface{}, error) {
+
+	var (
+		jsonString 	[]byte
+		err 		error
+		claims 		map[string]interface{}
+	)
+
+	if jsonString, err = json.Marshal(payload); err != nil {
+		logrus.WithError(err).Error("could not sign jwt")
+		return nil, fmt.Errorf("could not marshall payload: %w", err)
+	}
+
+	if err := json.Unmarshal(jsonString, &claims); err != nil {
+		return nil, fmt.Errorf("could not unmarshall string: %w", err)
+	}
+
+	return claims, nil
 }
 
 // StartSession starts an irma session.
