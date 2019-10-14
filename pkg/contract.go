@@ -25,8 +25,10 @@ type Contract struct {
 
 // Language of the contract in all caps. example: "NL"
 type Language string
+
 // ContractType contains type of the contract to sign. Example: "BehandelaarLogin"
 type ContractType string
+
 // Version of the contract. example: "v1"
 type Version string
 
@@ -78,6 +80,7 @@ func ContractFromMessageContents(contents string) (*Contract, error) {
 	return ContractByType(contractType, language, version)
 
 }
+
 // ContractByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
 // If no contract is found, the error vaule of ErrContractNotFound is returned.
 func ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {

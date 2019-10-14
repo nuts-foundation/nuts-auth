@@ -7,7 +7,7 @@ import (
 
 func TestGetIrmaServer(t *testing.T) {
 	authConfig := AuthConfig{
-		IrmaConfigPath: "../testdata/irma",
+		IrmaConfigPath:            "../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 

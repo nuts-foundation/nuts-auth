@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type MockContractSessionHandler struct{
+type MockContractSessionHandler struct {
 	SessionStatusResult *SessionStatusResult
 }
 
 type MockContractValidator struct {
-	jwtResult ValidationResult
+	jwtResult  ValidationResult
 	irmaResult ValidationResult
 }
 
@@ -122,9 +122,9 @@ func TestAuth_Configure(t *testing.T) {
 	t.Run("Configure returns no error on valid config", func(t *testing.T) {
 		i := &Auth{
 			Config: AuthConfig{
-				PublicUrl: "url",
-				ActingPartyCn: "url",
-				IrmaConfigPath: "../testdata/irma",
+				PublicUrl:                 "url",
+				ActingPartyCn:             "url",
+				IrmaConfigPath:            "../testdata/irma",
 				SkipAutoUpdateIrmaSchemas: true,
 			},
 		}
@@ -185,7 +185,7 @@ func TestAuth_ValidateContract(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, Valid, result.ValidationResult )
+		assert.Equal(t, Valid, result.ValidationResult)
 	})
 
 	t.Run("Returns validation result for Irma", func(t *testing.T) {
@@ -201,6 +201,6 @@ func TestAuth_ValidateContract(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, Valid, result.ValidationResult )
+		assert.Equal(t, Valid, result.ValidationResult)
 	})
 }

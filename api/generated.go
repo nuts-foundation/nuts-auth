@@ -510,4 +510,3 @@ func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
 	router.GET("/auth/contract/:contractType", wrapper.GetContractByType)
 
 }
-

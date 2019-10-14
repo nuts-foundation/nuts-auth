@@ -176,11 +176,11 @@ func TestValidateContract(t *testing.T) {
 	}
 
 	authConfig := AuthConfig{
-		IrmaConfigPath: "../testdata/irma",
+		IrmaConfigPath:            "../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 
-	validator := DefaultValidator{IrmaServer: GetIrmaServer(authConfig), irmaConfig:GetIrmaConfig(authConfig)}
+	validator := DefaultValidator{IrmaServer: GetIrmaServer(authConfig), irmaConfig: GetIrmaConfig(authConfig)}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -201,7 +201,7 @@ func TestValidateContract(t *testing.T) {
 
 func TestDefaultValidator_SessionStatus(t *testing.T) {
 	authConfig := AuthConfig{
-		IrmaConfigPath: "../testdata/irma",
+		IrmaConfigPath:            "../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 
@@ -325,7 +325,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		result, _ := validator.ValidateJwt(string(token), "Demo EHR")
 
 		//if assert.NotNil(t, result) && assert.NotNil(t, err) {
-			assert.Equal(t, Invalid, result.ValidationResult)
+		assert.Equal(t, Invalid, result.ValidationResult)
 		//}
 	})
 
@@ -407,7 +407,7 @@ func createJwt(iss string, sub string, irmaContract string) []byte {
 	jsonString, _ := json.Marshal(payload)
 	json.Unmarshal(jsonString, &claims)
 
-	tokenString, _ := cryptoInstance.SignJwtFor(claims, types.LegalEntity{URI:sub})
+	tokenString, _ := cryptoInstance.SignJwtFor(claims, types.LegalEntity{URI: sub})
 
 	return []byte(tokenString)
 }
@@ -415,7 +415,7 @@ func createJwt(iss string, sub string, irmaContract string) []byte {
 var cryptoInstance = &crypto.Crypto{
 	Config: crypto.CryptoConfig{
 		Keysize: types.ConfigKeySizeDefault,
-		Fspath: "../testdata/tmp",
+		Fspath:  "../testdata/tmp",
 	},
 }
 var testInstance *DefaultValidator

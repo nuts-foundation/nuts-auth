@@ -92,7 +92,7 @@ func (v DefaultValidator) SessionStatus(id SessionID, legalEntity string) *Sessi
 		if result.Signature != nil {
 			token, _ = v.createJwt(&SignedIrmaContract{*result.Signature}, legalEntity)
 		}
-		result :=  &SessionStatusResult{*result, token}
+		result := &SessionStatusResult{*result, token}
 		logrus.Info(result.NutsAuthToken)
 		return result
 	}
@@ -107,7 +107,7 @@ type nutsJwt struct {
 func (v DefaultValidator) createJwt(contract *SignedIrmaContract, legalEntity string) (string, error) {
 	payload := nutsJwt{
 		Payload: jwt.Payload{
-			Issuer: "nuts",
+			Issuer:  "nuts",
 			Subject: legalEntity,
 		},
 		Contract: *contract,
@@ -132,9 +132,9 @@ func (v DefaultValidator) createJwt(contract *SignedIrmaContract, legalEntity st
 func convertPayloadToClaims(payload nutsJwt) (map[string]interface{}, error) {
 
 	var (
-		jsonString 	[]byte
-		err 		error
-		claims 		map[string]interface{}
+		jsonString []byte
+		err        error
+		claims     map[string]interface{}
 	)
 
 	if jsonString, err = json.Marshal(payload); err != nil {

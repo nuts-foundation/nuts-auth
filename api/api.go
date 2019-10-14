@@ -25,9 +25,9 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 
 	// convert generated api format to internal struct
 	sessionRequest := pkg.CreateSessionRequest{
-		Type:     pkg.ContractType(params.Type),
-		Version:  pkg.Version(params.Version),
-		Language: pkg.Language(params.Language),
+		Type:        pkg.ContractType(params.Type),
+		Version:     pkg.Version(params.Version),
+		Language:    pkg.Language(params.Language),
 		LegalEntity: string(params.LegalEntity),
 		// FIXME: process the ValidFrom/To from request params
 		//ValidFrom: *params.ValidFrom,
@@ -135,7 +135,7 @@ func (api *Wrapper) ValidateContract(ctx echo.Context) error {
 
 	answer := ValidationResult{
 		ContractFormat:   string(validationResponse.ContractFormat),
-		SignerAttributes: ValidationResult_SignerAttributes{AdditionalProperties:signerAttributes},
+		SignerAttributes: ValidationResult_SignerAttributes{AdditionalProperties: signerAttributes},
 		ValidationResult: string(validationResponse.ValidationResult),
 	}
 

@@ -185,7 +185,6 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 
-
 		sa := ValidationResult_SignerAttributes{AdditionalProperties: map[string]string{"nl": "00000007"}}
 		echoMock.EXPECT().JSON(http.StatusOK, ValidationResult{
 			ContractFormat:   string(pkg.JwtFormat),
@@ -222,31 +221,29 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 		cVersion := "v1"
 		cLanguage := "NL"
 		params := GetContractByTypeParams{
-			Version: &cVersion,
+			Version:  &cVersion,
 			Language: &cLanguage,
 		}
 
 		contract := pkg.Contract{
-			Type: pkg.ContractType(cType),
-			Version: pkg.Version(cVersion),
-			Language: pkg.Language(cLanguage),
+			Type:               pkg.ContractType(cType),
+			Version:            pkg.Version(cVersion),
+			Language:           pkg.Language(cLanguage),
 			TemplateAttributes: []string{"party"},
-			Template: "ik geen toestemming aan {{party}}",
-
+			Template:           "ik geen toestemming aan {{party}}",
 		}
 
 		ta := []string{"party"}
 		answer := Contract{
-			Type: Type(cType),
-			Template: &contract.Template,
-			Version: Version(cVersion),
+			Type:               Type(cType),
+			Template:           &contract.Template,
+			Version:            Version(cVersion),
 			TemplateAttributes: &ta,
-			Language: Language(cLanguage),
+			Language:           Language(cLanguage),
 		}
 
 		authMock.EXPECT().ContractByType(pkg.ContractType(cType), pkg.Language(cLanguage), pkg.Version(cVersion)).Return(&contract, nil)
 		echoMock.EXPECT().JSON(http.StatusOK, answer)
-
 
 		wrapper := Wrapper{Auth: authMock}
 		err := wrapper.GetContractByType(echoMock, cType, params)
@@ -261,7 +258,7 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 		authMock := mock2.NewMockAuthClient(ctrl)
 
 		cType := "UnknownContract"
-		params := GetContractByTypeParams{ }
+		params := GetContractByTypeParams{}
 
 		authMock.EXPECT().ContractByType(pkg.ContractType(cType), pkg.Language(""), pkg.Version("")).Return(nil, pkg.ErrContractNotFound)
 
