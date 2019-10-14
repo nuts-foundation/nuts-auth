@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/mdp/qrterminal/v3"
 	irma "github.com/privacybydesign/irmago"
