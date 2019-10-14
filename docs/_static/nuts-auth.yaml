@@ -176,12 +176,12 @@ components:
           type: string
           format: 'date-time'
           description: "ValidFrom describes the time from which this contract should be considered valid"
-          example: "2019-06-24T14:32:00Z02:00"
+          example: "2019-06-24T14:32:00+02:00"
         valid_to:
           type: string
           format: 'date-time'
           description: "ValidTo describes the time until this contract should be considered valid"
-          example: "2019-12-24T14:32:00Z02:00"
+          example: "2019-12-24T14:32:00+02:00"
     CreateSessionResult:
       description: CreateSessionResult contains the results needed to setup an irma flow
       required:

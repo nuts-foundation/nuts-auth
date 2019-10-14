@@ -1,10 +1,13 @@
 package pkg
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/mdp/qrterminal/v3"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
+  "os"
 	"sync"
 	"time"
 )
@@ -139,7 +142,21 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 		QrCodeInfo: *sessionPointer,
 		SessionID:  token,
 	}
+	jsonResult, _ := json.Marshal(createSessionResult.QrCodeInfo)
+	printQrCode(string(jsonResult))
 	return createSessionResult, nil
+}
+
+func printQrCode(qrcode string) {
+	config := qrterminal.Config{
+		HalfBlocks: false,
+		BlackChar: qrterminal.WHITE,
+		WhiteChar: qrterminal.BLACK,
+		Level: qrterminal.M,
+		Writer: os.Stdout,
+		QuietZone: 1,
+	}
+	qrterminal.GenerateWithConfig(qrcode, config)
 }
 
 // ContractByType returns a Contract of a certain type, language and version.

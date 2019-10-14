@@ -15,7 +15,7 @@ type DefaultValidator struct {
 	IrmaServer *irmaserver.Server
 }
 
-var hs256 = jwt.NewHMAC(jwt.SHA256, []byte("nuts"))
+var hs256 = jwt.NewHS256([]byte("nuts"))
 
 // ValidateContract is the entrypoint for contract validation.
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
@@ -40,22 +40,13 @@ var ErrInvalidContract = errors.New("invalid contract")
 
 // ValidateJwt validates a JWT formatted contract.
 func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResult, error) {
-	raw, err := jwt.Parse([]byte(token))
-	if err != nil {
-		return nil, fmt.Errorf("could not parse jwt: %w", ErrInvalidContract)
-	}
-
-	if err := raw.Verify(hs256); err != nil {
-		return nil, fmt.Errorf("could not verify jwt: %w", ErrInvalidContract)
-	}
-
 	var (
 		payload nutsJwt
 	)
 
-	if _, err := raw.Decode(&payload); err != nil {
-		logrus.Error("Could not decode jwt payload", err)
-		return nil, err
+	_, err := jwt.Verify([]byte(token), hs256, &payload)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify jwt: %w", ErrInvalidContract)
 	}
 
 	if payload.Issuer != "nuts" {
@@ -86,14 +77,13 @@ type nutsJwt struct {
 }
 
 func createJwt(contract *SignedIrmaContract) (string, error) {
-	header := jwt.Header{}
 	payload := nutsJwt{
 		Payload: jwt.Payload{
 			Issuer: "nuts",
 		},
 		Contract: *contract,
 	}
-	token, err := jwt.Sign(header, payload, hs256)
+	token, err := jwt.Sign(payload, hs256)
 	if err != nil {
 		logrus.WithError(err).Error("could not sign jwt")
 		return "", nil
