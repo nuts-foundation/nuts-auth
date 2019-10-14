@@ -174,14 +174,20 @@ func TestValidateContract(t *testing.T) {
 			true,
 		},
 	}
-	GetIrmaConfig(AuthConfig{})
+
+	authConfig := AuthConfig{
+		IrmaConfigPath: "../testdata/irma",
+		SkipAutoUpdateIrmaSchemas: true,
+	}
+
+	validator := DefaultValidator{IrmaServer: GetIrmaServer(authConfig), irmaConfig:GetIrmaConfig(authConfig)}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			//patch := monkey.Patch(time.Now, func() time.Time { return tt.date })
 			NowFunc = func() time.Time { return tt.date }
 			//defer patch.Unpatch()
-			got, err := DefaultValidator{IrmaServer: GetIrmaServer(AuthConfig{})}.ValidateContract(tt.args.contract, tt.args.format, tt.args.actingPartyCN)
+			got, err := validator.ValidateContract(tt.args.contract, tt.args.format, tt.args.actingPartyCN)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateContract() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -194,7 +200,10 @@ func TestValidateContract(t *testing.T) {
 }
 
 func TestDefaultValidator_SessionStatus(t *testing.T) {
-	GetIrmaConfig(AuthConfig{})
+	authConfig := AuthConfig{
+		IrmaConfigPath: "../testdata/irma",
+		SkipAutoUpdateIrmaSchemas: true,
+	}
 
 	signatureRequest := &irma2.SignatureRequest{
 		Message: "Ik ga akkoord",
@@ -212,7 +221,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 		},
 	}
 
-	_, knownSessionID, _ := GetIrmaServer(AuthConfig{}).StartSession(signatureRequest, func(result *server.SessionResult) {
+	_, knownSessionID, _ := GetIrmaServer(authConfig).StartSession(signatureRequest, func(result *server.SessionResult) {
 		logrus.Infof("session done, result: %s", server.ToJson(result))
 	})
 
@@ -230,13 +239,13 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 	}{
 		{
 			"for an unknown session, it returns nil",
-			fields{GetIrmaServer(AuthConfig{})},
+			fields{GetIrmaServer(authConfig)},
 			args{"unknown sessionId"},
 			nil,
 		},
 		{
 			"for a known session it returns a status",
-			fields{GetIrmaServer(AuthConfig{})},
+			fields{GetIrmaServer(authConfig)},
 			args{SessionID(knownSessionID)},
 			&SessionStatusResult{
 				server.SessionResult{Token: knownSessionID, Status: server.StatusInitialized, Type: irma2.ActionSigning},
@@ -369,6 +378,7 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 		}()
 
 		validator := defaultValidator()
+		//defer os.RemoveAll(cryptoInstance.Config.Fspath)
 
 		var c = SignedIrmaContract{}
 		json.Unmarshal([]byte(testdata.ValidIrmaContract), &c.IrmaContract)
@@ -397,12 +407,19 @@ func createJwt(iss string, sub string, irmaContract string) []byte {
 	jsonString, _ := json.Marshal(payload)
 	json.Unmarshal(jsonString, &claims)
 
-	tokenString, _ := crypto.CryptoInstance().SignJwtFor(claims, types.LegalEntity{URI:sub})
+	tokenString, _ := cryptoInstance.SignJwtFor(claims, types.LegalEntity{URI:sub})
 
 	return []byte(tokenString)
 }
 
+var cryptoInstance = &crypto.Crypto{
+	Config: crypto.CryptoConfig{
+		Keysize: types.ConfigKeySizeDefault,
+		Fspath: "../testdata/tmp",
+	},
+}
 var testInstance *DefaultValidator
+
 func defaultValidator() DefaultValidator {
 	mutex := sync.Mutex{}
 	mutex.Lock()
@@ -418,15 +435,14 @@ func defaultValidator() DefaultValidator {
 			panic(err)
 		}
 
-		c := crypto.CryptoInstance()
-		if err := c.Configure(); err != nil {
+		if err := cryptoInstance.Configure(); err != nil {
 			panic(err)
 		}
 
 		le := types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"}
-		c.GenerateKeyPairFor(le)
-		c.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"})
-		pub, _ := c.PublicKey(le)
+		cryptoInstance.GenerateKeyPairFor(le)
+		cryptoInstance.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"})
+		pub, _ := cryptoInstance.PublicKey(le)
 
 		r.RegisterOrganization(db.Organization{
 			Identifier: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000",
@@ -436,7 +452,11 @@ func defaultValidator() DefaultValidator {
 
 		testInstance = &DefaultValidator{
 			registry: r,
-			crypto:   c,
+			crypto:   cryptoInstance,
+			irmaConfig: GetIrmaConfig(AuthConfig{
+				IrmaConfigPath:            "../testdata/irma",
+				SkipAutoUpdateIrmaSchemas: true,
+			}),
 		}
 	}
 

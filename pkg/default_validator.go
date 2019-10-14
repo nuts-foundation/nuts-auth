@@ -17,6 +17,7 @@ import (
 // DefaultValidator validates contracts using the irma logic.
 type DefaultValidator struct {
 	IrmaServer *irmaserver.Server
+	irmaConfig *irma.Configuration
 	registry   registry.RegistryClient
 	crypto     nutscrypto.Client
 }
@@ -34,8 +35,7 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 		if err != nil {
 			return nil, err
 		}
-
-		return signedContract.Validate(actingPartyCN)
+		return signedContract.Validate(actingPartyCN, v.irmaConfig)
 	}
 	return nil, ErrUnknownContractFormat
 }
@@ -81,7 +81,7 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 		return nil, fmt.Errorf("could not verify jwt: %w", err)
 	}
 	// @Context problem!!!
-	return payload.Contract.Validate(actingPartyCN)
+	return payload.Contract.Validate(actingPartyCN, v.irmaConfig)
 }
 
 // SessionStatus returns the current status of a certain session.

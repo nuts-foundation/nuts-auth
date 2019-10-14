@@ -75,3 +75,6 @@ coverage.txt
 profile.out
 main
 nuts.yaml
+
+# anything tmp
+tmp

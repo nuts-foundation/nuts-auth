@@ -12,8 +12,6 @@ require (
 	github.com/labstack/echo/v4 v4.1.11
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/nuts-foundation/nuts-crypto v0.0.0-20191001143430-29f6ebc292f0
-	github.com/nuts-foundation/nuts-go-core v0.0.0-20191014142450-dd0fd3a25ffb
-	github.com/nuts-foundation/nuts-registry v0.0.0-20190930131730-7e9ee2095c31
 	github.com/privacybydesign/irmago v0.4.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
