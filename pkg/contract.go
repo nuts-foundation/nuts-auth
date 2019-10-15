@@ -70,7 +70,7 @@ func ContractFromMessageContents(contents string) (*Contract, error) {
 
 	matchResult := r.FindSubmatch([]byte(contents))
 	if len(matchResult) != 4 {
-		return nil, fmt.Errorf("%w: could not extract contract version, languae and type", ErrInvalidContractText)
+		return nil, fmt.Errorf("%w: could not extract contract version, language and type", ErrInvalidContractText)
 	}
 
 	language := Language(matchResult[1])
