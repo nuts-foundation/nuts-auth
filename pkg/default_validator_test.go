@@ -296,13 +296,12 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 	})
 
 	t.Run("invalid formatted jwt", func(t *testing.T) {
-		token := "foo.bar"
+		token := "foo.bar.sig"
 
 		result, err := validator.ValidateJwt(token, "actingParty")
 
 		assert.Nil(t, result)
 		assert.Error(t, err)
-		assert.True(t, errors.Is(err, ErrInvalidContract))
 	})
 
 	t.Run("invalid signature", func(t *testing.T) {
@@ -322,11 +321,11 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		token := createJwt("nuts", "urn:oid:2.16.840.1.113883.2.4.6.1:00000000", testdata.ForgedIrmaContract)
 		//token = append(token[:len(token)-1], byte('a'))
 
-		result, _ := validator.ValidateJwt(string(token), "Demo EHR")
+		result, err := validator.ValidateJwt(string(token), "Demo EHR")
 
-		//if assert.NotNil(t, result) && assert.NotNil(t, err) {
-		assert.Equal(t, Invalid, result.ValidationResult)
-		//}
+		if assert.NotNil(t, result) && assert.Nil(t, err) {
+			assert.Equal(t, Invalid, result.ValidationResult)
+		}
 	})
 
 	t.Run("wrong issuer", func(t *testing.T) {
@@ -337,28 +336,6 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		assert.Error(t, err)
 		assert.True(t, errors.Is(err, ErrInvalidContract))
 		assert.Equal(t, "jwt does not have the nuts issuer: invalid contract", err.Error())
-	})
-
-	t.Run("wrong legalEntity", func(t *testing.T) {
-		oldFunc := NowFunc
-
-		NowFunc = func() time.Time {
-			now, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
-			if err != nil {
-				panic(err)
-			}
-			return now
-		}
-		defer func() {
-			NowFunc = oldFunc
-		}()
-
-		token := createJwt("nuts", "urn:oid:2.16.840.1.113883.2.4.6.1:00000001", testdata.ValidIrmaContract)
-
-		result, err := validator.ValidateJwt(string(token), "Demo EHR")
-		assert.Nil(t, result)
-		assert.Error(t, err)
-		assert.Equal(t, "could not verify jwt: organization not found", err.Error())
 	})
 }
 

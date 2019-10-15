@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/dgrijalva/jwt-go"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
@@ -45,42 +45,34 @@ var ErrInvalidContract = errors.New("invalid contract")
 
 // ValidateJwt validates a JWT formatted contract.
 func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResult, error) {
-	var payload nutsJwt
+	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (i interface{}, e error) {
+		legalEntity := token.Claims.(jwt.MapClaims)["sub"]
+		if legalEntity == nil || legalEntity == "" {
+			return nil, ErrInvalidContract
+		}
 
-	_, err := jwt.Verify([]byte(token), jwt.None(), &payload)
+		// get public key
+		pem, err := v.crypto.PublicKey(types.LegalEntity{URI:legalEntity.(string)})
+		if err != nil {
+			return nil, err
+		}
+
+		return nutscrypto.PemToPublicKey([]byte(pem))
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("could not parse jwt: %w", ErrInvalidContract)
+		return nil, fmt.Errorf("could not parse jwt: %w", err)
 	}
 
-	if payload.Issuer != "nuts" {
+	if parsedToken.Claims.(jwt.MapClaims)["iss"] != "nuts" {
 		return nil, fmt.Errorf("jwt does not have the nuts issuer: %w", ErrInvalidContract)
 	}
 
-	if len(payload.Subject) == 0 {
-		return nil, fmt.Errorf("jwt does not have a subject: %w", ErrInvalidContract)
-	}
-
-	// find the public key
-	org, err := v.registry.OrganizationById(payload.Subject)
+	payload, err := convertClaimsToPayload(parsedToken.Claims.(jwt.MapClaims))
 	if err != nil {
-		return nil, fmt.Errorf("could not verify jwt: %w", err)
+		return nil, err
 	}
 
-	if org.PublicKey == nil {
-		return nil, fmt.Errorf("could not verify jwt: missing public key for %s", org.Identifier)
-	}
-
-	pub, err := nutscrypto.PemToPublicKey([]byte(*org.PublicKey))
-	if err != nil {
-		return nil, fmt.Errorf("could not verify jwt: %w", err)
-	}
-
-	verifier := jwt.NewRS256(jwt.RSAPublicKey(pub))
-
-	if _, err := jwt.Verify([]byte(token), verifier, &payload); err != nil {
-		return nil, fmt.Errorf("could not verify jwt: %w", err)
-	}
-	// @Context problem!!!
 	return payload.Contract.Validate(actingPartyCN, v.irmaConfig)
 }
 
@@ -100,13 +92,13 @@ func (v DefaultValidator) SessionStatus(id SessionID, legalEntity string) *Sessi
 }
 
 type nutsJwt struct {
-	jwt.Payload
+	jwt.StandardClaims
 	Contract SignedIrmaContract `json:"nuts_signature"`
 }
 
 func (v DefaultValidator) createJwt(contract *SignedIrmaContract, legalEntity string) (string, error) {
 	payload := nutsJwt{
-		Payload: jwt.Payload{
+		StandardClaims: jwt.StandardClaims{
 			Issuer:  "nuts",
 			Subject: legalEntity,
 		},
@@ -147,6 +139,24 @@ func convertPayloadToClaims(payload nutsJwt) (map[string]interface{}, error) {
 	}
 
 	return claims, nil
+}
+
+func convertClaimsToPayload(claims map[string]interface{}) (*nutsJwt, error) {
+	var (
+		jsonString []byte
+		err        error
+		payload    nutsJwt
+	)
+
+	if jsonString, err = json.Marshal(claims); err != nil {
+		return nil, fmt.Errorf("could not marshall payload: %w", err)
+	}
+
+	if err := json.Unmarshal(jsonString, &payload); err != nil {
+		return nil, fmt.Errorf("could not unmarshall string: %w", err)
+	}
+
+	return &payload, nil
 }
 
 // StartSession starts an irma session.
