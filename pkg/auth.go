@@ -3,12 +3,10 @@ package pkg
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-errors/errors"
 	"github.com/mdp/qrterminal/v3"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
 	"os"
 	"sync"
 	"time"
@@ -117,9 +115,7 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 	}, 0, 60*time.Minute)
 	logrus.Debugf("contractMessage: %v", message)
 	if err != nil {
-		logMsg := fmt.Sprintf("Could not render contract template of type %v: %v", contract.Type, err)
-		logrus.Error(logMsg)
-		return nil, errors.New(logMsg)
+		return nil, fmt.Errorf("could not render contract template: %w", err)
 	}
 
 	// Step 3: Put the contract in an IMRA envelope
@@ -134,11 +130,10 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 
 	// Step 4: Start an IRMA session
 	sessionPointer, token, err := auth.ContractSessionHandler.StartSession(signatureRequest, func(result *server.SessionResult) {
-		logrus.Infof("session done, result: %s", server.ToJson(result))
+		logrus.Debugf("session done, result: %s", server.ToJson(result))
 	})
 	if err != nil {
-		logrus.Error("error while creating session: ", err)
-		return nil, err
+		return nil, fmt.Errorf("error while creating session: %w", err)
 	}
 	logrus.Debugf("session created with token: %s", token)
 
@@ -176,7 +171,7 @@ func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult,
 	if sessionStatus := auth.ContractSessionHandler.SessionStatus(SessionID(sessionID)); sessionStatus != nil {
 		return sessionStatus, nil
 	}
-	return nil, xerrors.Errorf("sessionID %s: %w", sessionID, ErrSessionNotFound)
+	return nil, fmt.Errorf("sessionID %s: %w", sessionID, ErrSessionNotFound)
 }
 
 // ValidateContract validates a given contract. Currently two ContractType's are accepted: Irma and Jwt.
@@ -187,5 +182,5 @@ func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResult
 	} else if request.ContractFormat == JwtFormat {
 		return auth.ContractValidator.ValidateJwt(request.ContractString, request.ActingPartyCN)
 	}
-	return nil, xerrors.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
+	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
 }

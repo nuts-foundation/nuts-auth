@@ -1,12 +1,11 @@
 package pkg
 
 import (
+	"errors"
 	"fmt"
 	"github.com/cbroglie/mustache"
-	"github.com/go-errors/errors"
 	"github.com/goodsign/monday"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/xerrors"
 	"regexp"
 	"time"
 )
@@ -37,6 +36,9 @@ var NowFunc = time.Now
 // ErrContractNotFound is used when a certain combination of type, language and version cannot resolve to a contract
 var ErrContractNotFound = errors.New("contract not found")
 
+// ErrInvalidContractText is used when contract texts cannot be parsed or contain invalid values
+var ErrInvalidContractText = errors.New("invalid contract text")
+
 // EN:PractitionerLogin:v1 Contract
 var contracts = map[Language]map[ContractType]map[Version]*Contract{
 	"NL": {"BehandelaarLogin": {"v1": &Contract{
@@ -66,8 +68,7 @@ func ContractFromMessageContents(contents string) (*Contract, error) {
 
 	matchResult := r.FindSubmatch([]byte(contents))
 	if len(matchResult) != 4 {
-		//logrus.Error("Could not extract type, language and version form contract text")
-		return nil, xerrors.Errorf("Could not extract type, language and version from contract text")
+		return nil, fmt.Errorf("%w: could not extract contract version, languae and type", ErrInvalidContractText)
 	}
 
 	language := Language(matchResult[1])
@@ -83,12 +84,11 @@ func ContractByType(contractType ContractType, language Language, version Versio
 	if version == "" {
 		version = "v1"
 	}
-	contract, ok := contracts[Language(language)][ContractType(contractType)][Version(version)]
-	if ok {
+	if contract, ok := contracts[Language(language)][ContractType(contractType)][Version(version)]; ok {
 		return contract, nil
 	}
 
-	return nil, xerrors.Errorf("type %s, lang: %s, version: %s: %w", contractType, language, version, ErrContractNotFound)
+	return nil, fmt.Errorf("type %s, lang: %s, version: %s: %w", contractType, language, version, ErrContractNotFound)
 }
 
 func (c Contract) timeLocation() *time.Location {
@@ -107,12 +107,12 @@ func (c Contract) extractParams(text string) (map[string]string, error) {
 	r, _ := regexp.Compile(c.Regexp)
 	matchResult := r.FindSubmatch([]byte(text))
 	if len(matchResult) < 1 {
-		return nil, errors.New("Could not match the text")
+		return nil, fmt.Errorf("%w: could not match the contract template regex", ErrInvalidContractText)
 	}
 	matches := matchResult[1:]
 
 	if len(matches) != len(c.TemplateAttributes) {
-		return nil, fmt.Errorf("amount of template attributes does not match the amount of params: found: %d, expected %d", len(matches), len(c.TemplateAttributes))
+		return nil, fmt.Errorf("%w: amount of template attributes does not match the amount of params: found: %d, expected %d",ErrInvalidContractText,  len(matches), len(c.TemplateAttributes))
 	}
 
 	result := make(map[string]string, len(matches))
@@ -128,8 +128,7 @@ func parseTime(timeStr string, _ Language) (*time.Time, error) {
 	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
 	parsedTime, err := monday.ParseInLocation(timeLayout, timeStr, amsterdamLocation, monday.LocaleNlNL)
 	if err != nil {
-		logrus.WithError(err).Errorf("error parsing contract time %v", timeStr)
-		return nil, err
+		return nil, fmt.Errorf("invalid time string [%v]: %w", timeStr, err)
 	}
 	return &parsedTime, nil
 }
@@ -143,31 +142,32 @@ func (c Contract) validateTimeFrame(params map[string]string) (bool, error) {
 	)
 
 	if validFromStr, ok = params["valid_from"]; !ok {
-		return false, errors.New("valid_from missing in params")
+		return false, fmt.Errorf("%w: value for [valid_from] is missing", ErrInvalidContractText)
 	}
 
 	validFrom, err = parseTime(validFromStr, c.Language)
 	if err != nil {
-		return false, errors.New("unable to parse valid_from")
+		return false, fmt.Errorf("%w: unable to parse [valid_from]: %s", ErrInvalidContractText, err)
+
 	}
 
 	if validToStr, ok = params["valid_to"]; !ok {
-		return false, errors.New("valid_to missing in params")
+		return false, fmt.Errorf("%w: value for [valid_to] is missing", ErrInvalidContractText)
 	}
 
 	validTo, err = parseTime(validToStr, c.Language)
 	if err != nil {
-		return false, errors.New("unable to parse valid_to")
+		return false, fmt.Errorf("%w: unable to parse [valid_to]: %s", ErrInvalidContractText, err)
 	}
 
 	// All parsed, check time range
 	if validFrom.After(*validTo) {
-		return false, errors.New("invalid time range")
+		return false, fmt.Errorf("%w: [valid_from] must be after [valid_to]", ErrInvalidContractText)
 	}
 
 	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
 	now := NowFunc()
-	logrus.Infof("checking timeframe: now %v, validFrom: %v, validTo: %v", now, *validFrom, *validTo)
+	logrus.Debugf("checking timeframe: now %v, validFrom: %v, validTo: %v", now, *validFrom, *validTo)
 
 	if now.In(amsterdamLocation).Before(*validFrom) {
 		logrus.Info("contract is not yet valid")
