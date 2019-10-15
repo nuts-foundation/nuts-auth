@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/mdp/qrterminal/v3"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
