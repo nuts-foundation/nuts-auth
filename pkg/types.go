@@ -31,7 +31,7 @@ type ContractValidator interface {
 
 // ContractSessionHandler interface must be implemented by ContractSessionHandlers
 type ContractSessionHandler interface {
-	SessionStatus(session SessionID, legalEntity string) *SessionStatusResult
+	SessionStatus(session SessionID) (*SessionStatusResult, error)
 	StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error)
 }
 
@@ -54,7 +54,7 @@ type CreateSessionRequest struct {
 	Version Version
 	// Language of the contact such as "NL"
 	Language Language
-	// LegalEntrity denotes the organization of the user
+	// LegalEntity denotes the organization of the user
 	LegalEntity string
 	// ValidFrom describes the time from which this contract should be considered valid
 	ValidFrom time.Time

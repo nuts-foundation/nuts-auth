@@ -180,10 +180,17 @@ func (auth *Auth) ContractByType(contractType ContractType, language Language, v
 // ContractSessionStatus returns the current session status for a given sessionID.
 // If the session is not found, the error is an ErrSessionNotFound and SessionStatusResult is nil
 func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult, error) {
-	if sessionStatus := auth.ContractSessionHandler.SessionStatus(SessionID(sessionID), ""); sessionStatus != nil {
-		return sessionStatus, nil
+	sessionStatus, err := auth.ContractSessionHandler.SessionStatus(SessionID(sessionID))
+
+	if err != nil {
+		return nil, fmt.Errorf("sessionID %s: %w", sessionID, err)
 	}
-	return nil, fmt.Errorf("sessionID %s: %w", sessionID, ErrSessionNotFound)
+
+	if sessionStatus == nil {
+		return nil, fmt.Errorf("sessionID %s: %w", sessionID, ErrSessionNotFound)
+	}
+
+	return sessionStatus, nil
 }
 
 // ValidateContract validates a given contract. Currently two ContractType's are accepted: Irma and Jwt.

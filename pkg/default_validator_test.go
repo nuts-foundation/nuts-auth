@@ -258,7 +258,10 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 			v := DefaultValidator{
 				IrmaServer: tt.fields.IrmaServer,
 			}
-			if got := v.SessionStatus(tt.args.id, ""); !reflect.DeepEqual(got, tt.want) {
+
+			got, _ := v.SessionStatus(tt.args.id)
+
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("DefaultValidator.SessionStatus() = %v, want %v", got, tt.want)
 			}
 		})

@@ -78,17 +78,49 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 
 // SessionStatus returns the current status of a certain session.
 // It returns nil if the session is not found
-func (v DefaultValidator) SessionStatus(id SessionID, legalEntity string) *SessionStatusResult {
+func (v DefaultValidator) SessionStatus(id SessionID) (*SessionStatusResult, error) {
 	if result := v.IrmaServer.GetSessionResult(string(id)); result != nil {
 		var token string
 		if result.Signature != nil {
-			token, _ = v.createJwt(&SignedIrmaContract{*result.Signature}, legalEntity)
+			sic := SignedIrmaContract{*result.Signature}
+			le, err := v.legalEntityFromContract(sic)
+			if err != nil {
+				return nil, fmt.Errorf("could not create JWT for given session: %w", err)
+			}
+
+			token, _ = v.createJwt(&sic, le)
 		}
 		result := &SessionStatusResult{*result, token}
 		logrus.Info(result.NutsAuthToken)
-		return result
+		return result, nil
 	}
-	return nil
+	return nil, ErrSessionNotFound
+}
+
+// ErrLegalEntityNotFound is returned when the legalEntity can not be found based on the contract text
+var ErrLegalEntityNotFound = errors.New("missing legal entity in contract text")
+
+func (v DefaultValidator) legalEntityFromContract(sic SignedIrmaContract) (string, error) {
+	c, err := ContractFromMessageContents(sic.IrmaContract.Message)
+	if err != nil {
+		return "", err
+	}
+
+	params, err := c.extractParams(sic.IrmaContract.Message)
+	if err != nil {
+		return "", err
+	}
+
+	if _, ok := params["legal_entity"]; !ok {
+		return "", ErrLegalEntityNotFound
+	}
+
+	le, err := v.registry.ReverseLookup(params["legal_entity"])
+	if err != nil {
+		return "", err
+	}
+
+	return string(le.Identifier), nil
 }
 
 type nutsJwt struct {

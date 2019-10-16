@@ -28,8 +28,8 @@ func (m MockContractValidator) ValidateJwt(contract string, actingPartyCN string
 
 const qrURL = "https://api.helder.health/auth/irmaclient/123-session-ref-123"
 
-func (v MockContractSessionHandler) SessionStatus(SessionID, string) *SessionStatusResult {
-	return v.SessionStatusResult
+func (v MockContractSessionHandler) SessionStatus(SessionID) (*SessionStatusResult, error) {
+	return v.SessionStatusResult, nil
 }
 
 func (v MockContractSessionHandler) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
