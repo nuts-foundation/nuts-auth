@@ -97,7 +97,7 @@ func (auth *Auth) Configure() (err error) {
 		}
 
 		validator := DefaultValidator{
-			IrmaServer: GetIrmaServer(auth.Config),
+			IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
 			registry:   registry.RegistryInstance(),
 			crypto:     crypto.CryptoInstance(),
 		}

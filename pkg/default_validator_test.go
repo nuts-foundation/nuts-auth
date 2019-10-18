@@ -4,8 +4,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"github.com/golang/mock/gomock"
+	cryptoMock "github.com/nuts-foundation/nuts-crypto/mock"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
+	registryMock "github.com/nuts-foundation/nuts-registry/mock"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/stretchr/testify/assert"
@@ -266,6 +269,64 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+type mockIrmaClient struct{
+	err 		  error
+	sessionResult server.SessionResult
+}
+
+func (m *mockIrmaClient) GetSessionResult(token string) *server.SessionResult {
+	if m.err != nil {
+		return nil
+	}
+	return &m.sessionResult
+}
+
+func (m *mockIrmaClient) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma2.Qr, string, error) {
+	if m.err != nil {
+		return nil, "", m.err
+	}
+
+	return nil, "", nil
+}
+
+// tests using mocks
+func TestDefaultValidator_SessionStatus2(t *testing.T) {
+	authConfig := AuthConfig{
+		IrmaConfigPath:            "../testdata/irma",
+		SkipAutoUpdateIrmaSchemas: true,
+	}
+
+	t.Run("correct contract with registry lookup", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		rMock := registryMock.NewMockRegistryClient(ctrl)
+		cMock := cryptoMock.NewMockClient(ctrl)
+		iMock := mockIrmaClient{
+			sessionResult: server.SessionResult{
+				Token:         "token",
+				Signature:     &irma2.SignedMessage{
+					Message:   "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens verpleeghuis De nootjes en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
+				},
+			},
+		}
+
+		v := DefaultValidator{
+			IrmaServer: &iMock,
+			irmaConfig: GetIrmaConfig(authConfig),
+			crypto: cMock,
+			registry: rMock,
+		}
+
+		rMock.EXPECT().ReverseLookup("verpleeghuis De nootjes").Return(&db.Organization{Identifier:"urn:id:1"}, nil)
+		cMock.EXPECT().SignJwtFor(gomock.Any(), types.LegalEntity{URI: "urn:id:1"}).Return("token", nil)
+
+		s, err := v.SessionStatus(SessionID("known"))
+
+		assert.Nil(t, err)
+		assert.NotNil(t, s)
+		assert.Equal(t, "token", s.NutsAuthToken)
+	})
 }
 
 func TestDefaultValidator_ValidateJwt(t *testing.T) {

@@ -16,7 +16,7 @@ import (
 
 // DefaultValidator validates contracts using the irma logic.
 type DefaultValidator struct {
-	IrmaServer *irmaserver.Server
+	IrmaServer IrmaServerClient
 	irmaConfig *irma.Configuration
 	registry   registry.RegistryClient
 	crypto     nutscrypto.Client

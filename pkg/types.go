@@ -96,3 +96,26 @@ type ValidationResult struct {
 	// DisclosedAttributes contain the attributes used to sign this contract
 	DisclosedAttributes map[string]string `json:"disclosed_attributes"`
 }
+
+// IrmaServerClient is an abstraction for the Irma Server, mainly for enabling better testing
+type IrmaServerClient interface {
+	GetSessionResult(token string) *server.SessionResult
+	StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error)
+}
+
+// DefaultIrmaClient is a wrapper for the Irma Server
+type DefaultIrmaClient struct {
+	I *irmaserver.Server
+}
+
+// GetSessionResult forwards to Irma Server instance
+func (d *DefaultIrmaClient) GetSessionResult(token string) *server.SessionResult {
+	return d.I.GetSessionResult(token)
+}
+
+// StartSession forwards to Irma Server instance
+func (d *DefaultIrmaClient) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
+	return d.StartSession(request, handler)
+}
+
+
