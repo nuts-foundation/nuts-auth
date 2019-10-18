@@ -115,7 +115,7 @@ func (d *DefaultIrmaClient) GetSessionResult(token string) *server.SessionResult
 
 // StartSession forwards to Irma Server instance
 func (d *DefaultIrmaClient) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
-	return d.StartSession(request, handler)
+	return d.I.StartSession(request, handler)
 }
 
 
