@@ -48,7 +48,7 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity := token.Claims.(jwt.MapClaims)["sub"]
 		if legalEntity == nil || legalEntity == "" {
-			return nil, ErrInvalidContract
+			return nil, ErrLegalEntityNotFound
 		}
 
 		// get public key

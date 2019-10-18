@@ -13,6 +13,7 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/stretchr/testify/assert"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -359,6 +360,41 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		}
 	})
 
+	t.Run("missing legalEntity", func(t *testing.T) {
+
+		oldFunc := NowFunc
+
+		NowFunc = func() time.Time {
+			now, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
+			if err != nil {
+				panic(err)
+			}
+			return now
+		}
+		defer func() {
+			NowFunc = oldFunc
+		}()
+
+		var payload nutsJwt
+
+		payload.Issuer = "nuts"
+		payload.Contract = SignedIrmaContract{}
+
+		json.Unmarshal([]byte(testdata.ValidIrmaContract), &payload.Contract.IrmaContract)
+
+		var claims map[string]interface{}
+		jsonString, _ := json.Marshal(payload)
+		json.Unmarshal(jsonString, &claims)
+
+		token, _ := cryptoInstance.SignJwtFor(claims, types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"})
+		actingParty := "Demo EHR"
+
+		result, err := validator.ValidateJwt(token, actingParty)
+		if assert.Nil(t, result) && assert.NotNil(t, err) {
+			assert.True(t, strings.Contains(err.Error(), ErrLegalEntityNotFound.Error())) // jwt-go does not use Go 1.13 errors yet
+		}
+	})
+
 	t.Run("invalid formatted jwt", func(t *testing.T) {
 		token := "foo.bar.sig"
 
@@ -432,6 +468,46 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 				assert.Equal(t, Valid, result.ValidationResult)
 			}
 		}
+	})
+}
+
+func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	rMock := registryMock.NewMockRegistryClient(ctrl)
+
+	v := DefaultValidator{
+		registry: rMock,
+	}
+
+	t.Run("Empty message returns error", func(t *testing.T) {
+		_, err := v.legalEntityFromContract(SignedIrmaContract{IrmaContract:irma2.SignedMessage{}})
+
+		assert.NotNil(t, err)
+		assert.True(t, errors.Is(err, ErrInvalidContractText))
+	})
+
+	t.Run("Missing legalEntity returns error", func(t *testing.T) {
+		_, err := v.legalEntityFromContract(SignedIrmaContract{
+			IrmaContract:irma2.SignedMessage{
+				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens  en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
+			},
+		})
+
+		assert.NotNil(t, err)
+		assert.True(t, errors.Is(err, ErrInvalidContractText))
+	})
+
+	t.Run("Unknown legalEntity returns error", func(t *testing.T) {
+		rMock.EXPECT().ReverseLookup("UNKNOWN").Return(nil, db.ErrOrganizationNotFound)
+
+		_, err := v.legalEntityFromContract(SignedIrmaContract{
+			IrmaContract:irma2.SignedMessage{
+				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens UNKNOWN en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
+			},
+		})
+
+		assert.NotNil(t, err)
+		assert.True(t, errors.Is(err, db.ErrOrganizationNotFound))
 	})
 }
 
