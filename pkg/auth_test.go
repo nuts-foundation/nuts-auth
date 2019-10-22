@@ -116,7 +116,7 @@ func TestAuth_Configure(t *testing.T) {
 			},
 		}
 
-		assert.Equal(t, ErrMissingPublicUrl, i.Configure())
+		assert.Equal(t, ErrMissingPublicURL, i.Configure())
 	})
 
 	t.Run("Configure returns no error on valid config", func(t *testing.T) {

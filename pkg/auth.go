@@ -80,8 +80,8 @@ func AuthInstance() *Auth {
 // ErrMissingActingParty is returned when the actingPartyCn is missing from the config
 var ErrMissingActingParty = errors.New("missing actingPartyCn")
 
-// ErrMissingPublicUrl is returned when the publicUrl is missing from the config
-var ErrMissingPublicUrl = errors.New("missing publicUrl")
+// ErrMissingPublicURL is returned when the publicUrl is missing from the config
+var ErrMissingPublicURL = errors.New("missing publicUrl")
 
 // Configure the Auth struct by creating a validator and create an Irma server
 func (auth *Auth) Configure() (err error) {
@@ -92,7 +92,7 @@ func (auth *Auth) Configure() (err error) {
 		}
 
 		if auth.Config.PublicUrl == "" {
-			err = ErrMissingPublicUrl
+			err = ErrMissingPublicURL
 			return
 		}
 
