@@ -380,11 +380,11 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		payload.Issuer = "nuts"
 		payload.Contract = SignedIrmaContract{}
 
-		json.Unmarshal([]byte(testdata.ValidIrmaContract), &payload.Contract.IrmaContract)
+		_ = json.Unmarshal([]byte(testdata.ValidIrmaContract), &payload.Contract.IrmaContract)
 
 		var claims map[string]interface{}
 		jsonString, _ := json.Marshal(payload)
-		json.Unmarshal(jsonString, &claims)
+		_ = json.Unmarshal(jsonString, &claims)
 
 		token, _ := cryptoInstance.SignJwtFor(claims, types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"})
 		actingParty := "Demo EHR"
@@ -458,7 +458,7 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 		//defer os.RemoveAll(cryptoInstance.Config.Fspath)
 
 		var c = SignedIrmaContract{}
-		json.Unmarshal([]byte(testdata.ValidIrmaContract), &c.IrmaContract)
+		_ = json.Unmarshal([]byte(testdata.ValidIrmaContract), &c.IrmaContract)
 
 		tokenString, err := validator.createJwt(&c, "urn:oid:2.16.840.1.113883.2.4.6.1:00000000")
 
@@ -518,11 +518,11 @@ func createJwt(iss string, sub string, irmaContract string) []byte {
 	payload.Subject = sub
 	payload.Contract = SignedIrmaContract{}
 
-	json.Unmarshal([]byte(irmaContract), &payload.Contract.IrmaContract)
+	_ = json.Unmarshal([]byte(irmaContract), &payload.Contract.IrmaContract)
 
 	var claims map[string]interface{}
 	jsonString, _ := json.Marshal(payload)
-	json.Unmarshal(jsonString, &claims)
+	_ = json.Unmarshal(jsonString, &claims)
 
 	tokenString, _ := cryptoInstance.SignJwtFor(claims, types.LegalEntity{URI: sub})
 
@@ -557,11 +557,11 @@ func defaultValidator() DefaultValidator {
 		}
 
 		le := types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"}
-		cryptoInstance.GenerateKeyPairFor(le)
-		cryptoInstance.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"})
+		_ = cryptoInstance.GenerateKeyPairFor(le)
+		_ = cryptoInstance.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"})
 		pub, _ := cryptoInstance.PublicKey(le)
 
-		r.RegisterOrganization(db.Organization{
+		_ = r.RegisterOrganization(db.Organization{
 			Identifier: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000",
 			Name:       "verpleeghuis De nootjes",
 			PublicKey:  &pub,
