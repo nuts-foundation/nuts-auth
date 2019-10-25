@@ -2,9 +2,13 @@ package pkg
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gbrlsnchs/jwt/v3"
+	"github.com/dgrijalva/jwt-go"
+	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-crypto/pkg/types"
+	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
@@ -12,10 +16,11 @@ import (
 
 // DefaultValidator validates contracts using the irma logic.
 type DefaultValidator struct {
-	IrmaServer *irmaserver.Server
+	IrmaServer IrmaServerClient
+	irmaConfig *irma.Configuration
+	registry   registry.RegistryClient
+	crypto     nutscrypto.Client
 }
-
-var hs256 = jwt.NewHS256([]byte("nuts"))
 
 // ValidateContract is the entrypoint for contract validation.
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
@@ -30,66 +35,160 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 		if err != nil {
 			return nil, err
 		}
-
-		return signedContract.Validate(actingPartyCN)
+		return signedContract.Validate(actingPartyCN, v.irmaConfig)
 	}
 	return nil, ErrUnknownContractFormat
 }
 
+// ErrInvalidContract is returned when the JWT or included signature is not up to spec
 var ErrInvalidContract = errors.New("invalid contract")
 
 // ValidateJwt validates a JWT formatted contract.
 func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResult, error) {
+	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (i interface{}, e error) {
+		legalEntity := token.Claims.(jwt.MapClaims)["sub"]
+		if legalEntity == nil || legalEntity == "" {
+			return nil, ErrLegalEntityNotFound
+		}
 
-	var (
-		payload nutsJwt
-	)
+		// get public key
+		pem, err := v.crypto.PublicKey(types.LegalEntity{URI:legalEntity.(string)})
+		if err != nil {
+			return nil, err
+		}
 
-	_, err := jwt.Verify([]byte(token), hs256, &payload)
+		return nutscrypto.PemToPublicKey([]byte(pem))
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("could not verify jwt: %w", ErrInvalidContract)
+		return nil, fmt.Errorf("could not parse jwt: %w", err)
 	}
 
-	if payload.Issuer != "nuts" {
+	if parsedToken.Claims.(jwt.MapClaims)["iss"] != "nuts" {
 		return nil, fmt.Errorf("jwt does not have the nuts issuer: %w", ErrInvalidContract)
 	}
 
-	return payload.Contract.Validate(actingPartyCN)
+	payload, err := convertClaimsToPayload(parsedToken.Claims.(jwt.MapClaims))
+	if err != nil {
+		return nil, err
+	}
+
+	return payload.Contract.Validate(actingPartyCN, v.irmaConfig)
 }
 
 // SessionStatus returns the current status of a certain session.
 // It returns nil if the session is not found
-func (v DefaultValidator) SessionStatus(id SessionID) *SessionStatusResult {
+func (v DefaultValidator) SessionStatus(id SessionID) (*SessionStatusResult, error) {
 	if result := v.IrmaServer.GetSessionResult(string(id)); result != nil {
 		var token string
 		if result.Signature != nil {
-			token, _ = createJwt(&SignedIrmaContract{*result.Signature})
+			sic := SignedIrmaContract{*result.Signature}
+			le, err := v.legalEntityFromContract(sic)
+			if err != nil {
+				return nil, fmt.Errorf("could not create JWT for given session: %w", err)
+			}
+
+			token, _ = v.createJwt(&sic, le)
 		}
-		result :=  &SessionStatusResult{*result, token}
+		result := &SessionStatusResult{*result, token}
 		logrus.Info(result.NutsAuthToken)
-		return result
+		return result, nil
 	}
-	return nil
+	return nil, ErrSessionNotFound
+}
+
+// ErrLegalEntityNotFound is returned when the legalEntity can not be found based on the contract text
+var ErrLegalEntityNotFound = errors.New("missing legal entity in contract text")
+
+func (v DefaultValidator) legalEntityFromContract(sic SignedIrmaContract) (string, error) {
+	c, err := ContractFromMessageContents(sic.IrmaContract.Message)
+	if err != nil {
+		return "", err
+	}
+
+	params, err := c.extractParams(sic.IrmaContract.Message)
+	if err != nil {
+		return "", err
+	}
+
+	if _, ok := params["legal_entity"]; !ok {
+		return "", ErrLegalEntityNotFound
+	}
+
+	le, err := v.registry.ReverseLookup(params["legal_entity"])
+	if err != nil {
+		return "", err
+	}
+
+	return string(le.Identifier), nil
 }
 
 type nutsJwt struct {
-	jwt.Payload
+	jwt.StandardClaims
 	Contract SignedIrmaContract `json:"nuts_signature"`
 }
 
-func createJwt(contract *SignedIrmaContract) (string, error) {
+func (v DefaultValidator) createJwt(contract *SignedIrmaContract, legalEntity string) (string, error) {
 	payload := nutsJwt{
-		Payload: jwt.Payload{
-			Issuer: "nuts",
+		StandardClaims: jwt.StandardClaims{
+			Issuer:  "nuts",
+			Subject: legalEntity,
 		},
 		Contract: *contract,
 	}
-	token, err := jwt.Sign(payload, hs256)
+
+	claims, err := convertPayloadToClaims(payload)
 	if err != nil {
-		logrus.WithError(err).Error("could not sign jwt")
-		return "", nil
+		err = fmt.Errorf("could not construct claims: %w", err)
+		logrus.Error(err)
+		return "", err
 	}
-	return string(token), nil
+
+	tokenString, err := v.crypto.SignJwtFor(claims, types.LegalEntity{URI: legalEntity})
+	if err != nil {
+		err = fmt.Errorf("could not sign jwt: %w", err)
+		logrus.Error(err)
+		return "", err
+	}
+	return tokenString, nil
+}
+
+func convertPayloadToClaims(payload nutsJwt) (map[string]interface{}, error) {
+
+	var (
+		jsonString []byte
+		err        error
+		claims     map[string]interface{}
+	)
+
+	if jsonString, err = json.Marshal(payload); err != nil {
+		logrus.WithError(err).Error("could not sign jwt")
+		return nil, fmt.Errorf("could not marshall payload: %w", err)
+	}
+
+	if err := json.Unmarshal(jsonString, &claims); err != nil {
+		return nil, fmt.Errorf("could not unmarshall string: %w", err)
+	}
+
+	return claims, nil
+}
+
+func convertClaimsToPayload(claims map[string]interface{}) (*nutsJwt, error) {
+	var (
+		jsonString []byte
+		err        error
+		payload    nutsJwt
+	)
+
+	if jsonString, err = json.Marshal(claims); err != nil {
+		return nil, fmt.Errorf("could not marshall payload: %w", err)
+	}
+
+	if err := json.Unmarshal(jsonString, &payload); err != nil {
+		return nil, fmt.Errorf("could not unmarshall string: %w", err)
+	}
+
+	return &payload, nil
 }
 
 // StartSession starts an irma session.

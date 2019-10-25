@@ -5,16 +5,17 @@
 # * 'ptr' and 'ptrp' create a POST request with a simple or parameter-like body;
 # * 'mptr' and 'fptr' create a POST request to submit a form with a text or file field (multipart/form-data);
 
-GET http://localhost:3000/auth/contract/BehandelaarLogin?language=NL
+GET http://localhost:1323/auth/contract/BehandelaarLogin?language=NL
 
 ###
 
-POST http://localhost:3000/auth/contract/session
+POST http://localhost:1323/auth/contract/session
 Content-Type: application/json
 
 {
   "type": "BehandelaarLogin",
-  "language": "NL"
+  "language": "NL",
+  "legalEntity": "Zorggroep Nuts"
 }
 
 ###

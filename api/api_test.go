@@ -53,7 +53,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 				Irmaqr: "signing",
 			}, SessionId: "abc-sessionid"})
 
-		err := wrapper.NutsAuthCreateSession(echoMock)
+		err := wrapper.CreateSession(echoMock)
 
 		assert.Nil(t, err)
 	})
@@ -65,7 +65,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		echoMock := mock.NewMockContext(ctrl)
 
 		echoMock.EXPECT().Bind(gomock.Any()).Return(errors.New("unable to parse body"))
-		err := wrapper.NutsAuthCreateSession(echoMock)
+		err := wrapper.CreateSession(echoMock)
 		assert.Error(t, err)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
@@ -98,7 +98,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 
-		err := wrapper.NutsAuthCreateSession(echoMock)
+		err := wrapper.CreateSession(echoMock)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
@@ -129,16 +129,23 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 			NutsAuthToken: nutsAuthToken,
 		}, nil)
 
+		a := []DisclosedAttribute{
+			{
+				Value: DisclosedAttribute_Value{
+					AdditionalProperties: map[string]string{"nl": "00000001"},
+				},
+			},
+		}
 		echoMock.EXPECT().JSON(http.StatusOK, SessionResult{
 			Status:        "INITIALIZED",
 			Token:         "YRnWbPJ7ffKCnf9cP51e",
 			Type:          "signing",
-			Disclosed:     []DisclosedAttribute{{Value: map[string]interface{}{"nl": "00000001"}}},
+			Disclosed:     &a,
 			NutsAuthToken: &nutsAuthToken,
 			ProofStatus:   &proofStatus,
 		})
 		wrapper := Wrapper{Auth: authMock}
-		err := wrapper.NutsAuthSessionRequestStatus(echoMock, sessionID)
+		err := wrapper.SessionRequestStatus(echoMock, sessionID)
 		assert.Nil(t, err)
 	})
 
@@ -153,7 +160,7 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 		authMock.EXPECT().ContractSessionStatus(sessionID).Return(nil, pkg.ErrSessionNotFound)
 		wrapper := Wrapper{Auth: authMock}
 
-		err := wrapper.NutsAuthSessionRequestStatus(echoMock, sessionID)
+		err := wrapper.SessionRequestStatus(echoMock, sessionID)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusNotFound, httpError.Code)
@@ -178,10 +185,11 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 
+		sa := ValidationResult_SignerAttributes{AdditionalProperties: map[string]string{"nl": "00000007"}}
 		echoMock.EXPECT().JSON(http.StatusOK, ValidationResult{
 			ContractFormat:   string(pkg.JwtFormat),
 			ValidationResult: "VALID",
-			SignerAttributes: map[string]interface{}{"nl": "00000007"},
+			SignerAttributes: sa,
 		})
 
 		authMock.EXPECT().ValidateContract(pkg.ValidationRequest{
@@ -195,7 +203,7 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 		}, nil)
 
 		wrapper := Wrapper{Auth: authMock}
-		err := wrapper.NutsAuthValidateContract(echoMock)
+		err := wrapper.ValidateContract(echoMock)
 
 		assert.Nil(t, err)
 	})
@@ -212,34 +220,33 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 		cType := "KnownContract"
 		cVersion := "v1"
 		cLanguage := "NL"
-		params := NutsAuthGetContractByTypeParams{
-			Version: &cVersion,
+		params := GetContractByTypeParams{
+			Version:  &cVersion,
 			Language: &cLanguage,
 		}
 
 		contract := pkg.Contract{
-			Type: pkg.ContractType(cType),
-			Version: pkg.Version(cVersion),
-			Language: pkg.Language(cLanguage),
+			Type:               pkg.ContractType(cType),
+			Version:            pkg.Version(cVersion),
+			Language:           pkg.Language(cLanguage),
 			TemplateAttributes: []string{"party"},
-			Template: "ik geen toestemming aan {{party}}",
-
+			Template:           "ik geen toestemming aan {{party}}",
 		}
 
+		ta := []string{"party"}
 		answer := Contract{
-			Type: Type(cType),
-			Template: &contract.Template,
-			Version: Version(cVersion),
-			TemplateAttributes: []string{"party"},
-			Language: Language(cLanguage),
+			Type:               Type(cType),
+			Template:           &contract.Template,
+			Version:            Version(cVersion),
+			TemplateAttributes: &ta,
+			Language:           Language(cLanguage),
 		}
 
 		authMock.EXPECT().ContractByType(pkg.ContractType(cType), pkg.Language(cLanguage), pkg.Version(cVersion)).Return(&contract, nil)
 		echoMock.EXPECT().JSON(http.StatusOK, answer)
 
-
 		wrapper := Wrapper{Auth: authMock}
-		err := wrapper.NutsAuthGetContractByType(echoMock, cType, params)
+		err := wrapper.GetContractByType(echoMock, cType, params)
 
 		assert.Nil(t, err)
 	})
@@ -251,12 +258,12 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 		authMock := mock2.NewMockAuthClient(ctrl)
 
 		cType := "UnknownContract"
-		params := NutsAuthGetContractByTypeParams{ }
+		params := GetContractByTypeParams{}
 
 		authMock.EXPECT().ContractByType(pkg.ContractType(cType), pkg.Language(""), pkg.Version("")).Return(nil, pkg.ErrContractNotFound)
 
 		wrapper := Wrapper{Auth: authMock}
-		err := wrapper.NutsAuthGetContractByType(echoMock, cType, params)
+		err := wrapper.GetContractByType(echoMock, cType, params)
 
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)

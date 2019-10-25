@@ -23,7 +23,7 @@ type EchoRouter interface {
 	PUT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 	TRACE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 	Any(path string, h echo.HandlerFunc, mi ...echo.MiddlewareFunc) []*echo.Route
-    Use(middleware ...echo.MiddlewareFunc)
+	Use(middleware ...echo.MiddlewareFunc)
 }
 
 // NewAuthEngine creates and returns a new AuthEngine instance.
@@ -32,12 +32,12 @@ func NewAuthEngine() *nutsGo.Engine {
 	authBackend := pkg.AuthInstance()
 
 	return &nutsGo.Engine{
-		Cmd: cmd(),
-		Config: &authBackend.Config,
+		Cmd:       cmd(),
+		Config:    &authBackend.Config,
 		ConfigKey: "auth",
 		Configure: authBackend.Configure,
-		FlagSet: flagSet(),
-		Name: "Auth",
+		FlagSet:   flagSet(),
+		Name:      "Auth",
 		Routes: func(router runtime.EchoRouter) {
 			// Mount the irma-app routes
 			routerWithAny := router.(EchoRouter)
@@ -58,16 +58,15 @@ func NewAuthEngine() *nutsGo.Engine {
 	}
 }
 
-
 func cmd() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use: "auth",
+		Use:   "auth",
 		Short: "commands related to authentication",
 	}
 
 	cmd.AddCommand(&cobra.Command{
-		Use: "server",
+		Use:   "server",
 		Short: "Run standalone auth server",
 		Run: func(cmd *cobra.Command, args []string) {
 			// TODO: add CORS startup option

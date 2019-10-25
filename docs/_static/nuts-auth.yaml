@@ -5,7 +5,7 @@ info:
 paths:
   '/auth/contract/session':
     post:
-      operationId: nuts-auth-create-session
+      operationId: createSession
       summary: CreateSessionHandler Initiates an IRMA signing session with the correct contract.
       tags:
         - auth
@@ -30,7 +30,7 @@ paths:
                 $ref: "#/components/schemas/CreateSessionResult"
   /auth/contract/session/{id}:
     get:
-      operationId: nuts-auth-session-request-status
+      operationId: sessionRequestStatus
       summary: returns the result of the contract request
       tags:
         - auth
@@ -55,7 +55,7 @@ paths:
                 $ref: "#/components/schemas/ErrorString"
   /auth/contract/validate:
     post:
-      operationId: nuts-auth-validate-contract
+      operationId: validateContract
       summary: Validate a Nuts Security Contract
       tags:
         - auth
@@ -81,7 +81,7 @@ paths:
                 $ref: "#/components/schemas/ErrorString"
   /auth/contract/{contractType}:
     get:
-      operationId: nuts-auth-get-contract-by-type
+      operationId: getContractByType
       summary: Get a contract by type and version
       tags:
         - auth
@@ -133,6 +133,10 @@ components:
       type: string
       description: "Version of the contract"
       example: "v1"
+    LegalEntity:
+      type: string
+      description: "Name of the legalEntity as registered in the Nuts registry"
+      example: "Zorggroep Nuts"
     Contract:
       required:
         - type
@@ -165,6 +169,7 @@ components:
         - type
         - version
         - language
+        - legalEntity
       properties:
         type:
           $ref: "#/components/schemas/Type"
@@ -172,6 +177,8 @@ components:
           $ref: "#/components/schemas/Language"
         version:
           $ref: "#/components/schemas/Version"
+        legalEntity:
+          $ref: "#/components/schemas/LegalEntity"
         valid_from:
           type: string
           format: 'date-time'

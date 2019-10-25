@@ -31,7 +31,7 @@ type ContractValidator interface {
 
 // ContractSessionHandler interface must be implemented by ContractSessionHandlers
 type ContractSessionHandler interface {
-	SessionStatus(SessionID) *SessionStatusResult
+	SessionStatus(session SessionID) (*SessionStatusResult, error)
 	StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error)
 }
 
@@ -54,6 +54,8 @@ type CreateSessionRequest struct {
 	Version Version
 	// Language of the contact such as "NL"
 	Language Language
+	// LegalEntity denotes the organization of the user
+	LegalEntity string
 	// ValidFrom describes the time from which this contract should be considered valid
 	ValidFrom time.Time
 	// ValidFrom describes the time until this contract should be considered valid
@@ -94,3 +96,26 @@ type ValidationResult struct {
 	// DisclosedAttributes contain the attributes used to sign this contract
 	DisclosedAttributes map[string]string `json:"disclosed_attributes"`
 }
+
+// IrmaServerClient is an abstraction for the Irma Server, mainly for enabling better testing
+type IrmaServerClient interface {
+	GetSessionResult(token string) *server.SessionResult
+	StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error)
+}
+
+// DefaultIrmaClient is a wrapper for the Irma Server
+type DefaultIrmaClient struct {
+	I *irmaserver.Server
+}
+
+// GetSessionResult forwards to Irma Server instance
+func (d *DefaultIrmaClient) GetSessionResult(token string) *server.SessionResult {
+	return d.I.GetSessionResult(token)
+}
+
+// StartSession forwards to Irma Server instance
+func (d *DefaultIrmaClient) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
+	return d.I.StartSession(request, handler)
+}
+
+

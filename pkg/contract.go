@@ -25,8 +25,10 @@ type Contract struct {
 
 // Language of the contract in all caps. example: "NL"
 type Language string
+
 // ContractType contains type of the contract to sign. Example: "BehandelaarLogin"
 type ContractType string
+
 // Version of the contract. example: "v1"
 type Version string
 
@@ -46,18 +48,18 @@ var contracts = map[Language]map[ContractType]map[Version]*Contract{
 		Version:            "v1",
 		Language:           "NL",
 		SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
-		Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om uit zijn/haar naam het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
-		TemplateAttributes: []string{"acting_party", "valid_from", "valid_to"},
-		Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om uit zijn/haar naam het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
+		Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om namens {{legal_entity}} en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
+		TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
+		Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
 	}}},
 	"EN": {"PractitionerLogin": {"v1": &Contract{
 		Type:               "PractitionerLogin",
 		Version:            "v1",
 		Language:           "EN",
 		SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
-		Template:           `EN:PractitionerLogin:v1 Undersigned gives permission to {{acting_party}} to make request on its behalf to the Nuts network. This permission is valid from {{valid_from}} until {{valid_to}}.`,
-		TemplateAttributes: []string{"acting_party", "valid_from", "valid_to"},
-		Regexp:             `EN:PractitionerLogin:v1 Undersigned gives permission to (.+) to make request on its behalf to the Nuts network. This permission is valid from (.+) until (.+).`,
+		Template:           `EN:PractitionerLogin:v1 Undersigned gives permission to {{acting_party}} to make request to the Nuts network on behalf of {{legal_entity}} and itself. This permission is valid from {{valid_from}} until {{valid_to}}.`,
+		TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
+		Regexp:             `EN:PractitionerLogin:v1 Undersigned gives permission to (.+) to make request to the Nuts network on behalf of (.+) and itself. This permission is valid from (.+) until (.+).`,
 	}}},
 }
 
@@ -68,7 +70,7 @@ func ContractFromMessageContents(contents string) (*Contract, error) {
 
 	matchResult := r.FindSubmatch([]byte(contents))
 	if len(matchResult) != 4 {
-		return nil, fmt.Errorf("%w: could not extract contract version, languae and type", ErrInvalidContractText)
+		return nil, fmt.Errorf("%w: could not extract contract version, language and type", ErrInvalidContractText)
 	}
 
 	language := Language(matchResult[1])
@@ -78,6 +80,7 @@ func ContractFromMessageContents(contents string) (*Contract, error) {
 	return ContractByType(contractType, language, version)
 
 }
+
 // ContractByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
 // If no contract is found, the error vaule of ErrContractNotFound is returned.
 func ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {

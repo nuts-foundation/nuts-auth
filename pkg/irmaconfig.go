@@ -31,6 +31,12 @@ func GetIrmaConfig(config AuthConfig) *irma.Configuration {
 				logrus.WithError(err).Panic("Could not download default schemes")
 				return
 			}
+		} else {
+			logrus.Info("Loading irma schemas.")
+			if err := irmaConfig.ParseFolder(); err != nil {
+				logrus.WithError(err).Panic("Could not load default schemes from disk")
+				return
+			}
 		}
 		irmaInstance = irmaConfig
 	})

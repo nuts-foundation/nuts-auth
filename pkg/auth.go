@@ -2,8 +2,11 @@ package pkg
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/mdp/qrterminal/v3"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
@@ -74,21 +77,29 @@ func AuthInstance() *Auth {
 	return instance
 }
 
+// ErrMissingActingParty is returned when the actingPartyCn is missing from the config
+var ErrMissingActingParty = errors.New("missing actingPartyCn")
+
+// ErrMissingPublicURL is returned when the publicUrl is missing from the config
+var ErrMissingPublicURL = errors.New("missing publicUrl")
+
 // Configure the Auth struct by creating a validator and create an Irma server
 func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
 		if auth.Config.ActingPartyCn == "" {
-			logrus.Error("actingPartyCn for auth must be provided")
-			logrus.Exit(1)
+			err = ErrMissingActingParty
+			return
 		}
 
 		if auth.Config.PublicUrl == "" {
-			logrus.Error("publicUrl for auth must be provided")
-			logrus.Exit(1)
+			err = ErrMissingPublicURL
+			return
 		}
 
 		validator := DefaultValidator{
-			IrmaServer: GetIrmaServer(auth.Config),
+			IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
+			registry:   registry.RegistryInstance(),
+			crypto:     crypto.CryptoInstance(),
 		}
 		auth.ContractSessionHandler = validator
 		auth.ContractValidator = validator
@@ -112,6 +123,7 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 	// Step 2: Render the contract template with all the correct values
 	message, err := contract.renderTemplate(map[string]string{
 		"acting_party": auth.Config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
+		"legal_entity": sessionRequest.LegalEntity,
 	}, 0, 60*time.Minute)
 	logrus.Debugf("contractMessage: %v", message)
 	if err != nil {
@@ -168,10 +180,17 @@ func (auth *Auth) ContractByType(contractType ContractType, language Language, v
 // ContractSessionStatus returns the current session status for a given sessionID.
 // If the session is not found, the error is an ErrSessionNotFound and SessionStatusResult is nil
 func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult, error) {
-	if sessionStatus := auth.ContractSessionHandler.SessionStatus(SessionID(sessionID)); sessionStatus != nil {
-		return sessionStatus, nil
+	sessionStatus, err := auth.ContractSessionHandler.SessionStatus(SessionID(sessionID))
+
+	if err != nil {
+		return nil, fmt.Errorf("sessionID %s: %w", sessionID, err)
 	}
-	return nil, fmt.Errorf("sessionID %s: %w", sessionID, ErrSessionNotFound)
+
+	if sessionStatus == nil {
+		return nil, fmt.Errorf("sessionID %s: %w", sessionID, ErrSessionNotFound)
+	}
+
+	return sessionStatus, nil
 }
 
 // ValidateContract validates a given contract. Currently two ContractType's are accepted: Irma and Jwt.
