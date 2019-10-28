@@ -14,13 +14,14 @@ const timeLayout = "Monday, 2 January 2006 15:04:05"
 
 // Contract stores the properties of a contract
 type Contract struct {
-	Type               ContractType `json:"type"`
-	Version            Version      `json:"version"`
-	Language           Language     `json:"language"`
-	SignerAttributes   []string     `json:"signer_attributes"`
-	Template           string       `json:"template"`
-	TemplateAttributes []string     `json:"template_attributes"`
-	Regexp             string       `json:"-"`
+	Type                 ContractType `json:"type"`
+	Version              Version      `json:"version"`
+	Language             Language     `json:"language"`
+	SignerAttributes     []string     `json:"signer_attributes"`
+	SignerDemoAttributes []string     `json:"-"`
+	Template             string       `json:"template"`
+	TemplateAttributes   []string     `json:"template_attributes"`
+	Regexp               string       `json:"-"`
 }
 
 // Language of the contract in all caps. example: "NL"
@@ -44,22 +45,22 @@ var ErrInvalidContractText = errors.New("invalid contract text")
 // EN:PractitionerLogin:v1 Contract
 var contracts = map[Language]map[ContractType]map[Version]*Contract{
 	"NL": {"BehandelaarLogin": {"v1": &Contract{
-		Type:               "BehandelaarLogin",
-		Version:            "v1",
-		Language:           "NL",
-		SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
-		Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om namens {{legal_entity}} en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
-		TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
-		Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
+		Type:                 "BehandelaarLogin",
+		Version:              "v1",
+		Language:             "NL",
+		SignerAttributes:     []string{"nuts.agb.agbcode"},
+		Template:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om namens {{legal_entity}} en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
+		TemplateAttributes:   []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
+		Regexp:               `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
 	}}},
 	"EN": {"PractitionerLogin": {"v1": &Contract{
-		Type:               "PractitionerLogin",
-		Version:            "v1",
-		Language:           "EN",
-		SignerAttributes:   []string{"irma-demo.nuts.agb.agbcode"},
-		Template:           `EN:PractitionerLogin:v1 Undersigned gives permission to {{acting_party}} to make request to the Nuts network on behalf of {{legal_entity}} and itself. This permission is valid from {{valid_from}} until {{valid_to}}.`,
-		TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
-		Regexp:             `EN:PractitionerLogin:v1 Undersigned gives permission to (.+) to make request to the Nuts network on behalf of (.+) and itself. This permission is valid from (.+) until (.+).`,
+		Type:                 "PractitionerLogin",
+		Version:              "v1",
+		Language:             "EN",
+		SignerAttributes:     []string{"nuts.agb.agbcode"},
+		Template:             `EN:PractitionerLogin:v1 Undersigned gives permission to {{acting_party}} to make request to the Nuts network on behalf of {{legal_entity}} and itself. This permission is valid from {{valid_from}} until {{valid_to}}.`,
+		TemplateAttributes:   []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
+		Regexp:               `EN:PractitionerLogin:v1 Undersigned gives permission to (.+) to make request to the Nuts network on behalf of (.+) and itself. This permission is valid from (.+) until (.+).`,
 	}}},
 }
 
@@ -115,7 +116,7 @@ func (c Contract) extractParams(text string) (map[string]string, error) {
 	matches := matchResult[1:]
 
 	if len(matches) != len(c.TemplateAttributes) {
-		return nil, fmt.Errorf("%w: amount of template attributes does not match the amount of params: found: %d, expected %d",ErrInvalidContractText,  len(matches), len(c.TemplateAttributes))
+		return nil, fmt.Errorf("%w: amount of template attributes does not match the amount of params: found: %d, expected %d", ErrInvalidContractText, len(matches), len(c.TemplateAttributes))
 	}
 
 	result := make(map[string]string, len(matches))
