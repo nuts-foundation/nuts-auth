@@ -35,6 +35,9 @@ const ConfEnableCORS = "enableCORS"
 // ConfActingPartyCN is the config key to provide the Acting party common name
 const ConfActingPartyCN = "actingPartyCn"
 
+// ConfIrmaSchemeManager allows selecting an IRMA scheme manager. During development this can ben irma-demo. Production should be pdfb
+const ConfIrmaSchemeManager = "irmaSchemeManager"
+
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
 	CreateContractSession(sessionRequest CreateSessionRequest, actingParty string) (*CreateSessionResult, error)
@@ -58,6 +61,7 @@ type AuthConfig struct {
 	Address                   string
 	PublicUrl                 string
 	IrmaConfigPath            string
+	IrmaSchemeManager         string
 	SkipAutoUpdateIrmaSchemas bool
 	ActingPartyCn             string
 	EnableCORS                bool
@@ -132,10 +136,13 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 
 	// Step 3: Put the contract in an IMRA envelope
 	signatureRequest := irma.NewSignatureRequest(message)
+	schemeManager := auth.Config.IrmaSchemeManager
+
+	attribute := fmt.Sprintf("%s.%s", schemeManager, contract.SignerAttributes[0])
 	signatureRequest.Disclose = irma.AttributeConDisCon{
 		irma.AttributeDisCon{
 			irma.AttributeCon{
-				irma.NewAttributeRequest(contract.SignerAttributes[0]),
+				irma.NewAttributeRequest(attribute),
 			},
 		},
 	}
@@ -162,11 +169,11 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 func printQrCode(qrcode string) {
 	config := qrterminal.Config{
 		HalfBlocks: false,
-		BlackChar: qrterminal.WHITE,
-		WhiteChar: qrterminal.BLACK,
-		Level: qrterminal.M,
-		Writer: os.Stdout,
-		QuietZone: 1,
+		BlackChar:  qrterminal.WHITE,
+		WhiteChar:  qrterminal.BLACK,
+		Level:      qrterminal.M,
+		Writer:     os.Stdout,
+		QuietZone:  1,
 	}
 	qrterminal.GenerateWithConfig(qrcode, config)
 }
