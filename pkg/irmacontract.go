@@ -7,7 +7,6 @@ import (
 	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/sirupsen/logrus"
-	"strings"
 )
 
 // SignedIrmaContract holds the contract and additional methods to parse and validate.
@@ -56,8 +55,9 @@ func (sc *SignedIrmaContract) verifySignature(configuration *irma.Configuration)
 		disclosedAttributes = make(map[string]string, len(attributes[0]))
 		for _, att := range attributes[0] {
 			// Check schemaManager. Only the pdbf root is accepted in strictMode.
-			schemaManager := strings.Split(*att.RawValue, ".")[0]
-			if core.NutsConfig().InStrictMode() && schemaManager != "pbdf" {
+			schemaManager := att.Identifier.Root()
+			strictMode := core.NutsConfig().InStrictMode()
+			if strictMode && schemaManager != "pbdf" {
 				logrus.Infof("IRMA schemeManager %s is not valid in strictMode", schemaManager)
 				validationResult = Invalid
 			}
