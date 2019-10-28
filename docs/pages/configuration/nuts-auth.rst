@@ -16,6 +16,7 @@ auth.irmaConfigPath                     ""                                      
 auth.actingPartyCn                      ""                                      The acting party Common name used in contracts
 auth.skipautoUpdateIrmaSchemas          false                                   set if you want to skip the auto download of the irma schemas every 60 minutes
 auth.enableCORS                         false                                   Set if you want to allow CORS requests. This is useful when you want browsers to directly communicate with the nuts node
+auth.irmaSchemeManager                  pbdf                                    Allows selecting an IRMA scheme manager. During development this can ben irma-demo. Should be pdfb in strictMode
 ===================================     ======================================  ========================================
 
 As with all other properties for nuts-go, they can be set through yaml:

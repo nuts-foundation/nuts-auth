@@ -48,6 +48,8 @@ func NewAuthEngine() *nutsGo.Engine {
 			// Mount the Auth-api routes
 			api.RegisterHandlers(router, &api.Wrapper{Auth: authBackend})
 
+			checkConfig(authBackend.Config)
+
 			config := pkg.AuthInstance().Config
 
 			if config.EnableCORS {
@@ -69,7 +71,6 @@ func cmd() *cobra.Command {
 		Use:   "server",
 		Short: "Run standalone auth server",
 		Run: func(cmd *cobra.Command, args []string) {
-			// TODO: add CORS startup option
 			authEngine := pkg.AuthInstance()
 			echoServer := echo.New()
 			echoServer.HideBanner = true
@@ -78,6 +79,8 @@ func cmd() *cobra.Command {
 			if authEngine.Config.EnableCORS {
 				echoServer.Use(middleware.CORS())
 			}
+
+			checkConfig(authEngine.Config)
 
 			// Mount the irma-app routes
 			irmaClientHandler := pkg.GetIrmaServer(authEngine.Config).HandlerFunc()
@@ -95,9 +98,20 @@ func cmd() *cobra.Command {
 	return cmd
 }
 
+func checkConfig(config pkg.AuthConfig) {
+	if config.IrmaSchemeManager == "" {
+		logrus.Fatal("IrmaSchemeManager must be set. Valid options are: [pbdf|irma-demo]")
+	}
+	if nutsGo.NutsConfig().InStrictMode() && config.IrmaSchemeManager != "pbdf" {
+		logrus.Fatal("In strictmode the only valid irma-scheme-manager is 'pbdf'")
+
+	}
+}
+
 func flagSet() *pflag.FlagSet {
 	flags := pflag.NewFlagSet("auth", pflag.ContinueOnError)
 
+	flags.String(pkg.ConfIrmaSchemeManager, "pbdf", "The IRMA schemeManager to use for attributes. Can be either 'pbdf' or 'irma-demo'")
 	flags.String(pkg.ConfAddress, "localhost:1323", "Interface and port for http server to bind to")
 	flags.String(pkg.PublicURL, "", "Public URL which can be reached by a users IRMA client")
 	flags.String(pkg.ConfMode, "server", "server or client, when client it uses the HttpClient")
