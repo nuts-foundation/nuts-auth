@@ -8,10 +8,13 @@ import (
 	cryptoMock "github.com/nuts-foundation/nuts-crypto/mock"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
+	core "github.com/nuts-foundation/nuts-go-core"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -272,8 +275,8 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 	}
 }
 
-type mockIrmaClient struct{
-	err 		  error
+type mockIrmaClient struct {
+	err           error
 	sessionResult server.SessionResult
 }
 
@@ -305,9 +308,9 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 		cMock := cryptoMock.NewMockClient(ctrl)
 		iMock := mockIrmaClient{
 			sessionResult: server.SessionResult{
-				Token:         "token",
-				Signature:     &irma2.SignedMessage{
-					Message:   "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens verpleeghuis De nootjes en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
+				Token: "token",
+				Signature: &irma2.SignedMessage{
+					Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens verpleeghuis De nootjes en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
 				},
 			},
 		}
@@ -315,11 +318,11 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 		v := DefaultValidator{
 			IrmaServer: &iMock,
 			irmaConfig: GetIrmaConfig(authConfig),
-			crypto: cMock,
-			registry: rMock,
+			crypto:     cMock,
+			registry:   rMock,
 		}
 
-		rMock.EXPECT().ReverseLookup("verpleeghuis De nootjes").Return(&db.Organization{Identifier:"urn:id:1"}, nil)
+		rMock.EXPECT().ReverseLookup("verpleeghuis De nootjes").Return(&db.Organization{Identifier: "urn:id:1"}, nil)
 		cMock.EXPECT().SignJwtFor(gomock.Any(), types.LegalEntity{URI: "urn:id:1"}).Return("token", nil)
 
 		s, err := v.SessionStatus(SessionID("known"))
@@ -402,6 +405,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		assert.Nil(t, result)
 		assert.Error(t, err)
+		assert.EqualError(t, err, "could not parse jwt: invalid character '~' looking for beginning of value")
 	})
 
 	t.Run("invalid signature", func(t *testing.T) {
@@ -437,6 +441,39 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		assert.True(t, errors.Is(err, ErrInvalidContract))
 		assert.Equal(t, "jwt does not have the nuts issuer: invalid contract", err.Error())
 	})
+
+	t.Run("wrong scheme manager", func(t *testing.T) {
+		oldFunc := NowFunc
+
+		NowFunc = func() time.Time {
+			now, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
+			if err != nil {
+				panic(err)
+			}
+			return now
+		}
+		defer func() {
+			NowFunc = oldFunc
+		}()
+
+		os.Setenv("NUTS_STRICTMODE", "true")
+		cfg := core.NutsConfig()
+		if err := cfg.Load(&cobra.Command{}); err != nil {
+			t.Fatal("not expected error", err)
+		}
+
+		if assert.True(t, core.NutsConfig().InStrictMode()) {
+			token := createJwt("nuts", "urn:oid:2.16.840.1.113883.2.4.6.1:00000000", testdata.ValidIrmaContract)
+			actingParty := "Demo EHR"
+			result, err := validator.ValidateJwt(string(token), actingParty)
+			if assert.Nil(t, err) && assert.NotNil(t, result) {
+				assert.Equal(t, ValidationState("INVALID"), result.ValidationResult)
+			}
+		}
+		os.Unsetenv("NUTS_STRICTMODE")
+
+	})
+
 }
 
 func TestDefaultValidator_createJwt(t *testing.T) {
@@ -480,7 +517,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	}
 
 	t.Run("Empty message returns error", func(t *testing.T) {
-		_, err := v.legalEntityFromContract(SignedIrmaContract{IrmaContract:irma2.SignedMessage{}})
+		_, err := v.legalEntityFromContract(SignedIrmaContract{IrmaContract: irma2.SignedMessage{}})
 
 		assert.NotNil(t, err)
 		assert.True(t, errors.Is(err, ErrInvalidContractText))
@@ -488,7 +525,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 
 	t.Run("Missing legalEntity returns error", func(t *testing.T) {
 		_, err := v.legalEntityFromContract(SignedIrmaContract{
-			IrmaContract:irma2.SignedMessage{
+			IrmaContract: irma2.SignedMessage{
 				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens  en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
 			},
 		})
@@ -501,7 +538,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 		rMock.EXPECT().ReverseLookup("UNKNOWN").Return(nil, db.ErrOrganizationNotFound)
 
 		_, err := v.legalEntityFromContract(SignedIrmaContract{
-			IrmaContract:irma2.SignedMessage{
+			IrmaContract: irma2.SignedMessage{
 				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens UNKNOWN en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
 			},
 		})

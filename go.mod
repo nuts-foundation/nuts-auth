@@ -16,7 +16,7 @@ require (
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/nuts-foundation/nuts-crypto v0.0.0-20191015112225-206a68fc8f33
-	github.com/nuts-foundation/nuts-go-core v0.0.0-20191014142450-dd0fd3a25ffb
+	github.com/nuts-foundation/nuts-go-core v0.0.0-20191028080827-9058a6df915a
 	github.com/nuts-foundation/nuts-registry v0.0.0-20191016145829-6bcaa08ad25d
 	github.com/pkg/errors v0.8.1
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
@@ -26,5 +26,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
+	golang.org/x/net v0.0.0-20191021144547-ec77196f6094 // indirect
+	golang.org/x/sys v0.0.0-20191022100944-742c48ecaeb7 // indirect
 	gopkg.in/antage/eventsource.v1 v1.0.0-20150318155416-803f4c5af225 // indirect
 )

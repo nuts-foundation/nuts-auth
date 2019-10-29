@@ -144,10 +144,10 @@ github.com/nuts-foundation/nuts-crypto v0.0.0-20191015112225-206a68fc8f33 h1:953
 github.com/nuts-foundation/nuts-crypto v0.0.0-20191015112225-206a68fc8f33/go.mod h1:hwwPkHU+ptE850C6DF+ha0dCClzeVEZE6ZlZoJmgfSc=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20191014142450-dd0fd3a25ffb h1:Sdh/K8bSx/PG/5pD5WArKu7JEksDOShZXvSVSXuOA88=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20191014142450-dd0fd3a25ffb/go.mod h1:tPPkfE9y+T+jTc8klZ0B8FXtc23p9NIpg5BjI+FIiEs=
-github.com/nuts-foundation/nuts-registry v0.0.0-20191014144721-4f3a38dc8a9b h1:aBBTdWExnLedd7LemDWYMCBiQzW2hPVtui4QLfI43Vk=
-github.com/nuts-foundation/nuts-registry v0.0.0-20191014144721-4f3a38dc8a9b/go.mod h1:lYE7NOSMGiR3TcSc3VQ66uk564o3qmsjbJGZ3UQPT9Q=
-github.com/nuts-foundation/nuts-registry v0.0.0-20191016095342-8ccb29c91d71 h1:48kXe+Q75ks1Ub4mOY1ltX2LX303LyNWL2widEtmd48=
-github.com/nuts-foundation/nuts-registry v0.0.0-20191016095342-8ccb29c91d71/go.mod h1:GoIUJryOXBLSYV1d5gOG3+ksRA2qyVvN2fI67YIWI8g=
+github.com/nuts-foundation/nuts-go-core v0.0.0-20191025082623-e8edeb2448c6 h1:CCC8qdmfi2jVDtMX4nnchnNVR/tLcwmRLokHHMGszS4=
+github.com/nuts-foundation/nuts-go-core v0.0.0-20191025082623-e8edeb2448c6/go.mod h1:+IeGzu5J8qlF4Jcol+mY+MRcLDIfJ8OQnQV4wDp887o=
+github.com/nuts-foundation/nuts-go-core v0.0.0-20191028080827-9058a6df915a h1:Y0X6Vg28p5x0fQWQ9mfT1GeW+DOWOgOJLWfBznrOt6Y=
+github.com/nuts-foundation/nuts-go-core v0.0.0-20191028080827-9058a6df915a/go.mod h1:+IeGzu5J8qlF4Jcol+mY+MRcLDIfJ8OQnQV4wDp887o=
 github.com/nuts-foundation/nuts-registry v0.0.0-20191016145829-6bcaa08ad25d h1:0mGb+u8ZjWn5IZadKJ1a+R3Ds5wYDOawB1xUVjZtrso=
 github.com/nuts-foundation/nuts-registry v0.0.0-20191016145829-6bcaa08ad25d/go.mod h1:GoIUJryOXBLSYV1d5gOG3+ksRA2qyVvN2fI67YIWI8g=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
@@ -265,6 +265,8 @@ golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLL
 golang.org/x/net v0.0.0-20190724013045-ca1201d0de80/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/net v0.0.0-20191011234655-491137f69257 h1:ry8e2D+cwaV6hk7lb3aRTjjZo24shrbK0e11QEOkTIg=
 golang.org/x/net v0.0.0-20191011234655-491137f69257/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
+golang.org/x/net v0.0.0-20191021144547-ec77196f6094 h1:5O4U9trLjNpuhpynaDsqwCk+Tw6seqJz1EbqbnzHrc8=
+golang.org/x/net v0.0.0-20191021144547-ec77196f6094/go.mod h1:z5CRVTTTmAJ677TzLLGU+0bjPO0LkuOLi4/5GtJWs/s=
 golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
 golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
@@ -289,6 +291,8 @@ golang.org/x/sys v0.0.0-20190813064441-fde4db37ae7a/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20191008105621-543471e840be/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20191010194322-b09406accb47 h1:/XfQ9z7ib8eEJX2hdgFTZJ/ntt0swNk5oYBziWeTCvY=
 golang.org/x/sys v0.0.0-20191010194322-b09406accb47/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20191022100944-742c48ecaeb7 h1:HmbHVPwrPEKPGLAcHSrMe6+hqSUlvZU0rab6x5EXfGU=
+golang.org/x/sys v0.0.0-20191022100944-742c48ecaeb7/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.2 h1:tW2bmiBqwgJj/UpqtC8EpXEZVYOwU0yG4iWbprSVAcs=

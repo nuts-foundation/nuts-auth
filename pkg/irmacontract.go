@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/sirupsen/logrus"
 )
@@ -39,18 +40,27 @@ func (sc *SignedIrmaContract) verifySignature(configuration *irma.Configuration)
 		return nil, err
 	}
 
+	var disclosedAttributes map[string]string
 	// wrapper around irma status result
 	validationResult := Invalid
 	if status == irma.ProofStatusValid {
 		validationResult = Valid
-	}
 
-	var disclosedAttributes map[string]string
+		// a contract needs attributes
+		if len(attributes) == 0 {
+			return nil, fmt.Errorf("contract does not have any attributes")
+		}
 
-	if len(attributes) > 0 {
 		// take the attributes rawvalue and add them to a list.
 		disclosedAttributes = make(map[string]string, len(attributes[0]))
 		for _, att := range attributes[0] {
+			// Check schemaManager. Only the pdbf root is accepted in strictMode.
+			schemaManager := att.Identifier.Root()
+			strictMode := core.NutsConfig().InStrictMode()
+			if strictMode && schemaManager != "pbdf" {
+				logrus.Infof("IRMA schemeManager %s is not valid in strictMode", schemaManager)
+				validationResult = Invalid
+			}
 			disclosedAttributes[att.Identifier.String()] = *att.RawValue
 		}
 	}
