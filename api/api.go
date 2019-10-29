@@ -106,7 +106,7 @@ func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) err
 	return ctx.JSON(http.StatusOK, answer)
 }
 
-// ValidateContract translates the request params to an internal format, it
+// ValidateContract first translates the request params to an internal format, it then
 // calls the engine's validator and translates the results to the API format and returns
 // the answer to the HTTP stack
 func (api *Wrapper) ValidateContract(ctx echo.Context) error {
