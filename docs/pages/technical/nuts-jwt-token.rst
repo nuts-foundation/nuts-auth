@@ -13,10 +13,6 @@ The JWT is specified as:
         "nuts_signature": {...irma based signature...}
     }
 
-.. note::
-
-    right now the JWT is constructed with HS256 and the 'nuts' secret. This has to change to RS512 using the private key of the care provider as given in sub.
-
 Iss
 ---
 The issuer in the JWT is always *nuts*.
