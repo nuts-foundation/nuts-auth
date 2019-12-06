@@ -3,10 +3,12 @@ package api
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/sirupsen/logrus"
-	"net/http"
 )
 
 // Wrapper bridges the generated api types and http logic to the internal types and logic
@@ -23,15 +25,30 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
 	}
 
+	var vf, vt time.Time
+	if params.ValidFrom != nil {
+		vft, err := time.Parse("2006-01-02T15:04:05-07:00", *params.ValidFrom)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validFrom: %v", err))
+		}
+		vf = vft
+	}
+	if params.ValidTo != nil {
+		vft, err := time.Parse("2006-01-02T15:04:05-07:00", *params.ValidTo)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validTo: %v", err))
+		}
+		vt = vft
+	}
+
 	// convert generated api format to internal struct
 	sessionRequest := pkg.CreateSessionRequest{
 		Type:        pkg.ContractType(params.Type),
 		Version:     pkg.Version(params.Version),
 		Language:    pkg.Language(params.Language),
 		LegalEntity: string(params.LegalEntity),
-		// FIXME: process the ValidFrom/To from request params
-		//ValidFrom: *params.ValidFrom,
-		//ValidTo: *params.ValidTo,
+		ValidFrom:   vf,
+		ValidTo:     vt,
 	}
 
 	// TODO: make it possible to provide the acting party via a JWT or other secure way
