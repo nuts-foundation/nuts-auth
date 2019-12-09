@@ -10,7 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"net/http"
-	"time"
 )
 
 // Contract defines model for Contract.
@@ -28,8 +27,8 @@ type ContractSigningRequest struct {
 	Language    Language    `json:"language"`
 	LegalEntity LegalEntity `json:"legalEntity"`
 	Type        Type        `json:"type"`
-	ValidFrom   *time.Time  `json:"valid_from,omitempty"`
-	ValidTo     *time.Time  `json:"valid_to,omitempty"`
+	ValidFrom   *string     `json:"valid_from,omitempty"`
+	ValidTo     *string     `json:"valid_to,omitempty"`
 	Version     Version     `json:"version"`
 }
 
@@ -510,3 +509,4 @@ func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
 	router.GET("/auth/contract/:contractType", wrapper.GetContractByType)
 
 }
+

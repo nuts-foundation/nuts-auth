@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
@@ -24,11 +25,14 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		echoMock := mock.NewMockContext(ctrl)
 		authMock := mock2.NewMockAuthClient(ctrl)
 
+		tt := time.Now().Truncate(time.Second)
+
 		authMock.EXPECT().CreateContractSession(pkg.CreateSessionRequest{
-			Type:     "BehandelaarLogin",
-			Version:  "v1",
-			Language: "NL",
-			// FIXME: use actual actingPartyCN here
+			Type:      "BehandelaarLogin",
+			Version:   "v1",
+			Language:  "NL",
+			ValidFrom: tt,
+			ValidTo:   tt.Add(time.Hour * 13),
 		}, gomock.Any()).Return(&pkg.CreateSessionResult{
 			QrCodeInfo: irma.Qr{
 				URL:  "http://example.com/auth/irmaclient/123",
@@ -37,10 +41,14 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		}, nil)
 
 		wrapper := Wrapper{Auth: authMock}
+		vf := tt.Format("2006-01-02T15:04:05-07:00")
+		vt := tt.Add(time.Hour * 13).Format("2006-01-02T15:04:05-07:00")
 		params := ContractSigningRequest{
-			Type:     "BehandelaarLogin",
-			Language: "NL",
-			Version:  "v1",
+			Type:      "BehandelaarLogin",
+			Language:  "NL",
+			Version:   "v1",
+			ValidFrom: &vf,
+			ValidTo:   &vt,
 		}
 
 		jsonData, _ := json.Marshal(params)
