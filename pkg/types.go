@@ -2,10 +2,11 @@ package pkg
 
 import (
 	"errors"
+	"time"
+
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
-	"time"
 )
 
 // SessionID contains a number to uniquely identify a contract signing session
@@ -27,6 +28,7 @@ var ErrSessionNotFound = errors.New("session not found")
 type ContractValidator interface {
 	ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ValidationResult, error)
 	ValidateJwt(contract string, actingPartyCN string) (*ValidationResult, error)
+	IsInitialized() bool
 }
 
 // ContractSessionHandler interface must be implemented by ContractSessionHandlers
@@ -117,5 +119,3 @@ func (d *DefaultIrmaClient) GetSessionResult(token string) *server.SessionResult
 func (d *DefaultIrmaClient) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
 	return d.I.StartSession(request, handler)
 }
-
-
