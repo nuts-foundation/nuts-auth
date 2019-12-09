@@ -15,9 +15,9 @@ require (
 	github.com/labstack/echo/v4 v4.1.11
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
-	github.com/nuts-foundation/nuts-crypto v0.0.0-20191015112225-206a68fc8f33
+	github.com/nuts-foundation/nuts-crypto v0.0.0-20191128090623-5ba9490632bb
 	github.com/nuts-foundation/nuts-go-core v0.0.0-20191028170600-66675906a53a
-	github.com/nuts-foundation/nuts-registry v0.0.0-20191016145829-6bcaa08ad25d
+	github.com/nuts-foundation/nuts-registry v0.0.0-20191128091042-807cfaf67305
 	github.com/pkg/errors v0.8.1
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
 	github.com/privacybydesign/irmago v0.4.1

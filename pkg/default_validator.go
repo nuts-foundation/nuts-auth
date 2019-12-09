@@ -58,12 +58,12 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 		}
 
 		// get public key
-		pem, err := v.crypto.PublicKey(types.LegalEntity{URI: legalEntity.(string)})
+		pk, err := v.crypto.PublicKeyInJWK(types.LegalEntity{URI: legalEntity.(string)})
 		if err != nil {
 			return nil, err
 		}
 
-		return nutscrypto.PemToPublicKey([]byte(pem))
+		return pk.Materialize()
 	})
 
 	if err != nil {

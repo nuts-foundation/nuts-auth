@@ -609,7 +609,7 @@ func defaultValidator() DefaultValidator {
 		le := types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"}
 		_ = cryptoInstance.GenerateKeyPairFor(le)
 		_ = cryptoInstance.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"})
-		pub, _ := cryptoInstance.PublicKey(le)
+		pub, _ := cryptoInstance.PublicKeyInPEM(le)
 
 		_ = r.RegisterOrganization(db.Organization{
 			Identifier: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000",
