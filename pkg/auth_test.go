@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"errors"
+
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/stretchr/testify/assert"
@@ -16,6 +17,10 @@ type MockContractSessionHandler struct {
 type MockContractValidator struct {
 	jwtResult  ValidationResult
 	irmaResult ValidationResult
+}
+
+func (m MockContractValidator) IsInitialized() bool {
+	return true
 }
 
 func (m MockContractValidator) ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ValidationResult, error) {
@@ -129,7 +134,10 @@ func TestAuth_Configure(t *testing.T) {
 			},
 		}
 
-		assert.Nil(t, i.Configure())
+		if assert.NoError(t, i.Configure()) {
+			// BUG: nuts-auth#23
+			assert.True(t, i.ContractValidator.IsInitialized())
+		}
 	})
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/dgrijalva/jwt-go"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
@@ -20,6 +21,11 @@ type DefaultValidator struct {
 	irmaConfig *irma.Configuration
 	registry   registry.RegistryClient
 	crypto     nutscrypto.Client
+}
+
+// IsInitialized is a helper function to determine if the validator has been initialized properly.
+func (v DefaultValidator) IsInitialized() bool {
+	return v.irmaConfig != nil
 }
 
 // ValidateContract is the entrypoint for contract validation.
@@ -52,7 +58,7 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 		}
 
 		// get public key
-		pem, err := v.crypto.PublicKey(types.LegalEntity{URI:legalEntity.(string)})
+		pem, err := v.crypto.PublicKey(types.LegalEntity{URI: legalEntity.(string)})
 		if err != nil {
 			return nil, err
 		}

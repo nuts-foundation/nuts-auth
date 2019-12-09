@@ -4,15 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"sync"
+	"time"
+
 	"github.com/mdp/qrterminal/v3"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
-	"os"
-	"sync"
-	"time"
 )
 
 // ConfAddress is the config key for the address the http server listens on
@@ -102,6 +103,7 @@ func (auth *Auth) Configure() (err error) {
 
 		validator := DefaultValidator{
 			IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
+			irmaConfig: GetIrmaConfig(auth.Config),
 			registry:   registry.RegistryInstance(),
 			crypto:     crypto.CryptoInstance(),
 		}

@@ -4,6 +4,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"os"
+	"reflect"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/golang/mock/gomock"
 	cryptoMock "github.com/nuts-foundation/nuts-crypto/mock"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -14,12 +21,6 @@ import (
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
-	"os"
-	"reflect"
-	"strings"
-	"sync"
-	"testing"
-	"time"
 
 	"github.com/nuts-foundation/nuts-auth/testdata"
 	irma2 "github.com/privacybydesign/irmago"
@@ -27,6 +28,18 @@ import (
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
 )
+
+func TestDefaultValidator_IsInitialized(t *testing.T) {
+	t.Run("No irma config returns false", func(t *testing.T) {
+		v := DefaultValidator{}
+		assert.False(t, v.IsInitialized())
+	})
+
+	t.Run("with irma config returns true", func(t *testing.T) {
+		v := DefaultValidator{irmaConfig: &irma2.Configuration{}}
+		assert.True(t, v.IsInitialized())
+	})
+}
 
 func TestValidateContract(t *testing.T) {
 	type args struct {
