@@ -13,6 +13,7 @@ The JWT is specified as:
         "aud": "https://target_token_endpoint",
         "usi": {...irma based signature...},
         "osi": {...hardware token sig...},
+        "con": {...additional context...},
         "ccn": "CN=client_common_name",
         "icn": "CN=issuer_common_name",
         "exp": max(time_from_irma_sign, some_limited_time),
@@ -46,6 +47,10 @@ User signature. This is the Irma signature presented to the user. Base64 encoded
 Osi
 ---
 Ops signature, optional signature coming from a hardware token, indicating the user belongs to the issuer organization. Can be linked to the Nuts registry.
+
+Con
+---
+Base64 encoded json representing key-value pairs for additional context for the requested access token. Such as patient and/or task flow selection.
 
 Ccn
 ---
