@@ -58,7 +58,13 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 		}
 
 		// get public key
-		pk, err := v.crypto.PublicKeyInJWK(types.LegalEntity{URI: legalEntity.(string)})
+		org, err := v.registry.OrganizationById(legalEntity.(string))
+		if err != nil {
+			return nil, err
+		}
+
+		pk, err := org.CurrentPublicKey()
+
 		if err != nil {
 			return nil, err
 		}
