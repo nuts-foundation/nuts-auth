@@ -45,6 +45,7 @@ type AuthClient interface {
 	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
 	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
 	ValidateContract(request ValidationRequest) (*ValidationResult, error)
+	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
 }
 
 // Auth is the main struct of the Auth service
@@ -211,4 +212,8 @@ func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResult
 		return auth.ContractValidator.ValidateJwt(request.ContractString, request.ActingPartyCN)
 	}
 	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
+}
+
+func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error) {
+	return nil, nil
 }

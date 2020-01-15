@@ -116,6 +116,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Contract"
+  /auth/accesstoken:
+    post:
+      operationId: createAccessToken
+      summery: Create an access token based on the OAuth JWT Bearer flow.
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/CreateAccessTokenRequest"
+      responses:
+        '200':
+          description: The posted JWT is valid. Responds with access token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessTokenResponse"
+        '400':
+          description: The posted JWT is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessTokenRequestFailedResponse"
 components:
   schemas:
     ErrorString:
@@ -382,3 +407,59 @@ components:
           type: object
           additionalProperties:
             type: number
+    CreateAccessTokenRequest:
+      description: JWT as described in RFC7523 secrtion 2.1
+      required:
+        - grand_type
+        - assertion
+      properties:
+        grand_type:
+          type: string
+          description: always must contain the value "urn:ietf:params:oauth:grant-type:jwt-bearer"
+          example: urn:ietf:params:oauth:grant-type:jwt-bearer
+        assertion:
+          description: Base64 encoded JWT following rfc7523 and the Nuts documentation
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6NDgwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjoxNTc4MTEwNDgxLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.76XtU81IyR3Ak_2fgrYsuLcvxndf0eedT1mFPa-rPXk"
+    AccessTokenResponse:
+      description: Succesful response as described in rfc6749 section 5.1
+      required:
+        - access_token
+        - token_type
+        - expires
+      properties:
+        access_token:
+          description: |
+            The access token issued by the authorization server.
+            Could be a signed JWT or a random number. It should not have a meaning to the client.
+          type: string
+          example:
+            "12345"
+        token_type:
+          description: The type of the token issued
+          type: string
+          example: "nuts_session_token"
+        expires_in:
+          type: number
+          description: The lifetime in seconds of the access token.
+          example: 15
+    AccessTokenRequestFailedResponse:
+      description: Error response when access token request fails as described in rfc6749 sectionn 5.2
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          enum: [invalid_request, invalid_grant, unsupported_grant_type]
+        error_description:
+          description: >
+            Human-readable ASCII text providing
+            additional information, used to assist the client developer in
+            understanding the error that occurred.
+          type: string
+
+
+
+
+
+
+

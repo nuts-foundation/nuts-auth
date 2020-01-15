@@ -6,11 +6,25 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"net/http"
 )
+
+// AccessTokenRequestFailedResponse defines model for AccessTokenRequestFailedResponse.
+type AccessTokenRequestFailedResponse struct {
+	Error            string  `json:"error"`
+	ErrorDescription *string `json:"error_description,omitempty"`
+}
+
+// AccessTokenResponse defines model for AccessTokenResponse.
+type AccessTokenResponse struct {
+	AccessToken string   `json:"access_token"`
+	ExpiresIn   *float32 `json:"expires_in,omitempty"`
+	TokenType   string   `json:"token_type"`
+}
 
 // Contract defines model for Contract.
 type Contract struct {
@@ -30,6 +44,12 @@ type ContractSigningRequest struct {
 	ValidFrom   *string     `json:"valid_from,omitempty"`
 	ValidTo     *string     `json:"valid_to,omitempty"`
 	Version     Version     `json:"version"`
+}
+
+// CreateAccessTokenRequest defines model for CreateAccessTokenRequest.
+type CreateAccessTokenRequest struct {
+	Assertion interface{} `json:"assertion"`
+	GrandType string      `json:"grand_type"`
 }
 
 // CreateSessionResult defines model for CreateSessionResult.
@@ -185,6 +205,8 @@ type validateContractJSONBody ValidationRequest
 
 // GetContractByTypeParams defines parameters for GetContractByType.
 type GetContractByTypeParams struct {
+
+	// The version of this contract. If omitted, the most recent version will be returned
 	Version  *string `json:"version,omitempty"`
 	Language *string `json:"language,omitempty"`
 }
@@ -409,6 +431,8 @@ func (a ValidationResult_SignerAttributes) MarshalJSON() ([]byte, error) {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// (POST /auth/accesstoken)
+	CreateAccessToken(ctx echo.Context) error
 	// CreateSessionHandler Initiates an IRMA signing session with the correct contract.// (POST /auth/contract/session)
 	CreateSession(ctx echo.Context) error
 	// returns the result of the contract request// (GET /auth/contract/session/{id})
@@ -422,6 +446,15 @@ type ServerInterface interface {
 // ServerInterfaceWrapper converts echo contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler ServerInterface
+}
+
+// CreateAccessToken converts echo context to params.
+func (w *ServerInterfaceWrapper) CreateAccessToken(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.CreateAccessToken(ctx)
+	return err
 }
 
 // CreateSession converts echo context to params.
@@ -497,16 +530,26 @@ func (w *ServerInterfaceWrapper) GetContractByType(ctx echo.Context) error {
 }
 
 // RegisterHandlers adds each server route to the EchoRouter.
-func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
+func RegisterHandlers(router interface {
+	CONNECT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	DELETE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	GET(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	HEAD(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	OPTIONS(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	PATCH(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	POST(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	PUT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	TRACE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+}, si ServerInterface) {
 
 	wrapper := ServerInterfaceWrapper{
 		Handler: si,
 	}
 
+	router.POST("/auth/accesstoken", wrapper.CreateAccessToken)
 	router.POST("/auth/contract/session", wrapper.CreateSession)
 	router.GET("/auth/contract/session/:id", wrapper.SessionRequestStatus)
 	router.POST("/auth/contract/validate", wrapper.ValidateContract)
 	router.GET("/auth/contract/:contractType", wrapper.GetContractByType)
 
 }
-

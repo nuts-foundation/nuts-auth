@@ -194,3 +194,7 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 
 	return ctx.JSON(http.StatusOK, answer)
 }
+
+func (api *Wrapper) CreateAccessToken(ctx echo.Context) error {
+	panic("implement me")
+}

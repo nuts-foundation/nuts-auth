@@ -91,6 +91,12 @@ type ValidationRequest struct {
 	ActingPartyCN string
 }
 
+type CreateAccessTokenRequest struct {
+}
+
+type AccessTokenResponse struct {
+}
+
 // ValidationResult contains the result of a contract validation
 type ValidationResult struct {
 	ValidationResult ValidationState `json:"validation_result"`
