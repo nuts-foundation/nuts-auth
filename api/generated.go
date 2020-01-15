@@ -48,8 +48,8 @@ type ContractSigningRequest struct {
 
 // CreateAccessTokenRequest defines model for CreateAccessTokenRequest.
 type CreateAccessTokenRequest struct {
-	Assertion interface{} `json:"assertion"`
-	GrandType string      `json:"grand_type"`
+	Assertion string `json:"assertion"`
+	GrandType string `json:"grand_type"`
 }
 
 // CreateSessionResult defines model for CreateSessionResult.
