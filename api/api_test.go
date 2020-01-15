@@ -3,7 +3,9 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 
@@ -278,4 +280,87 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, httpError.Code)
 
 	})
+}
+
+type OAuthErrorMatcher struct {
+	x AccessTokenRequestFailedResponse
+}
+
+func (e OAuthErrorMatcher) Matches(x interface{}) bool {
+	if !reflect.TypeOf(x).AssignableTo(reflect.TypeOf(x)) {
+		return false
+	}
+
+	response := x.(*AccessTokenRequestFailedResponse)
+	return e.x.Error == response.Error && *e.x.ErrorDescription == *response.ErrorDescription
+}
+
+func (e OAuthErrorMatcher) String() string {
+	return fmt.Sprintf("is equal to {%v, %v}", e.x.Error, *e.x.ErrorDescription)
+}
+
+func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
+	type CreateAccessTokenTestContext struct {
+		ctrl     *gomock.Controller
+		echoMock *mock.MockContext
+		authMock *mock2.MockAuthClient
+		wrapper  Wrapper
+	}
+
+	createContext := func(t *testing.T) *CreateAccessTokenTestContext {
+		ctrl := gomock.NewController(t)
+		authMock := mock2.NewMockAuthClient(ctrl)
+		return &CreateAccessTokenTestContext{
+			ctrl:     ctrl,
+			echoMock: mock.NewMockContext(ctrl),
+			authMock: authMock,
+			wrapper:  Wrapper{Auth: authMock},
+		}
+	}
+
+	bindPostBody := func(ctx *CreateAccessTokenTestContext, body CreateAccessTokenRequest) {
+		jsonData, _ := json.Marshal(body)
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+			_ = json.Unmarshal(jsonData, f)
+		})
+	}
+
+	expectError := func(ctx *CreateAccessTokenTestContext, err AccessTokenRequestFailedResponse) {
+		ctx.echoMock.EXPECT().JSON(http.StatusBadRequest, OAuthErrorMatcher{x: err})
+	}
+
+	t.Run("unknown grand_type", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		params := CreateAccessTokenRequest{GrandType: "unknown type"}
+		bindPostBody(ctx, params)
+
+		errorDescription := "grant_type must be: 'urn:ietf:params:oauth:grant-type:jwt-bearer'"
+		errorType := "unsupported_grant_type"
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: &errorDescription, Error: errorType}
+		expectError(ctx, errorResponse)
+
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
+
+		assert.Nil(t, err)
+	})
+
+	t.Run("invalid assertion", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		params := CreateAccessTokenRequest{GrandType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: "invalid assertion"}
+		bindPostBody(ctx, params)
+
+		errorDescription := "Could not decode the JWT. Is it valid base64?"
+		errorType := "invalid_grant"
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: &errorDescription, Error: errorType}
+		expectError(ctx, errorResponse)
+
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
+
+		assert.Nil(t, err)
+	})
+
 }

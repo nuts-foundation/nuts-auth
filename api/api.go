@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -195,6 +196,26 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 	return ctx.JSON(http.StatusOK, answer)
 }
 
-func (api *Wrapper) CreateAccessToken(ctx echo.Context) error {
-	panic("implement me")
+func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
+	request := new(CreateAccessTokenRequest)
+	if err = ctx.Bind(request); err != nil {
+		return
+	}
+
+	if request.GrandType != "urn:ietf:params:oauth:grant-type:jwt-bearer" {
+		errDesc := "grant_type must be: 'urn:ietf:params:oauth:grant-type:jwt-bearer'"
+		errorResponse := &AccessTokenRequestFailedResponse{Error: "unsupported_grant_type", ErrorDescription: &errDesc}
+		return ctx.JSON(http.StatusBadRequest, errorResponse)
+	}
+	_, err = base64.StdEncoding.DecodeString(request.Assertion)
+	if err != nil {
+		errDesc := "Could not decode the JWT. Is it valid base64?"
+		errorResponse := &AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
+		return ctx.JSON(http.StatusBadRequest, errorResponse)
+	}
+
+	response := new(AccessTokenResponse)
+	response.AccessToken = "foo"
+
+	return ctx.JSON(http.StatusOK, response)
 }

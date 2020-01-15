@@ -408,7 +408,7 @@ components:
           additionalProperties:
             type: number
     CreateAccessTokenRequest:
-      description: JWT as described in RFC7523 secrtion 2.1
+      description: Request as described in RFC7523 secrtion 2.1
       required:
         - grand_type
         - assertion
