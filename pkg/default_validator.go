@@ -223,7 +223,6 @@ func (v DefaultValidator) CreateAccessToken(acString string) (string, error) {
 		}
 
 		pk, err := org.CurrentPublicKey()
-
 		if err != nil {
 			return nil, err
 		}
@@ -231,20 +230,18 @@ func (v DefaultValidator) CreateAccessToken(acString string) (string, error) {
 		return pk.Materialize()
 	})
 
-	if err != nil {
-		return "", err
-	}
+	if token != nil && token.Valid {
+		if claims, ok := token.Claims.(*NutsJwtClaims); ok {
 
-	if claims, ok := token.Claims.(*NutsJwtClaims); ok && token.Valid {
+			sessionClaims := map[string]interface{}{
+				"iss": claims.Issuer,
+				"sub": claims.Subject,
+				"sid": claims.SubjectId,
+			}
 
-		sessionClaims := map[string]interface{}{
-			"iss": claims.Issuer,
-			"sub": claims.Subject,
-			"sid": claims.SubjectId,
+			return v.crypto.SignJwtFor(sessionClaims, types.LegalEntity{URI: claims.Subject})
 		}
 
-		return v.crypto.SignJwtFor(sessionClaims, types.LegalEntity{URI: claims.Subject})
 	}
-
 	return "", err
 }

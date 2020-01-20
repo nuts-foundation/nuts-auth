@@ -590,14 +590,6 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		assert.Equal(t, "invalid character '×' looking for beginning of value", err.Error())
 	})
 
-	t.Run("unknown issuer", func(t *testing.T) {
-		validator := defaultValidator()
-		const validJwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDEiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjo0MDcwOTA4ODAwLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.FKdBzfIsMnLSjnIqrWxqHjtWX8GJGA1CeAQ1MfZSnFTA9J2w-Xf8PIg_G_lWXaAsTbTTKm2Tgde8Jxot7WOKIcWWyFlHGUYnopIfWSgQCZ7CChSZflUb0Y3POy71GBeK6I_zi85ZCS5AYFbQNI2wnG7a5s0dpzOLxxRuesjzUpM9hafkA0Vc3npvKtPLFNJhYAvzFEG61g9hnb5PgalAhnkxokZMrr6pqKIcv6B4XeKvvTD_fJtyTiLcpwbTlpK6fvdtfAcjhX-1z60wxiO_7SLKf0_dQ4Wku7ltElQY86_bcPlUmMg68YamMs8RyuAO3GCJZzXx2J8eOMAxj_Ib0Q"
-		response, err := validator.CreateAccessToken(validJwt)
-		assert.Equal(t, "", response)
-		assert.Equal(t, "organization not found", err.Error())
-	})
-
 	t.Run("wrong algorithm", func(t *testing.T) {
 		validator := defaultValidator()
 		// alg: HS256
@@ -607,13 +599,84 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		assert.Equal(t, "key is of invalid type", err.Error())
 	})
 
-	t.Run("wrong signature", func(t *testing.T) {
+	t.Run("missing issuer", func(t *testing.T) {
 		validator := defaultValidator()
-		const validJwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjo0MDcwOTA4ODAwLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.GI2PAd06OcNvxC40EpY0YtLavJPYrSiKWAITqY6rUYAo_H0BO9SCqPGCMlpDpu9yzLgOF4iePTdSdeN0nk2ifK0gHPgAr0ie9wARzs2etqU3Lkb8gpw2quviIT2jHF_JqsaWm_bD8X0gmy_IzCFtV3mHnD-s3LHlYqS1GeJe9lsG8RE-J82piQnaLYAbGqIssHf0QKhVPGiUxCh8qkCDc7zqLb2me-NpN-aiSfyxck2bin1_RsBj7lW2R1owAbrNO9FHOK55PHEeRP1VgpJ58iOrbyOQXyuC6nK22JZzQZFBC8KPJfYj4JPYfyja4xPlO7V03PHLarTD-QqC5o9XsA"
+		claims := map[string]interface{}{
+			"iss": "",
+			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
+			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+			"aud": "https://target_token_endpoint",
+			"usi": "base64 encoded signature",
+			"exp": 4070908800,
+			"iat": 1578910481,
+			"jti": "123-456-789",
+		}
+		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
+		response, err := validator.CreateAccessToken(validJwt)
+		assert.Equal(t, "", response)
+		assert.Equal(t, "legalEntity not provided", err.Error())
+	})
 
+	t.Run("unknown issuer", func(t *testing.T) {
+		validator := defaultValidator()
+		claims := map[string]interface{}{
+			"iss": "urn:oid:2.16.840.1.113883.2.4.6.1:00000001",
+			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
+			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+			"aud": "https://target_token_endpoint",
+			"usi": "base64 encoded signature",
+			"exp": 4070908800,
+			"iat": 1578910481,
+			"jti": "123-456-789",
+		}
+		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: claims["iss"].(string)})
+		response, err := validator.CreateAccessToken(validJwt)
+		assert.Equal(t, "", response)
+		assert.Equal(t, "organization not found", err.Error())
+	})
+
+	t.Run("token not signed by issuer", func(t *testing.T) {
+		validator := defaultValidator()
+
+		claims := map[string]interface{}{
+			"iss": "urn:oid:2.16.840.1.113883.2.4.6.1:00000000",
+			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
+			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+			"aud": "https://target_token_endpoint",
+			"usi": "base64 encoded signature",
+			"exp": 4070908800,
+			"iat": 1578910481,
+			"jti": "123-456-789",
+		}
+
+		otherParty := types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000002"}
+		validator.crypto.GenerateKeyPairFor(otherParty)
+		validJwt, err := validator.crypto.SignJwtFor(claims, otherParty)
+		assert.Nil(t, err)
 		response, err := validator.CreateAccessToken(validJwt)
 		assert.Equal(t, "", response)
 		assert.Equal(t, "crypto/rsa: verification error", err.Error())
+	})
+
+	t.Run("token expired", func(t *testing.T) {
+		validator := defaultValidator()
+
+		claims := map[string]interface{}{
+			"iss": "urn:oid:2.16.840.1.113883.2.4.6.1:00000000",
+			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
+			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+			"aud": "https://target_token_endpoint",
+			"usi": "base64 encoded signature",
+			"exp": 1578910481,
+			"iat": 1578910481,
+			"jti": "123-456-789",
+		}
+
+		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: claims["iss"].(string)})
+		assert.Nil(t, err)
+		response, err := validator.CreateAccessToken(validJwt)
+		assert.Equal(t, "", response)
+		assert.Contains(t, err.Error(), "token is expired by")
 	})
 
 	t.Run("valid jwt", func(t *testing.T) {
