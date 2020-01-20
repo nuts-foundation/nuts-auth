@@ -115,26 +115,15 @@ func (sc *SignedIrmaContract) Validate(actingPartyCn string, configuration *irma
 func validateActingParty(params map[string]string, actingParty string) (bool, error) {
 	// If no acting party is given, that is probably an implementation error.
 	if actingParty == "" {
-		logrus.Error("No acting party provided. Origin of contract cannot be checked.")
-		return false, errors.New("actingParty cannot be empty")
+		return false, errors.New("actingParty validation failed: actingParty cannot be empty")
 	}
 
-	var (
-		actingPartyFromContract string
-		ok                      bool
-	)
-
 	// if no acting party in the params, error
-	if actingPartyFromContract, ok = params["acting_party"]; !ok {
-		return false, errors.New("no acting party found by contract but one given to verify")
+	actingPartyFromContract, ok := params["acting_party"]
+	if !ok {
+		return false, errors.New("actingParty validation failed: no acting party found in contract params")
 	}
 
 	// perform the actual check
-	if actingParty == actingPartyFromContract {
-		return true, nil
-	}
-
-	logrus.Infof("expected actingParty %s not equal to contract %s", actingParty, actingPartyFromContract)
-	// false by default
-	return false, nil
+	return actingParty == actingPartyFromContract, nil
 }
