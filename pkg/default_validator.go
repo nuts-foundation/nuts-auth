@@ -209,8 +209,8 @@ func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.S
 	return v.IrmaServer.StartSession(request, handler)
 }
 
-// CreateAccessToken validates the jwt and returns an new access token which can be used as a Session Token
-func (v DefaultValidator) CreateAccessToken(acString string) (string, error) {
+// ParseAndValidateAccessTokenJwt validates the jwt signature and returns the containing claims
+func (v DefaultValidator) ParseAndValidateAccessTokenJwt(acString string) (*NutsJwtClaims, error) {
 	token, err := jwt.ParseWithClaims(acString, &NutsJwtClaims{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity := token.Claims.(*NutsJwtClaims).Issuer
 		if legalEntity == "" {
@@ -233,16 +233,10 @@ func (v DefaultValidator) CreateAccessToken(acString string) (string, error) {
 
 	if token != nil && token.Valid {
 		if claims, ok := token.Claims.(*NutsJwtClaims); ok {
+			return claims, nil
 
-			sessionClaims := map[string]interface{}{
-				"iss": claims.Issuer,
-				"sub": claims.Subject,
-				"sid": claims.SubjectId,
-			}
-
-			return v.crypto.SignJwtFor(sessionClaims, types.LegalEntity{URI: claims.Subject})
 		}
 
 	}
-	return "", err
+	return nil, err
 }

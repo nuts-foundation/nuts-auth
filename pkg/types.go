@@ -40,7 +40,7 @@ type ContractSessionHandler interface {
 }
 
 type AccessTokenHandler interface {
-	CreateAccessToken(acString string) (string, error)
+	ParseAndValidateAccessTokenJwt(acString string) (*NutsJwtClaims, error)
 }
 
 const (

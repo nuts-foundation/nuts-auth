@@ -216,11 +216,11 @@ func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResult
 	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
 }
 
-// CreateAccessToken Passes the call to the AccessTokenHandler.
+// ParseAndValidateAccessTokenJwt Passes the call to the AccessTokenHandler.
 func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error) {
-	token, err := auth.AccessTokenHandler.CreateAccessToken(request.JwtString)
+	_, err := auth.AccessTokenHandler.ParseAndValidateAccessTokenJwt(request.JwtString)
 	if err != nil {
 		return nil, err
 	}
-	return &AccessTokenResponse{AccessToken: token}, nil
+	return &AccessTokenResponse{AccessToken: ""}, nil
 }
