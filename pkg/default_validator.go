@@ -208,3 +208,43 @@ func convertClaimsToPayload(claims map[string]interface{}) (*nutsJwt, error) {
 func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
 	return v.IrmaServer.StartSession(request, handler)
 }
+
+func (v DefaultValidator) CreateAccessToken(acString string) (string, error) {
+	token, err := jwt.ParseWithClaims(acString, &NutsJwtClaims{}, func(token *jwt.Token) (i interface{}, e error) {
+		legalEntity := token.Claims.(*NutsJwtClaims).Issuer
+		if legalEntity == "" {
+			return nil, fmt.Errorf("legalEntity not provided")
+		}
+
+		// get public key
+		org, err := v.registry.OrganizationById(legalEntity)
+		if err != nil {
+			return nil, err
+		}
+
+		pk, err := org.CurrentPublicKey()
+
+		if err != nil {
+			return nil, err
+		}
+
+		return pk.Materialize()
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	if claims, ok := token.Claims.(*NutsJwtClaims); ok && token.Valid {
+
+		sessionClaims := map[string]interface{}{
+			"iss": claims.Issuer,
+			"sub": claims.Subject,
+			"sid": claims.SubjectId,
+		}
+
+		return v.crypto.SignJwtFor(sessionClaims, types.LegalEntity{URI: claims.Subject})
+	}
+
+	return "", err
+}

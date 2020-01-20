@@ -55,6 +55,7 @@ type Auth struct {
 	configDone             bool
 	ContractSessionHandler ContractSessionHandler
 	ContractValidator      ContractValidator
+	AccessTokenHandler     AccessTokenHandler
 }
 
 // AuthConfig holds all the configuration params
@@ -110,6 +111,7 @@ func (auth *Auth) Configure() (err error) {
 		}
 		auth.ContractSessionHandler = validator
 		auth.ContractValidator = validator
+		auth.AccessTokenHandler = validator
 		auth.configDone = true
 	})
 
@@ -215,5 +217,9 @@ func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResult
 }
 
 func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error) {
-	return nil, nil
+	token, err := auth.AccessTokenHandler.CreateAccessToken(request.JwtString)
+	if err != nil {
+		return nil, err
+	}
+	return &AccessTokenResponse{AccessToken: token}, nil
 }

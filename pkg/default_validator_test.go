@@ -522,22 +522,35 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 }
 
 func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	rMock := registryMock.NewMockRegistryClient(ctrl)
+	type TestContext struct {
+		ctrl  *gomock.Controller
+		v     DefaultValidator
+		rMock *registryMock.MockRegistryClient
+	}
+	createContext := func(t *testing.T) TestContext {
+		ctrl := gomock.NewController(t)
+		rMock := registryMock.NewMockRegistryClient(ctrl)
 
-	v := DefaultValidator{
-		registry: rMock,
+		v := DefaultValidator{
+			registry: rMock,
+		}
+
+		return TestContext{ctrl: ctrl, v: v, rMock: rMock}
 	}
 
 	t.Run("Empty message returns error", func(t *testing.T) {
-		_, err := v.legalEntityFromContract(SignedIrmaContract{IrmaContract: irma2.SignedMessage{}})
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		_, err := ctx.v.legalEntityFromContract(SignedIrmaContract{IrmaContract: irma2.SignedMessage{}})
 
 		assert.NotNil(t, err)
 		assert.True(t, errors.Is(err, ErrInvalidContractText))
 	})
 
 	t.Run("Missing legalEntity returns error", func(t *testing.T) {
-		_, err := v.legalEntityFromContract(SignedIrmaContract{
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		_, err := ctx.v.legalEntityFromContract(SignedIrmaContract{
 			IrmaContract: irma2.SignedMessage{
 				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens  en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
 			},
@@ -548,9 +561,12 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	})
 
 	t.Run("Unknown legalEntity returns error", func(t *testing.T) {
-		rMock.EXPECT().ReverseLookup("UNKNOWN").Return(nil, db.ErrOrganizationNotFound)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
-		_, err := v.legalEntityFromContract(SignedIrmaContract{
+		ctx.rMock.EXPECT().ReverseLookup("UNKNOWN").Return(nil, db.ErrOrganizationNotFound)
+
+		_, err := ctx.v.legalEntityFromContract(SignedIrmaContract{
 			IrmaContract: irma2.SignedMessage{
 				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens UNKNOWN en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
 			},
@@ -558,6 +574,68 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 
 		assert.NotNil(t, err)
 		assert.True(t, errors.Is(err, db.ErrOrganizationNotFound))
+	})
+}
+
+func TestAuth_CreateAccessToken(t *testing.T) {
+	t.Run("malformed access tokens", func(t *testing.T) {
+		validator := defaultValidator()
+
+		response, err := validator.CreateAccessToken("foo")
+		assert.Equal(t, "", response)
+		assert.Equal(t, "token contains an invalid number of segments", err.Error())
+
+		response, err = validator.CreateAccessToken("123.456.787")
+		assert.Equal(t, "", response)
+		assert.Equal(t, "invalid character '×' looking for beginning of value", err.Error())
+	})
+
+	t.Run("unknown issuer", func(t *testing.T) {
+		validator := defaultValidator()
+		const validJwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDEiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjo0MDcwOTA4ODAwLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.FKdBzfIsMnLSjnIqrWxqHjtWX8GJGA1CeAQ1MfZSnFTA9J2w-Xf8PIg_G_lWXaAsTbTTKm2Tgde8Jxot7WOKIcWWyFlHGUYnopIfWSgQCZ7CChSZflUb0Y3POy71GBeK6I_zi85ZCS5AYFbQNI2wnG7a5s0dpzOLxxRuesjzUpM9hafkA0Vc3npvKtPLFNJhYAvzFEG61g9hnb5PgalAhnkxokZMrr6pqKIcv6B4XeKvvTD_fJtyTiLcpwbTlpK6fvdtfAcjhX-1z60wxiO_7SLKf0_dQ4Wku7ltElQY86_bcPlUmMg68YamMs8RyuAO3GCJZzXx2J8eOMAxj_Ib0Q"
+		response, err := validator.CreateAccessToken(validJwt)
+		assert.Equal(t, "", response)
+		assert.Equal(t, "organization not found", err.Error())
+	})
+
+	t.Run("wrong algorithm", func(t *testing.T) {
+		validator := defaultValidator()
+		// alg: HS256
+		const invalidJwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjo0MDcwOTA4ODAwLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.2_4bxKKsVspQ4QxXRG8m2mOnLbl-fFgSkEq_h8N9sNE"
+		response, err := validator.CreateAccessToken(invalidJwt)
+		assert.Equal(t, "", response)
+		assert.Equal(t, "key is of invalid type", err.Error())
+	})
+
+	t.Run("wrong signature", func(t *testing.T) {
+		validator := defaultValidator()
+		const validJwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjo0MDcwOTA4ODAwLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.GI2PAd06OcNvxC40EpY0YtLavJPYrSiKWAITqY6rUYAo_H0BO9SCqPGCMlpDpu9yzLgOF4iePTdSdeN0nk2ifK0gHPgAr0ie9wARzs2etqU3Lkb8gpw2quviIT2jHF_JqsaWm_bD8X0gmy_IzCFtV3mHnD-s3LHlYqS1GeJe9lsG8RE-J82piQnaLYAbGqIssHf0QKhVPGiUxCh8qkCDc7zqLb2me-NpN-aiSfyxck2bin1_RsBj7lW2R1owAbrNO9FHOK55PHEeRP1VgpJ58iOrbyOQXyuC6nK22JZzQZFBC8KPJfYj4JPYfyja4xPlO7V03PHLarTD-QqC5o9XsA"
+
+		response, err := validator.CreateAccessToken(validJwt)
+		assert.Equal(t, "", response)
+		assert.Equal(t, "crypto/rsa: verification error", err.Error())
+	})
+
+	t.Run("valid jwt", func(t *testing.T) {
+		validator := defaultValidator()
+
+		claims := map[string]interface{}{
+			"iss": "urn:oid:2.16.840.1.113883.2.4.6.1:00000000",
+			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
+			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+			"aud": "https://target_token_endpoint",
+			"usi": "base64 encoded signature",
+			"exp": 4070908800,
+			"iat": 1578910481,
+			"jti": "123-456-789",
+		}
+
+		validator.crypto.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
+		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: claims["iss"].(string)})
+		assert.Nil(t, err)
+		response, err := validator.CreateAccessToken(validJwt)
+		assert.NotEmpty(t, response)
+		assert.Nil(t, err)
 	})
 }
 
@@ -587,6 +665,8 @@ var cryptoInstance = &crypto.Crypto{
 }
 var testInstance *DefaultValidator
 
+// defaultValidator sets up a validator with a registry containing a single test organization.
+// The method is a singleton and always returns the same instance
 func defaultValidator() DefaultValidator {
 	mutex := sync.Mutex{}
 	mutex.Lock()
@@ -606,13 +686,12 @@ func defaultValidator() DefaultValidator {
 			panic(err)
 		}
 
+		// Add a test organization to the registry
 		le := types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"}
 		_ = cryptoInstance.GenerateKeyPairFor(le)
-		_ = cryptoInstance.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"})
 		pub, _ := cryptoInstance.PublicKeyInPEM(le)
-
 		_ = r.RegisterOrganization(db.Organization{
-			Identifier: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000",
+			Identifier: db.Identifier(le.URI),
 			Name:       "verpleeghuis De nootjes",
 			PublicKey:  &pub,
 		})

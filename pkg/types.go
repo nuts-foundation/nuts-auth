@@ -4,6 +4,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
+
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
@@ -35,6 +37,10 @@ type ContractValidator interface {
 type ContractSessionHandler interface {
 	SessionStatus(session SessionID) (*SessionStatusResult, error)
 	StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error)
+}
+
+type AccessTokenHandler interface {
+	CreateAccessToken(acString string) (string, error)
 }
 
 const (
@@ -92,9 +98,18 @@ type ValidationRequest struct {
 }
 
 type CreateAccessTokenRequest struct {
+	// JwtString the string containing the unmarshalled jwt.
+	JwtString string
+}
+
+type NutsJwtClaims struct {
+	// Subject identifier
+	SubjectId string `json:sid`
+	jwt.StandardClaims
 }
 
 type AccessTokenResponse struct {
+	AccessToken string
 }
 
 // ValidationResult contains the result of a contract validation
