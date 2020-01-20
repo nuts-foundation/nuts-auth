@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/sirupsen/logrus"
@@ -19,9 +20,7 @@ func ParseIrmaContract(rawContract string) (*SignedIrmaContract, error) {
 	signedContract := &SignedIrmaContract{}
 
 	if err := json.Unmarshal([]byte(rawContract), &signedContract.IrmaContract); err != nil {
-		logMsg := fmt.Sprint("Could not parse irma contract")
-		logrus.WithError(err).Info(logMsg)
-		return nil, errors.New(logMsg)
+		return nil, fmt.Errorf("could not parse IRMA contract: %w", err)
 	}
 
 	return signedContract, nil
@@ -32,12 +31,8 @@ func ParseIrmaContract(rawContract string) (*SignedIrmaContract, error) {
 func (sc *SignedIrmaContract) verifySignature(configuration *irma.Configuration) (*ValidationResult, error) {
 	// Actual verification
 	attributes, status, err := sc.IrmaContract.Verify(configuration, nil)
-
-	// error handling
 	if err != nil {
-		logMsg := "Unable to verify contract signature"
-		logrus.WithError(err).Info(logMsg)
-		return nil, err
+		return nil, fmt.Errorf("contract signature verification failed: %w", err)
 	}
 
 	var disclosedAttributes map[string]string
