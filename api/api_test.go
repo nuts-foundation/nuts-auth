@@ -329,6 +329,10 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		ctx.echoMock.EXPECT().JSON(http.StatusBadRequest, OAuthErrorMatcher{x: err})
 	}
 
+	expectStatusOK := func(ctx *CreateAccessTokenTestContext, response AccessTokenResponse) {
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, gomock.Eq(response))
+	}
+
 	t.Run("unknown grand_type", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
@@ -350,10 +354,10 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		params := CreateAccessTokenRequest{GrandType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: "invalid assertion"}
+		params := CreateAccessTokenRequest{GrandType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: "invalid jwt"}
 		bindPostBody(ctx, params)
 
-		errorDescription := "Could not decode the JWT. Is it valid base64?"
+		errorDescription := "Assertion must be a valid encoded jwt"
 		errorType := "invalid_grant"
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: &errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
@@ -361,6 +365,27 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
 
 		assert.Nil(t, err)
+	})
+
+	const validJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6NDgwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjoxNTc4MTEwNDgxLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.76XtU81IyR3Ak_2fgrYsuLcvxndf0eedT1mFPa-rPXk"
+
+	t.Run("valid request", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		params := CreateAccessTokenRequest{GrandType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
+		bindPostBody(ctx, params)
+
+		pkgResponse := &pkg.AccessTokenResponse{AccessToken: "foo"}
+		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{JwtString: validJwt}).Return(pkgResponse, nil)
+
+		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
+		expectStatusOK(ctx, apiResponse)
+
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
+
+		assert.Nil(t, err)
+
 	})
 
 }

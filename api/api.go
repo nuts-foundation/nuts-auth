@@ -1,10 +1,10 @@
 package api
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -207,15 +207,22 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 		errorResponse := &AccessTokenRequestFailedResponse{Error: "unsupported_grant_type", ErrorDescription: &errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-	_, err = base64.StdEncoding.DecodeString(request.Assertion)
-	if err != nil {
-		errDesc := "Could not decode the JWT. Is it valid base64?"
+
+	const jwtPattern = `^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$`
+	if matched, err := regexp.Match(jwtPattern, []byte(request.Assertion)); !matched || err != nil {
+		errDesc := "Assertion must be a valid encoded jwt"
 		errorResponse := &AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 
-	response := new(AccessTokenResponse)
-	response.AccessToken = "foo"
+	catRequest := pkg.CreateAccessTokenRequest{JwtString: request.Assertion}
+	acResponse, err := api.Auth.CreateAccessToken(catRequest)
+	if err != nil {
+		errDesc := fmt.Sprintf("Could not create accessoken: %s", err)
+		errorResponse := &AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
+		return ctx.JSON(http.StatusBadRequest, errorResponse)
+	}
+	response := AccessTokenResponse{AccessToken: acResponse.AccessToken}
 
 	return ctx.JSON(http.StatusOK, response)
 }
