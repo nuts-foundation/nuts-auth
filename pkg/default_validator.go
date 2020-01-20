@@ -209,6 +209,7 @@ func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.S
 	return v.IrmaServer.StartSession(request, handler)
 }
 
+// CreateAccessToken validates the jwt and returns an new access token which can be used as a Session Token
 func (v DefaultValidator) CreateAccessToken(acString string) (string, error) {
 	token, err := jwt.ParseWithClaims(acString, &NutsJwtClaims{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity := token.Claims.(*NutsJwtClaims).Issuer

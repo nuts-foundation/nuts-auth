@@ -196,6 +196,8 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 	return ctx.JSON(http.StatusOK, answer)
 }
 
+// CreateAccessToken handles the api call to create an access token. It consumes and checks the JWT and returns
+// an smaller sessionToken
 func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 	request := new(CreateAccessTokenRequest)
 	if err = ctx.Bind(request); err != nil {
