@@ -104,7 +104,7 @@ type CreateAccessTokenRequest struct {
 
 type NutsJwtClaims struct {
 	// Subject identifier
-	SubjectId string `json:sid`
+	SubjectId string `json:"sid,omitempty"`
 	jwt.StandardClaims
 }
 
