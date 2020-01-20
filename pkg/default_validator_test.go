@@ -611,7 +611,8 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 			"iat": 1578910481,
 			"jti": "123-456-789",
 		}
-		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
+		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"})
+		assert.Nil(t, err)
 		response, err := validator.CreateAccessToken(validJwt)
 		assert.Equal(t, "", response)
 		assert.Equal(t, "legalEntity not provided", err.Error())
@@ -629,7 +630,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 			"iat": 1578910481,
 			"jti": "123-456-789",
 		}
-		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: claims["iss"].(string)})
+		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"})
 		response, err := validator.CreateAccessToken(validJwt)
 		assert.Equal(t, "", response)
 		assert.Equal(t, "organization not found", err.Error())
