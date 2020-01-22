@@ -333,11 +333,11 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, gomock.Eq(response))
 	}
 
-	t.Run("unknown grand_type", func(t *testing.T) {
+	t.Run("unknown grant_type", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		params := CreateAccessTokenRequest{GrandType: "unknown type"}
+		params := CreateAccessTokenRequest{GrantType: "unknown type"}
 		bindPostBody(ctx, params)
 
 		errorDescription := "grant_type must be: 'urn:ietf:params:oauth:grant-type:jwt-bearer'"
@@ -354,7 +354,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		params := CreateAccessTokenRequest{GrandType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: "invalid jwt"}
+		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: "invalid jwt"}
 		bindPostBody(ctx, params)
 
 		errorDescription := "Assertion must be a valid encoded jwt"
@@ -373,7 +373,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		params := CreateAccessTokenRequest{GrandType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
+		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
 		bindPostBody(ctx, params)
 
 		errorDescription := "Could not create accessoken: oh boy"
@@ -391,7 +391,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		params := CreateAccessTokenRequest{GrandType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
+		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
 		bindPostBody(ctx, params)
 
 		pkgResponse := &pkg.AccessTokenResponse{AccessToken: "foo"}

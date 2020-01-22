@@ -196,6 +196,8 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 	return ctx.JSON(http.StatusOK, answer)
 }
 
+const jwtBearerGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
+
 // CreateAccessToken handles the api call to create an access token. It consumes and checks the JWT and returns
 // an smaller sessionToken
 func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
@@ -204,8 +206,8 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 		return
 	}
 
-	if request.GrandType != "urn:ietf:params:oauth:grant-type:jwt-bearer" {
-		errDesc := "grant_type must be: 'urn:ietf:params:oauth:grant-type:jwt-bearer'"
+	if request.GrantType != jwtBearerGrantType {
+		errDesc := fmt.Sprintf("grant_type must be: '%s'", jwtBearerGrantType)
 		errorResponse := &AccessTokenRequestFailedResponse{Error: "unsupported_grant_type", ErrorDescription: &errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
