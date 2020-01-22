@@ -40,7 +40,7 @@ type ContractSessionHandler interface {
 }
 
 type AccessTokenHandler interface {
-	ParseAndValidateAccessTokenJwt(acString string) (*NutsJwtClaims, error)
+	ParseAndValidateJwtBearerToken(acString string) (*NutsJwtClaims, error)
 	BuildAccessToken(jwtClaims *NutsJwtClaims, identityValidationResult *ContractValidationResult) (token string, err error)
 }
 

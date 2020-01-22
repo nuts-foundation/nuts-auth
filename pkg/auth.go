@@ -216,11 +216,11 @@ func (auth *Auth) ValidateContract(request ValidationRequest) (*ContractValidati
 	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
 }
 
-// ParseAndValidateAccessTokenJwt Passes the call to the AccessTokenHandler.
+// ParseAndValidateJwtBearerToken Passes the call to the AccessTokenHandler.
 func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error) {
-	claims, err := auth.AccessTokenHandler.ParseAndValidateAccessTokenJwt(request.JwtString)
+	claims, err := auth.AccessTokenHandler.ParseAndValidateJwtBearerToken(request.JwtString)
 	if err != nil {
-		return nil, fmt.Errorf("access token validation failed: %w", err)
+		return nil, fmt.Errorf("jwt bearer token validation failed: %w", err)
 	}
 
 	res, err := auth.ContractValidator.ValidateJwt(claims.UserSignature, "Demo EHR")

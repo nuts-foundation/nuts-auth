@@ -212,8 +212,8 @@ func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.S
 
 var ErrLegalEntityNotProvided = errors.New("legalEntity not provided")
 
-// ParseAndValidateAccessTokenJwt validates the jwt signature and returns the containing claims
-func (v DefaultValidator) ParseAndValidateAccessTokenJwt(acString string) (*NutsJwtClaims, error) {
+// ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
+func (v DefaultValidator) ParseAndValidateJwtBearerToken(acString string) (*NutsJwtClaims, error) {
 	token, err := jwt.ParseWithClaims(acString, &NutsJwtClaims{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity := token.Claims.(*NutsJwtClaims).Issuer
 		if legalEntity == "" {
@@ -239,7 +239,7 @@ func (v DefaultValidator) ParseAndValidateAccessTokenJwt(acString string) (*Nuts
 			return claims, nil
 		}
 	}
-	return nil, fmt.Errorf("could not validate access token: %w", err)
+	return nil, err
 }
 
 // BuildAccessToken builds an access token based on the oauth claims and the identity of the user provided by the identityValidationResult

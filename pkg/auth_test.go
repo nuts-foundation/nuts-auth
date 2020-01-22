@@ -22,7 +22,7 @@ type MockAccessTokenHandler struct {
 	accessTokenError                    error
 }
 
-func (m MockAccessTokenHandler) ParseAndValidateAccessTokenJwt(acString string) (*NutsJwtClaims, error) {
+func (m MockAccessTokenHandler) ParseAndValidateJwtBearerToken(acString string) (*NutsJwtClaims, error) {
 	return m.claims, m.parseAndValidateAccessTokenJwtError
 }
 
@@ -242,7 +242,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		response, err := i.CreateAccessToken(CreateAccessTokenRequest{JwtString: "foo"})
 		assert.Nil(t, response)
 		if assert.NotNil(t, err) {
-			assert.Contains(t, err.Error(), "access token validation failed")
+			assert.Contains(t, err.Error(), "jwt bearer token validation failed")
 		}
 	})
 

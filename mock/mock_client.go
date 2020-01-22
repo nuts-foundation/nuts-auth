@@ -94,17 +94,17 @@ func (mr *MockAuthClientMockRecorder) ValidateContract(request interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateContract", reflect.TypeOf((*MockAuthClient)(nil).ValidateContract), request)
 }
 
-// ParseAndValidateAccessTokenJwt mocks base method
+// ParseAndValidateJwtBearerToken mocks base method
 func (m *MockAuthClient) CreateAccessToken(request pkg.CreateAccessTokenRequest) (*pkg.AccessTokenResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParseAndValidateAccessTokenJwt", request)
+	ret := m.ctrl.Call(m, "ParseAndValidateJwtBearerToken", request)
 	ret0, _ := ret[0].(*pkg.AccessTokenResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ParseAndValidateAccessTokenJwt indicates an expected call of ParseAndValidateAccessTokenJwt
+// ParseAndValidateJwtBearerToken indicates an expected call of ParseAndValidateJwtBearerToken
 func (mr *MockAuthClientMockRecorder) CreateAccessToken(request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseAndValidateAccessTokenJwt", reflect.TypeOf((*MockAuthClient)(nil).CreateAccessToken), request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseAndValidateJwtBearerToken", reflect.TypeOf((*MockAuthClient)(nil).CreateAccessToken), request)
 }

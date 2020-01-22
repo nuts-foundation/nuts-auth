@@ -583,22 +583,22 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 	t.Run("malformed access tokens", func(t *testing.T) {
 		validator := defaultValidator()
 
-		response, err := validator.ParseAndValidateAccessTokenJwt("foo")
+		response, err := validator.ParseAndValidateJwtBearerToken("foo")
 		assert.Nil(t, response)
-		assert.Equal(t, "could not validate access token: token contains an invalid number of segments", err.Error())
+		assert.Equal(t, "token contains an invalid number of segments", err.Error())
 
-		response, err = validator.ParseAndValidateAccessTokenJwt("123.456.787")
+		response, err = validator.ParseAndValidateJwtBearerToken("123.456.787")
 		assert.Nil(t, response)
-		assert.Equal(t, "could not validate access token: invalid character '×' looking for beginning of value", err.Error())
+		assert.Equal(t, "invalid character '×' looking for beginning of value", err.Error())
 	})
 
 	t.Run("wrong algorithm", func(t *testing.T) {
 		validator := defaultValidator()
 		// alg: HS256
 		const invalidJwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjo0MDcwOTA4ODAwLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.2_4bxKKsVspQ4QxXRG8m2mOnLbl-fFgSkEq_h8N9sNE"
-		response, err := validator.ParseAndValidateAccessTokenJwt(invalidJwt)
+		response, err := validator.ParseAndValidateJwtBearerToken(invalidJwt)
 		assert.Nil(t, response)
-		assert.Equal(t, "could not validate access token: key is of invalid type", err.Error())
+		assert.Equal(t, "key is of invalid type", err.Error())
 	})
 
 	t.Run("missing issuer", func(t *testing.T) {
@@ -615,9 +615,9 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 		}
 		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"})
 		assert.Nil(t, err)
-		response, err := validator.ParseAndValidateAccessTokenJwt(validJwt)
+		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
-		assert.Equal(t, "could not validate access token: legalEntity not provided", err.Error())
+		assert.Equal(t, "legalEntity not provided", err.Error())
 	})
 
 	t.Run("unknown issuer", func(t *testing.T) {
@@ -634,9 +634,9 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 		}
 		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"})
 		assert.Nil(t, err)
-		response, err := validator.ParseAndValidateAccessTokenJwt(validJwt)
+		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
-		assert.Equal(t, "could not validate access token: organization not found", err.Error())
+		assert.Equal(t, "organization not found", err.Error())
 	})
 
 	t.Run("token not signed by issuer", func(t *testing.T) {
@@ -657,9 +657,9 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 		validator.crypto.GenerateKeyPairFor(otherParty)
 		validJwt, err := validator.crypto.SignJwtFor(claims, otherParty)
 		assert.Nil(t, err)
-		response, err := validator.ParseAndValidateAccessTokenJwt(validJwt)
+		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
-		assert.Equal(t, "could not validate access token: crypto/rsa: verification error", err.Error())
+		assert.Equal(t, "crypto/rsa: verification error", err.Error())
 	})
 
 	t.Run("token expired", func(t *testing.T) {
@@ -678,9 +678,9 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 
 		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: claims["iss"].(string)})
 		assert.Nil(t, err)
-		response, err := validator.ParseAndValidateAccessTokenJwt(validJwt)
+		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
-		assert.Contains(t, err.Error(), "could not validate access token: token is expired by")
+		assert.Contains(t, err.Error(), "token is expired by")
 	})
 
 	t.Run("valid jwt", func(t *testing.T) {
@@ -700,7 +700,7 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 		validator.crypto.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
 		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: claims["iss"].(string)})
 		assert.Nil(t, err)
-		response, err := validator.ParseAndValidateAccessTokenJwt(validJwt)
+		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.NotEmpty(t, response)
 		assert.Nil(t, err)
 	})
