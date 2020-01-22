@@ -80,10 +80,10 @@ func (mr *MockAuthClientMockRecorder) ContractByType(contractType, language, ver
 }
 
 // ValidateContract mocks base method
-func (m *MockAuthClient) ValidateContract(request pkg.ValidationRequest) (*pkg.ValidationResult, error) {
+func (m *MockAuthClient) ValidateContract(request pkg.ValidationRequest) (*pkg.ContractValidationResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidateContract", request)
-	ret0, _ := ret[0].(*pkg.ValidationResult)
+	ret0, _ := ret[0].(*pkg.ContractValidationResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

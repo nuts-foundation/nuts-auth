@@ -206,7 +206,7 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 			ActingPartyCN:  "DemoEHR",
 			ContractFormat: pkg.JwtFormat,
 			ContractString: "base64encodedContractString",
-		}).Return(&pkg.ValidationResult{
+		}).Return(&pkg.ContractValidationResult{
 			ValidationResult:    "VALID",
 			ContractFormat:      pkg.JwtFormat,
 			DisclosedAttributes: map[string]string{"nl": "00000007"},

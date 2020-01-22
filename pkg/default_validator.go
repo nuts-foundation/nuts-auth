@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -31,7 +32,7 @@ func (v DefaultValidator) IsInitialized() bool {
 // ValidateContract is the entrypoint for contract validation.
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
 // Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
-func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ValidationResult, error) {
+func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ContractValidationResult, error) {
 	if format == IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
@@ -50,7 +51,7 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 var ErrInvalidContract = errors.New("invalid contract")
 
 // ValidateJwt validates a JWT formatted contract.
-func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResult, error) {
+func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ContractValidationResult, error) {
 	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity := token.Claims.(jwt.MapClaims)["sub"]
 		if legalEntity == nil || legalEntity == "" {
@@ -209,12 +210,14 @@ func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.S
 	return v.IrmaServer.StartSession(request, handler)
 }
 
+var ErrLegalEntityNotProvided = errors.New("legalEntity not provided")
+
 // ParseAndValidateAccessTokenJwt validates the jwt signature and returns the containing claims
 func (v DefaultValidator) ParseAndValidateAccessTokenJwt(acString string) (*NutsJwtClaims, error) {
 	token, err := jwt.ParseWithClaims(acString, &NutsJwtClaims{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity := token.Claims.(*NutsJwtClaims).Issuer
 		if legalEntity == "" {
-			return nil, fmt.Errorf("legalEntity not provided")
+			return nil, ErrLegalEntityNotProvided
 		}
 
 		// get public key
@@ -234,9 +237,46 @@ func (v DefaultValidator) ParseAndValidateAccessTokenJwt(acString string) (*Nuts
 	if token != nil && token.Valid {
 		if claims, ok := token.Claims.(*NutsJwtClaims); ok {
 			return claims, nil
-
 		}
-
 	}
-	return nil, err
+	return nil, fmt.Errorf("could not validate access token: %w", err)
+}
+
+// BuildAccessToken builds an access token based on the oauth claims and the identity of the user provided by the identityValidationResult
+// The token gets signed with the custodians private key and returned as a string.
+func (v DefaultValidator) BuildAccessToken(jwtClaims *NutsJwtClaims, identityValidationResult *ContractValidationResult) (string, error) {
+
+	if identityValidationResult.ValidationResult != Valid {
+		return "", fmt.Errorf("could not build accessToken: %w", errors.New("invalid contract"))
+	}
+
+	issuer := jwtClaims.Subject
+	if issuer == "" {
+		return "", fmt.Errorf("could not build accessToken: %w", errors.New("subject is missing"))
+	}
+
+	sessionClaims := map[string]interface{}{
+		// Issuer: custodian issuing the JWT
+		"iss": issuer,
+		// AGB code of the end-user
+		"sub": identityValidationResult.DisclosedAttributes["nuts.agb.agbcode"],
+		// Subject (Patient) identifier (oid encoded BSN)
+		"sid": jwtClaims.SubjectId,
+		// ActorId
+		"aid": jwtClaims.Issuer,
+		//"aud": jwtClaims.Audience,
+		// Expires in 15 minutes
+		"exp": time.Now().Add(time.Minute * 15).Unix(),
+		"iat": time.Now().Unix(),
+		// TODO: include personal information when used in contract
+		//"family_name": identityValidationResult.DisclosedAttributes["pbdf.gemeente.personalData.familyname"],
+	}
+
+	// Sign with the private key of the issuer
+	token, err := v.crypto.SignJwtFor(sessionClaims, types.LegalEntity{URI: issuer})
+	if err != nil {
+		return token, fmt.Errorf("could not build accessToken: %w", err)
+	}
+
+	return token, err
 }

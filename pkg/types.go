@@ -28,8 +28,8 @@ var ErrSessionNotFound = errors.New("session not found")
 
 // ContractValidator interface must be implemented by contract validators
 type ContractValidator interface {
-	ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ValidationResult, error)
-	ValidateJwt(contract string, actingPartyCN string) (*ValidationResult, error)
+	ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ContractValidationResult, error)
+	ValidateJwt(contract string, actingPartyCN string) (*ContractValidationResult, error)
 	IsInitialized() bool
 }
 
@@ -41,6 +41,7 @@ type ContractSessionHandler interface {
 
 type AccessTokenHandler interface {
 	ParseAndValidateAccessTokenJwt(acString string) (*NutsJwtClaims, error)
+	BuildAccessToken(jwtClaims *NutsJwtClaims, identityValidationResult *ContractValidationResult) (token string, err error)
 }
 
 const (
@@ -103,17 +104,18 @@ type CreateAccessTokenRequest struct {
 }
 
 type NutsJwtClaims struct {
-	// Subject identifier
-	SubjectId string `json:"sid,omitempty"`
 	jwt.StandardClaims
+	SubjectId     string `json:"sid,omitempty"`
+	UserSignature string `json:"usi,omitempty"`
+	Audience      string `json:"aud,omitempty"`
 }
 
 type AccessTokenResponse struct {
 	AccessToken string
 }
 
-// ValidationResult contains the result of a contract validation
-type ValidationResult struct {
+// ContractValidationResult contains the result of a contract validation
+type ContractValidationResult struct {
 	ValidationResult ValidationState `json:"validation_result"`
 	ContractFormat   ContractFormat  `json:"contract_format"`
 	// DisclosedAttributes contain the attributes used to sign this contract

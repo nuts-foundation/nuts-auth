@@ -44,7 +44,7 @@ type AuthClient interface {
 	CreateContractSession(sessionRequest CreateSessionRequest, actingParty string) (*CreateSessionResult, error)
 	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
 	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
-	ValidateContract(request ValidationRequest) (*ValidationResult, error)
+	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
 }
 
@@ -207,7 +207,7 @@ func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult,
 
 // ValidateContract validates a given contract. Currently two ContractType's are accepted: Irma and Jwt.
 // Both types should be passed as a base64 encoded string in the ContractString of the request paramContractString of the request param
-func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResult, error) {
+func (auth *Auth) ValidateContract(request ValidationRequest) (*ContractValidationResult, error) {
 	if request.ContractFormat == IrmaFormat {
 		return auth.ContractValidator.ValidateContract(request.ContractString, IrmaFormat, request.ActingPartyCN)
 	} else if request.ContractFormat == JwtFormat {
@@ -218,9 +218,20 @@ func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResult
 
 // ParseAndValidateAccessTokenJwt Passes the call to the AccessTokenHandler.
 func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error) {
-	_, err := auth.AccessTokenHandler.ParseAndValidateAccessTokenJwt(request.JwtString)
+	claims, err := auth.AccessTokenHandler.ParseAndValidateAccessTokenJwt(request.JwtString)
+	if err != nil {
+		return nil, fmt.Errorf("access token validation failed: %w", err)
+	}
+
+	res, err := auth.ContractValidator.ValidateJwt(claims.UserSignature, "Demo EHR")
 	if err != nil {
 		return nil, err
 	}
-	return &AccessTokenResponse{AccessToken: ""}, nil
+	if res.ValidationResult == Invalid {
+		return nil, fmt.Errorf("identity validation failed: %w", err)
+	}
+
+	accessToken, err := auth.AccessTokenHandler.BuildAccessToken(claims, res)
+
+	return &AccessTokenResponse{AccessToken: accessToken}, nil
 }

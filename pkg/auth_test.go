@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"fmt"
 	"testing"
 
 	"errors"
@@ -14,20 +15,41 @@ type MockContractSessionHandler struct {
 	SessionStatusResult *SessionStatusResult
 }
 
+type MockAccessTokenHandler struct {
+	claims                              *NutsJwtClaims
+	parseAndValidateAccessTokenJwtError error
+	accessToken                         string
+	accessTokenError                    error
+}
+
+func (m MockAccessTokenHandler) ParseAndValidateAccessTokenJwt(acString string) (*NutsJwtClaims, error) {
+	return m.claims, m.parseAndValidateAccessTokenJwtError
+}
+
+func (m MockAccessTokenHandler) BuildAccessToken(jwtClaims *NutsJwtClaims, identityValidationResult *ContractValidationResult) (string, error) {
+	if m.accessTokenError != nil {
+		return "", m.accessTokenError
+	}
+	if len(m.accessToken) > 0 {
+		return m.accessToken, nil
+	}
+	return "fresh access token", nil
+}
+
 type MockContractValidator struct {
-	jwtResult  ValidationResult
-	irmaResult ValidationResult
+	jwtResult  ContractValidationResult
+	irmaResult ContractValidationResult
 }
 
 func (m MockContractValidator) IsInitialized() bool {
 	return true
 }
 
-func (m MockContractValidator) ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ValidationResult, error) {
+func (m MockContractValidator) ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ContractValidationResult, error) {
 	return &m.irmaResult, nil
 }
 
-func (m MockContractValidator) ValidateJwt(contract string, actingPartyCN string) (*ValidationResult, error) {
+func (m MockContractValidator) ValidateJwt(contract string, actingPartyCN string) (*ContractValidationResult, error) {
 	return &m.jwtResult, nil
 }
 
@@ -183,7 +205,7 @@ func TestAuth_ValidateContract(t *testing.T) {
 	t.Run("Returns validation result for JWT", func(t *testing.T) {
 		i := &Auth{
 			ContractValidator: MockContractValidator{
-				jwtResult: ValidationResult{
+				jwtResult: ContractValidationResult{
 					ValidationResult: Valid,
 				},
 			},
@@ -199,7 +221,7 @@ func TestAuth_ValidateContract(t *testing.T) {
 	t.Run("Returns validation result for Irma", func(t *testing.T) {
 		i := &Auth{
 			ContractValidator: MockContractValidator{
-				irmaResult: ValidationResult{
+				irmaResult: ContractValidationResult{
 					ValidationResult: Valid,
 				},
 			},
@@ -211,4 +233,48 @@ func TestAuth_ValidateContract(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, Valid, result.ValidationResult)
 	})
+}
+
+func TestAuth_CreateAccessToken(t *testing.T) {
+
+	t.Run("invalid jwt", func(t *testing.T) {
+		i := &Auth{AccessTokenHandler: MockAccessTokenHandler{claims: nil, parseAndValidateAccessTokenJwtError: fmt.Errorf("validationError")}}
+		response, err := i.CreateAccessToken(CreateAccessTokenRequest{JwtString: "foo"})
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "access token validation failed")
+		}
+	})
+
+	t.Run("invalid identity", func(t *testing.T) {
+		i := &Auth{
+			AccessTokenHandler: MockAccessTokenHandler{claims: &NutsJwtClaims{}},
+			ContractValidator: MockContractValidator{
+				jwtResult: ContractValidationResult{ValidationResult: Invalid},
+			},
+		}
+		response, err := i.CreateAccessToken(CreateAccessTokenRequest{JwtString: "foo"})
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "identity validation failed")
+		}
+	})
+
+	t.Run("it creates a token", func(t *testing.T) {
+		expectedAT := "ac"
+		i := &Auth{
+			ContractValidator: MockContractValidator{
+				jwtResult: ContractValidationResult{ValidationResult: Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}},
+			},
+			AccessTokenHandler: MockAccessTokenHandler{claims: &NutsJwtClaims{}, accessToken: expectedAT},
+		}
+
+		response, err := i.CreateAccessToken(CreateAccessTokenRequest{JwtString: "foo"})
+		assert.Nil(t, err)
+		if assert.NotNil(t, response) {
+			assert.Equal(t, expectedAT, response.AccessToken)
+		}
+
+	})
+
 }

@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
+
 	"github.com/golang/mock/gomock"
 	cryptoMock "github.com/nuts-foundation/nuts-crypto/mock"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -53,7 +55,7 @@ func TestValidateContract(t *testing.T) {
 		name    string
 		args    args
 		date    time.Time
-		want    *ValidationResult
+		want    *ContractValidationResult
 		wantErr bool
 	}{
 		{
@@ -66,7 +68,7 @@ func TestValidateContract(t *testing.T) {
 			},
 			// contract is valid at 1 oct 2019 11:46:00
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
-			&ValidationResult{
+			&ContractValidationResult{
 				Valid,
 				IrmaFormat,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000007"},
@@ -82,7 +84,7 @@ func TestValidateContract(t *testing.T) {
 				"legalEntity",
 			},
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
-			&ValidationResult{
+			&ContractValidationResult{
 				Invalid,
 				IrmaFormat,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000007"},
@@ -110,7 +112,7 @@ func TestValidateContract(t *testing.T) {
 				"legalEntity",
 			},
 			time.Date(2019, time.October, 2, 13, 46, 00, 0, location),
-			&ValidationResult{
+			&ContractValidationResult{
 				Invalid,
 				IrmaFormat,
 				map[string]string{"irma-demo.nuts.agb.agbcode": "00000007"},
@@ -126,7 +128,7 @@ func TestValidateContract(t *testing.T) {
 				"legalEntity",
 			},
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
-			&ValidationResult{
+			&ContractValidationResult{
 				Invalid,
 				IrmaFormat,
 				nil,
@@ -577,17 +579,17 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	})
 }
 
-func TestAuth_CreateAccessToken(t *testing.T) {
+func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 	t.Run("malformed access tokens", func(t *testing.T) {
 		validator := defaultValidator()
 
 		response, err := validator.ParseAndValidateAccessTokenJwt("foo")
 		assert.Nil(t, response)
-		assert.Equal(t, "token contains an invalid number of segments", err.Error())
+		assert.Equal(t, "could not validate access token: token contains an invalid number of segments", err.Error())
 
 		response, err = validator.ParseAndValidateAccessTokenJwt("123.456.787")
 		assert.Nil(t, response)
-		assert.Equal(t, "invalid character '×' looking for beginning of value", err.Error())
+		assert.Equal(t, "could not validate access token: invalid character '×' looking for beginning of value", err.Error())
 	})
 
 	t.Run("wrong algorithm", func(t *testing.T) {
@@ -596,7 +598,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		const invalidJwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjo0MDcwOTA4ODAwLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.2_4bxKKsVspQ4QxXRG8m2mOnLbl-fFgSkEq_h8N9sNE"
 		response, err := validator.ParseAndValidateAccessTokenJwt(invalidJwt)
 		assert.Nil(t, response)
-		assert.Equal(t, "key is of invalid type", err.Error())
+		assert.Equal(t, "could not validate access token: key is of invalid type", err.Error())
 	})
 
 	t.Run("missing issuer", func(t *testing.T) {
@@ -615,7 +617,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateAccessTokenJwt(validJwt)
 		assert.Nil(t, response)
-		assert.Equal(t, "legalEntity not provided", err.Error())
+		assert.Equal(t, "could not validate access token: legalEntity not provided", err.Error())
 	})
 
 	t.Run("unknown issuer", func(t *testing.T) {
@@ -634,7 +636,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateAccessTokenJwt(validJwt)
 		assert.Nil(t, response)
-		assert.Equal(t, "organization not found", err.Error())
+		assert.Equal(t, "could not validate access token: organization not found", err.Error())
 	})
 
 	t.Run("token not signed by issuer", func(t *testing.T) {
@@ -657,7 +659,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateAccessTokenJwt(validJwt)
 		assert.Nil(t, response)
-		assert.Equal(t, "crypto/rsa: verification error", err.Error())
+		assert.Equal(t, "could not validate access token: crypto/rsa: verification error", err.Error())
 	})
 
 	t.Run("token expired", func(t *testing.T) {
@@ -678,7 +680,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateAccessTokenJwt(validJwt)
 		assert.Nil(t, response)
-		assert.Contains(t, err.Error(), "token is expired by")
+		assert.Contains(t, err.Error(), "could not validate access token: token is expired by")
 	})
 
 	t.Run("valid jwt", func(t *testing.T) {
@@ -772,4 +774,41 @@ func defaultValidator() DefaultValidator {
 	}
 
 	return *testInstance
+}
+
+func TestDefaultValidator_BuildAccessToken(t *testing.T) {
+	t.Run("missing subject", func(t *testing.T) {
+		v := defaultValidator()
+		claims := &NutsJwtClaims{}
+		identityValidationResult := &ContractValidationResult{ValidationResult: Valid}
+		token, err := v.BuildAccessToken(claims, identityValidationResult)
+		assert.Empty(t, token)
+		assert.EqualError(t, err, "could not build accessToken: subject is missing")
+	})
+
+	t.Run("build an access token", func(t *testing.T) {
+		v := defaultValidator()
+		claims := &NutsJwtClaims{StandardClaims: jwt.StandardClaims{Subject: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"}}
+		identityValidationResult := &ContractValidationResult{ValidationResult: Valid}
+		token, err := v.BuildAccessToken(claims, identityValidationResult)
+		if assert.NotEmpty(t, token) {
+			token, err := jwt.Parse(token, func(token *jwt.Token) (i interface{}, err error) {
+				org, _ := v.registry.OrganizationById(claims.Subject)
+				pk, _ := org.CurrentPublicKey()
+				return pk.Materialize()
+			})
+			if assert.Nil(t, err) {
+				if assert.True(t, token.Valid) {
+					if tokenClaims, ok := token.Claims.(jwt.MapClaims); ok {
+						assert.Equal(t, claims.Subject, tokenClaims["iss"])
+						assert.InDelta(t, tokenClaims["iat"].(float64), time.Now().Unix(), float64(time.Second*2))
+						assert.InDelta(t, tokenClaims["exp"].(float64), time.Now().Add(15*time.Minute).Unix(), float64(time.Second*2))
+					}
+				}
+			}
+		}
+
+		assert.Nil(t, err)
+	})
+
 }
