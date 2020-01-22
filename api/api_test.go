@@ -319,10 +319,8 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 	}
 
 	bindPostBody := func(ctx *CreateAccessTokenTestContext, body CreateAccessTokenRequest) {
-		jsonData, _ := json.Marshal(body)
-		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
-			_ = json.Unmarshal(jsonData, f)
-		})
+		ctx.echoMock.EXPECT().FormValue("assertion").Return(body.Assertion)
+		ctx.echoMock.EXPECT().FormValue("grant_type").Return(body.GrantType)
 	}
 
 	expectError := func(ctx *CreateAccessTokenTestContext, err AccessTokenRequestFailedResponse) {

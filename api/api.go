@@ -201,10 +201,10 @@ const jwtBearerGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 // CreateAccessToken handles the api call to create an access token. It consumes and checks the JWT and returns
 // an smaller sessionToken
 func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
+	// Can't use echo.Bind() here since it requires extra tags on generated code
 	request := new(CreateAccessTokenRequest)
-	if err = ctx.Bind(request); err != nil {
-		return
-	}
+	request.Assertion = ctx.FormValue("assertion")
+	request.GrantType = ctx.FormValue("grant_type")
 
 	if request.GrantType != jwtBearerGrantType {
 		errDesc := fmt.Sprintf("grant_type must be: '%s'", jwtBearerGrantType)
