@@ -146,6 +146,8 @@ github.com/nuts-foundation/nuts-crypto v0.0.0-20191015112225-206a68fc8f33 h1:953
 github.com/nuts-foundation/nuts-crypto v0.0.0-20191015112225-206a68fc8f33/go.mod h1:hwwPkHU+ptE850C6DF+ha0dCClzeVEZE6ZlZoJmgfSc=
 github.com/nuts-foundation/nuts-crypto v0.0.0-20191128090623-5ba9490632bb h1:YlV34Sfbw/FlFG/oymW7gj/HtFZbtwmfqZcc6PdBkjI=
 github.com/nuts-foundation/nuts-crypto v0.0.0-20191128090623-5ba9490632bb/go.mod h1:O+ACn2COL8q7rt9j0HT7TWf1eIRnqkKAJvHMifalsrE=
+github.com/nuts-foundation/nuts-crypto v0.0.0-20200127075335-afcefe897a71 h1:xa6aopX+cUjEjYwtlNJFmVYJZEZWfpDSIZC6ngYMOwQ=
+github.com/nuts-foundation/nuts-crypto v0.0.0-20200127075335-afcefe897a71/go.mod h1:uIe/1AW3Zpm3xcxlK5+jLIbU2ksE6UM68mMb/IYahDo=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20191014142450-dd0fd3a25ffb h1:Sdh/K8bSx/PG/5pD5WArKu7JEksDOShZXvSVSXuOA88=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20191014142450-dd0fd3a25ffb/go.mod h1:tPPkfE9y+T+jTc8klZ0B8FXtc23p9NIpg5BjI+FIiEs=
 github.com/nuts-foundation/nuts-go-core v0.0.0-20191025082623-e8edeb2448c6 h1:CCC8qdmfi2jVDtMX4nnchnNVR/tLcwmRLokHHMGszS4=
