@@ -6,11 +6,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+	"net/http"
 )
 
 // AccessTokenRequestFailedResponse defines model for AccessTokenRequestFailedResponse.
@@ -49,7 +48,7 @@ type ContractSigningRequest struct {
 // CreateAccessTokenRequest defines model for CreateAccessTokenRequest.
 type CreateAccessTokenRequest struct {
 	Assertion string `json:"assertion"`
-	GrandType string `json:"grand_type"`
+	GrantType string `json:"grant_type"`
 }
 
 // CreateSessionResult defines model for CreateSessionResult.
@@ -553,3 +552,4 @@ func RegisterHandlers(router interface {
 	router.GET("/auth/contract/:contractType", wrapper.GetContractByType)
 
 }
+

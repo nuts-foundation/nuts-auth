@@ -248,7 +248,7 @@ components:
           enum: [irma, JWT]
         contract_string:
           description: Base64 encoded contracts, either Irma signature or a JWT
-          type : string
+          type: string
         acting_party_cn:
           description: ActingPartyCN is the common name of the Acting party extracted from the client cert
           type: string
@@ -410,10 +410,10 @@ components:
     CreateAccessTokenRequest:
       description: Request as described in RFC7523 secrtion 2.1
       required:
-        - grand_type
+        - grant_type
         - assertion
       properties:
-        grand_type:
+        grant_type:
           type: string
           description: always must contain the value "urn:ietf:params:oauth:grant-type:jwt-bearer"
           example: urn:ietf:params:oauth:grant-type:jwt-bearer
