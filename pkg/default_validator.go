@@ -223,7 +223,7 @@ func (v DefaultValidator) ParseAndValidateJwtBearerToken(acString string) (*Nuts
 		// get public key
 		org, err := v.registry.OrganizationById(legalEntity)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%w: %s", err, legalEntity)
 		}
 
 		pk, err := org.CurrentPublicKey()

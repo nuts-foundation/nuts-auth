@@ -222,7 +222,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 	catRequest := pkg.CreateAccessTokenRequest{JwtString: request.Assertion}
 	acResponse, err := api.Auth.CreateAccessToken(catRequest)
 	if err != nil {
-		errDesc := fmt.Sprintf("Could not create accessoken: %s", err)
+		errDesc := err.Error()
 		errorResponse := &AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}

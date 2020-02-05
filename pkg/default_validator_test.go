@@ -636,7 +636,7 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
-		assert.Equal(t, "organization not found", err.Error())
+		assert.Equal(t, "organization not found: urn:oid:2.16.840.1.113883.2.4.6.1:00000001", err.Error())
 	})
 
 	t.Run("token not signed by issuer", func(t *testing.T) {

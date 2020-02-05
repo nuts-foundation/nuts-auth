@@ -374,7 +374,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
 		bindPostBody(ctx, params)
 
-		errorDescription := "Could not create accessoken: oh boy"
+		errorDescription := "oh boy"
 		errorType := "invalid_grant"
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: &errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
