@@ -232,6 +232,9 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 	}
 
 	accessToken, err := auth.AccessTokenHandler.BuildAccessToken(claims, res)
+	if err != nil {
+		return nil, err
+	}
 
 	return &AccessTokenResponse{AccessToken: accessToken}, nil
 }

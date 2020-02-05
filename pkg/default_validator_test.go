@@ -654,7 +654,7 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 		}
 
 		otherParty := types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000002"}
-		validator.crypto.GenerateKeyPairFor(otherParty)
+		_ = validator.crypto.GenerateKeyPairFor(otherParty)
 		validJwt, err := validator.crypto.SignJwtFor(claims, otherParty)
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
@@ -697,7 +697,7 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 			"jti": "123-456-789",
 		}
 
-		validator.crypto.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
+		_ = validator.crypto.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
 		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: claims["iss"].(string)})
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
