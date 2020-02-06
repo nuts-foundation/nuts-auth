@@ -440,9 +440,16 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		body := CreateJwtBearerTokenRequest{}
+		body := CreateJwtBearerTokenRequest{
+			Actor:     "",
+			Custodian: "",
+			Subject:   "",
+			Identity:  "",
+		}
 		bindPostBody(ctx, body)
-		response := JwtBearerTokenResponse{}
+		response := JwtBearerTokenResponse{
+			BearerToken: "",
+		}
 		expectStatusOK(ctx, response)
 
 		ctx.wrapper.CreateJwtBearerToken(ctx.echoMock)

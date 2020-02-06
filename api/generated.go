@@ -67,10 +67,10 @@ type CreateAccessTokenRequest struct {
 
 // CreateJwtBearerTokenRequest defines model for CreateJwtBearerTokenRequest.
 type CreateJwtBearerTokenRequest struct {
-	Actor     *string `json:"actor,omitempty"`
-	Custodian *string `json:"custodian,omitempty"`
-	Identity  *string `json:"identity,omitempty"`
-	Subject   *string `json:"subject,omitempty"`
+	Actor     string `json:"actor"`
+	Custodian string `json:"custodian"`
+	Identity  string `json:"identity"`
+	Subject   string `json:"subject"`
 }
 
 // CreateSessionResult defines model for CreateSessionResult.
@@ -109,7 +109,7 @@ type IrmaQR struct {
 
 // JwtBearerTokenResponse defines model for JwtBearerTokenResponse.
 type JwtBearerTokenResponse struct {
-	BearerToken *string `json:"bearer_token,omitempty"`
+	BearerToken string `json:"bearer_token"`
 }
 
 // Language defines model for Language.

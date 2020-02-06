@@ -478,6 +478,11 @@ components:
           type: string
     CreateJwtBearerTokenRequest:
       description: Request for a JWT Bearer Token. The Bearer Token can be used during a Access Token Request in the assertion field
+      required:
+        - subject
+        - custodian
+        - actor
+        - identity
       properties:
         subject:
           type: string
@@ -491,6 +496,8 @@ components:
             Base64 encoded IRMA contract conaining the identity of the performer
     JwtBearerTokenResponse:
       description: Response with a JWT Bearer Token. It contains a JWT, signed with the private key of the requestor software vendor. Using the RS256 signing algorithm.
+      required:
+        - bearer_token
       properties:
         bearer_token:
           type: string
