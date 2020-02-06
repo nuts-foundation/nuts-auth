@@ -6,7 +6,9 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nuts-foundation/nuts-auth/api"
 	"github.com/nuts-foundation/nuts-auth/pkg"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	nutsGo "github.com/nuts-foundation/nuts-go-core"
+	registry "github.com/nuts-foundation/nuts-registry/client"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -31,6 +33,10 @@ func NewAuthEngine() *nutsGo.Engine {
 
 	authBackend := pkg.AuthInstance()
 
+	// these are initialized before nuts-auth
+	cryptoBackend := crypto.NewCryptoClient()
+	registryBackend := registry.NewRegistryClient()
+
 	return &nutsGo.Engine{
 		Cmd:       cmd(),
 		Config:    &authBackend.Config,
@@ -46,7 +52,7 @@ func NewAuthEngine() *nutsGo.Engine {
 			routerWithAny.Any("/auth/irmaclient/*", irmaEchoHandler)
 
 			// Mount the Auth-api routes
-			api.RegisterHandlers(router, &api.Wrapper{Auth: authBackend})
+			api.RegisterHandlers(router, &api.Wrapper{Auth: authBackend, Crypto: cryptoBackend, Registry: registryBackend})
 
 			checkConfig(authBackend.Config)
 
