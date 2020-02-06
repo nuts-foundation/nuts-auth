@@ -232,5 +232,12 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 }
 
 func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
-	panic("implement me")
+	requestBody := &CreateJwtBearerTokenRequest{}
+	if err := ctx.Bind(requestBody); err != nil {
+		return err
+	}
+
+	response := JwtBearerTokenResponse{}
+
+	return ctx.JSON(http.StatusOK, response)
 }

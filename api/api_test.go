@@ -405,3 +405,46 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 	})
 
 }
+
+func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
+	type CreateJwtBearerTokenContext struct {
+		ctrl     *gomock.Controller
+		echoMock *mock.MockContext
+		authMock *mock2.MockAuthClient
+		wrapper  Wrapper
+	}
+
+	createContext := func(t *testing.T) *CreateJwtBearerTokenContext {
+		ctrl := gomock.NewController(t)
+		authMock := mock2.NewMockAuthClient(ctrl)
+		return &CreateJwtBearerTokenContext{
+			ctrl:     ctrl,
+			echoMock: mock.NewMockContext(ctrl),
+			authMock: authMock,
+			wrapper:  Wrapper{Auth: authMock},
+		}
+	}
+
+	bindPostBody := func(ctx *CreateJwtBearerTokenContext, body CreateJwtBearerTokenRequest) {
+		jsonData, _ := json.Marshal(body)
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+			_ = json.Unmarshal(jsonData, f)
+		})
+	}
+
+	expectStatusOK := func(ctx *CreateJwtBearerTokenContext, response JwtBearerTokenResponse) {
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, gomock.Eq(response))
+	}
+
+	t.Run("make request", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		body := CreateJwtBearerTokenRequest{}
+		bindPostBody(ctx, body)
+		response := JwtBearerTokenResponse{}
+		expectStatusOK(ctx, response)
+
+		ctx.wrapper.CreateJwtBearerToken(ctx.echoMock)
+	})
+}
