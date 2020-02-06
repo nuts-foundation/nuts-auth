@@ -592,13 +592,13 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 		assert.Equal(t, "invalid character '×' looking for beginning of value", err.Error())
 	})
 
-	t.Run("wrong algorithm", func(t *testing.T) {
+	t.Run("wrong signing algorithm", func(t *testing.T) {
 		validator := defaultValidator()
 		// alg: HS256
 		const invalidJwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjo0MDcwOTA4ODAwLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.2_4bxKKsVspQ4QxXRG8m2mOnLbl-fFgSkEq_h8N9sNE"
 		response, err := validator.ParseAndValidateJwtBearerToken(invalidJwt)
 		assert.Nil(t, response)
-		assert.Equal(t, "key is of invalid type", err.Error())
+		assert.Equal(t, "signing method HS256 is invalid", err.Error())
 	})
 
 	t.Run("missing issuer", func(t *testing.T) {

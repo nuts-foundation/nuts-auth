@@ -214,7 +214,8 @@ var ErrLegalEntityNotProvided = errors.New("legalEntity not provided")
 
 // ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
 func (v DefaultValidator) ParseAndValidateJwtBearerToken(acString string) (*NutsJwtClaims, error) {
-	token, err := jwt.ParseWithClaims(acString, &NutsJwtClaims{}, func(token *jwt.Token) (i interface{}, e error) {
+	parser := &jwt.Parser{ValidMethods: []string{"RS256"}}
+	token, err := parser.ParseWithClaims(acString, &NutsJwtClaims{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity := token.Claims.(*NutsJwtClaims).Issuer
 		if legalEntity == "" {
 			return nil, ErrLegalEntityNotProvided
