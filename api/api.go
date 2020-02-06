@@ -230,3 +230,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 
 	return ctx.JSON(http.StatusOK, response)
 }
+
+func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
+	panic("implement me")
+}

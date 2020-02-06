@@ -141,6 +141,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AccessTokenRequestFailedResponse"
+  /auth/jwtbearertoken:
+    post:
+      operationId: createJwtBearerToken
+      summery: Create a JWT Bearer Token which can be used in the createAccessToken request in the assertion field
+      tags:
+        - auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJwtBearerTokenRequest"
+      responses:
+        '200':
+          description: Successfull request. Responds with JWT encoded Bearer Token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JwtBearerTokenResponse"
 components:
   schemas:
     ErrorString:
@@ -457,6 +476,79 @@ components:
             additional information, used to assist the client developer in
             understanding the error that occurred.
           type: string
+    CreateJwtBearerTokenRequest:
+      description: Request for a JWT Bearer Token. The Bearer Token can be used during a Access Token Request in the assertion field
+      properties:
+        subject:
+          type: string
+        custodian:
+          type: string
+        actor:
+          type: string
+        identity:
+          type: string
+          description: |
+            Base64 encoded IRMA contract conaining the identity of the performer
+    JwtBearerTokenResponse:
+      description: Response with a JWT Bearer Token. It contains a JWT, signed with the private key of the requestor software vendor. Using the RS256 signing algorithm.
+      properties:
+        bearer_token:
+          type: string
+    AccessTokenRequestJWT:
+      description: JWT as described in rfc7523
+      required:
+        - iss
+        - sub
+        - iss
+        - sid
+        - aud
+        - usi
+        - exp
+        - iat
+        - jti
+      properties:
+        iss:
+          type: string
+          description: |
+            The issuer in the JWT is always the actor, thus the care organization doing the request.
+            This is used to find the public key of the issuer from the Nuts registry.
+          example: "urn:oid:2.16.840.1.113883.2.4.6.1:48000000"
+        sub:
+          type: string
+          description: |
+            The subject (not a Nuts subject) contains the urn of the custodian. The
+            custodian information is used to find the relevant consent (together with actor
+            and subject).
+          example: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"
+        sid:
+          type: string
+          description: The Nuts subject id, patient identifier in the form of an oid encoded BSN.
+          example: "urn:oid:2.16.840.1.113883.2.4.6.3:9999990"
+        aud:
+          type: string
+          description: |
+            As per rfc7523 https://tools.ietf.org/html/rfc7523>, the aud must be the
+            token endpoint. This can be taken from the Nuts registry.
+          example: "https://target_token_endpoint"
+        usi:
+          type: string
+          description: "base64 encoded IRMA signature"
+        osi:
+          type: string
+          description: "base64 encoded hardware signature"
+        con:
+          type: string
+          description: Additional context
+        exp:
+          type: number
+          description: max(time_from_irma_sign, some_limited_time)
+          example: 1578910481
+        iat:
+          type: number
+          example: 1578910481
+        jti:
+          type: string
+          description: unique identifier
 
 
 
