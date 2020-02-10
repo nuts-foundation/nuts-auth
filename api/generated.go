@@ -34,9 +34,9 @@ type AccessTokenRequestJWT struct {
 
 // AccessTokenResponse defines model for AccessTokenResponse.
 type AccessTokenResponse struct {
-	AccessToken string   `json:"access_token"`
-	ExpiresIn   *float32 `json:"expires_in,omitempty"`
-	TokenType   string   `json:"token_type"`
+	AccessToken string  `json:"access_token"`
+	ExpiresIn   float32 `json:"expires_in"`
+	TokenType   string  `json:"token_type"`
 }
 
 // Contract defines model for Contract.
@@ -463,7 +463,7 @@ func (a ValidationResult_SignerAttributes) MarshalJSON() ([]byte, error) {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// (POST /auth/accesstoken)
+	// Create an access token based on the OAuth JWT Bearer flow.// (POST /auth/accesstoken)
 	CreateAccessToken(ctx echo.Context) error
 	// CreateSessionHandler Initiates an IRMA signing session with the correct contract.// (POST /auth/contract/session)
 	CreateSession(ctx echo.Context) error
@@ -473,7 +473,7 @@ type ServerInterface interface {
 	ValidateContract(ctx echo.Context) error
 	// Get a contract by type and version// (GET /auth/contract/{contractType})
 	GetContractByType(ctx echo.Context, contractType string, params GetContractByTypeParams) error
-	// (POST /auth/jwtbearertoken)
+	// Create a JWT Bearer Token which can be used in the createAccessToken request in the assertion field// (POST /auth/jwtbearertoken)
 	CreateJwtBearerToken(ctx echo.Context) error
 }
 

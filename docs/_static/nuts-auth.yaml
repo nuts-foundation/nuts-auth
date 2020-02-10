@@ -119,7 +119,7 @@ paths:
   /auth/accesstoken:
     post:
       operationId: createAccessToken
-      summery: Create an access token based on the OAuth JWT Bearer flow.
+      summary: Create an access token based on the OAuth JWT Bearer flow.
       tags:
         - auth
       requestBody:
@@ -144,7 +144,7 @@ paths:
   /auth/jwtbearertoken:
     post:
       operationId: createJwtBearerToken
-      summery: Create a JWT Bearer Token which can be used in the createAccessToken request in the assertion field
+      summary: Create a JWT Bearer Token which can be used in the createAccessToken request in the assertion field
       tags:
         - auth
       requestBody:
@@ -441,11 +441,11 @@ components:
           description: Base64 encoded JWT following rfc7523 and the Nuts documentation
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6NDgwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjoxNTc4MTEwNDgxLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.76XtU81IyR3Ak_2fgrYsuLcvxndf0eedT1mFPa-rPXk"
     AccessTokenResponse:
-      description: Succesful response as described in rfc6749 section 5.1
+      description: Successful response as described in rfc6749 section 5.1
       required:
         - access_token
         - token_type
-        - expires
+        - expires_in
       properties:
         access_token:
           description: |
