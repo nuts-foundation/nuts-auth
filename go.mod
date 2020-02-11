@@ -10,6 +10,7 @@ require (
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/golang/mock v1.3.1
 	github.com/goodsign/monday v0.0.0-20190708072354-9bcb46af8546
+	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.6.2 // indirect
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
 	github.com/labstack/echo/v4 v4.1.11
@@ -17,7 +18,7 @@ require (
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/nuts-foundation/nuts-crypto v0.0.0-20191128090623-5ba9490632bb
 	github.com/nuts-foundation/nuts-go-core v0.0.0-20191218133145-27ebcf628fab
-	github.com/nuts-foundation/nuts-registry v0.0.0-20191209153959-67dd0910b057
+	github.com/nuts-foundation/nuts-registry v0.0.0-20200211142433-9d1d2985be8e
 	github.com/pkg/errors v0.8.1
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
 	github.com/privacybydesign/irmago v0.4.1

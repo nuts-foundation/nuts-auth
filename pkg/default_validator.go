@@ -7,6 +7,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
+
+	"github.com/google/uuid"
+
 	"github.com/dgrijalva/jwt-go"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
@@ -125,7 +129,7 @@ func (v DefaultValidator) legalEntityFromContract(sic SignedIrmaContract) (strin
 	}
 
 	if _, ok := params["legal_entity"]; !ok {
-		return "", ErrLegalEntityNotFound
+		return "", ErrLegalEntityNotProvided
 	}
 
 	le, err := v.registry.ReverseLookup(params["legal_entity"])
@@ -141,6 +145,7 @@ type nutsJwt struct {
 	Contract SignedIrmaContract `json:"nuts_signature"`
 }
 
+// createJwt from a signed irma contract. Returns a JWT signed with the provided legalEntity.
 func (v DefaultValidator) createJwt(contract *SignedIrmaContract, legalEntity string) (string, error) {
 	payload := nutsJwt{
 		StandardClaims: jwt.StandardClaims{
@@ -166,6 +171,7 @@ func (v DefaultValidator) createJwt(contract *SignedIrmaContract, legalEntity st
 	return tokenString, nil
 }
 
+// convertPayloadToClaims converts a nutsJwt struct to a map of strings so it can be signed with the crypto module
 func convertPayloadToClaims(payload nutsJwt) (map[string]interface{}, error) {
 
 	var (
@@ -214,7 +220,7 @@ var ErrLegalEntityNotProvided = errors.New("legalEntity not provided")
 
 // ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
 func (v DefaultValidator) ParseAndValidateJwtBearerToken(acString string) (*NutsJwtClaims, error) {
-	parser := &jwt.Parser{ValidMethods: []string{"RS256"}}
+	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
 	token, err := parser.ParseWithClaims(acString, &NutsJwtClaims{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity := token.Claims.(*NutsJwtClaims).Issuer
 		if legalEntity == "" {
@@ -224,7 +230,7 @@ func (v DefaultValidator) ParseAndValidateJwtBearerToken(acString string) (*Nuts
 		// get public key
 		org, err := v.registry.OrganizationById(legalEntity)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %s", err, legalEntity)
+			return nil, err
 		}
 
 		pk, err := org.CurrentPublicKey()
@@ -280,4 +286,50 @@ func (v DefaultValidator) BuildAccessToken(jwtClaims *NutsJwtClaims, identityVal
 	}
 
 	return token, err
+}
+
+const ssoEndpointType string = "urn:oid:1.3.6.1.4.1.54851.1:nuts-oauth-authorization-server"
+
+func (v DefaultValidator) findTokenEndpoint(legalEntity string) (*db.Endpoint, error) {
+	// TODO make this a constant in github.com/nuts-foundation/nuts-go-core
+	ssoEP := ssoEndpointType
+	endpoints, err := v.registry.EndpointsByOrganizationAndType(legalEntity, &ssoEP)
+	if err != nil {
+		return nil, fmt.Errorf("token endpoint not found: %w", err)
+	}
+	if len(endpoints) != 1 {
+		return nil, fmt.Errorf("none or multiple registred sso endpoints found, there can only be one")
+	}
+	endpoint := endpoints[0]
+	return &endpoint, nil
+}
+
+func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error) {
+	jti, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+
+	endpoint, err := v.findTokenEndpoint(request.Custodian)
+	if err != nil {
+		return nil, err
+	}
+
+	claims := map[string]interface{}{
+		"iss": request.Actor,
+		"sub": request.Custodian,
+		"sid": request.Subject,
+		"aud": endpoint.Identifier,
+		"usi": request.Identity,
+		"exp": time.Now().Add(30 * time.Minute).Unix(),
+		"iat": time.Now().Unix(),
+		"jti": jti,
+	}
+
+	signingString, err := v.crypto.SignJwtFor(claims, types.LegalEntity{URI: request.Actor})
+	if err != nil {
+		return nil, err
+	}
+
+	return &JwtBearerAccessTokenResponse{BearerToken: signingString}, nil
 }

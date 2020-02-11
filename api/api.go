@@ -83,7 +83,7 @@ func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) err
 		if errors.Is(err, pkg.ErrSessionNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	// convert internal result back to generated api format
@@ -198,8 +198,8 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 
 const jwtBearerGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
-// CreateAccessToken handles the api call to create an access token. It consumes and checks the JWT and returns
-// an smaller sessionToken
+// CreateAccessToken handles the api call to create an access token.
+// It consumes and checks the JWT and returns a smaller sessionToken
 func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 	// Can't use echo.Bind() here since it requires extra tags on generated code
 	request := new(CreateAccessTokenRequest)
@@ -237,7 +237,16 @@ func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
 		return err
 	}
 
-	response := JwtBearerTokenResponse{}
+	request := pkg.CreateJwtBearerTokenRequest{
+		Actor:     requestBody.Actor,
+		Custodian: requestBody.Custodian,
+		Identity:  requestBody.Identity,
+		Subject:   requestBody.Subject,
+	}
+	response, err := api.Auth.CreateJwtBearerToken(request)
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, err.Error())
+	}
 
-	return ctx.JSON(http.StatusOK, response)
+	return ctx.JSON(http.StatusOK, JwtBearerTokenResponse{BearerToken: response.BearerToken})
 }

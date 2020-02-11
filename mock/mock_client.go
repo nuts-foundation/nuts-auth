@@ -5,10 +5,9 @@
 package mock
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	pkg "github.com/nuts-foundation/nuts-auth/pkg"
+	reflect "reflect"
 )
 
 // MockAuthClient is a mock of AuthClient interface
@@ -94,17 +93,32 @@ func (mr *MockAuthClientMockRecorder) ValidateContract(request interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateContract", reflect.TypeOf((*MockAuthClient)(nil).ValidateContract), request)
 }
 
-// ParseAndValidateJwtBearerToken mocks base method
+// CreateAccessToken mocks base method
 func (m *MockAuthClient) CreateAccessToken(request pkg.CreateAccessTokenRequest) (*pkg.AccessTokenResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParseAndValidateJwtBearerToken", request)
+	ret := m.ctrl.Call(m, "CreateAccessToken", request)
 	ret0, _ := ret[0].(*pkg.AccessTokenResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ParseAndValidateJwtBearerToken indicates an expected call of ParseAndValidateJwtBearerToken
+// CreateAccessToken indicates an expected call of CreateAccessToken
 func (mr *MockAuthClientMockRecorder) CreateAccessToken(request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseAndValidateJwtBearerToken", reflect.TypeOf((*MockAuthClient)(nil).CreateAccessToken), request)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccessToken", reflect.TypeOf((*MockAuthClient)(nil).CreateAccessToken), request)
+}
+
+// CreateJwtBearerToken mocks base method
+func (m *MockAuthClient) CreateJwtBearerToken(request pkg.CreateJwtBearerTokenRequest) (*pkg.JwtBearerAccessTokenResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateJwtBearerToken", request)
+	ret0, _ := ret[0].(*pkg.JwtBearerAccessTokenResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateJwtBearerToken indicates an expected call of CreateJwtBearerToken
+func (mr *MockAuthClientMockRecorder) CreateJwtBearerToken(request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateJwtBearerToken", reflect.TypeOf((*MockAuthClient)(nil).CreateJwtBearerToken), request)
 }

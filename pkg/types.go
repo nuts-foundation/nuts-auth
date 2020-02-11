@@ -40,6 +40,7 @@ type ContractSessionHandler interface {
 }
 
 type AccessTokenHandler interface {
+	CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error)
 	ParseAndValidateJwtBearerToken(acString string) (*NutsJwtClaims, error)
 	BuildAccessToken(jwtClaims *NutsJwtClaims, identityValidationResult *ContractValidationResult) (token string, err error)
 }
@@ -103,6 +104,13 @@ type CreateAccessTokenRequest struct {
 	JwtString string
 }
 
+type CreateJwtBearerTokenRequest struct {
+	Actor     string
+	Custodian string
+	Identity  string
+	Subject   string
+}
+
 type NutsJwtClaims struct {
 	jwt.StandardClaims
 	SubjectId     string `json:"sid,omitempty"`
@@ -112,6 +120,10 @@ type NutsJwtClaims struct {
 
 type AccessTokenResponse struct {
 	AccessToken string
+}
+
+type JwtBearerAccessTokenResponse struct {
+	BearerToken string
 }
 
 // ContractValidationResult contains the result of a contract validation

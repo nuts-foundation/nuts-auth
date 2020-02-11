@@ -41,6 +41,10 @@ type MockContractValidator struct {
 	irmaResult ContractValidationResult
 }
 
+func (m MockAccessTokenHandler) CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error) {
+	panic("implement me")
+}
+
 func (m MockContractValidator) IsInitialized() bool {
 	return true
 }

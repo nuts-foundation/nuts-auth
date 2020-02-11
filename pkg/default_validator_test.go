@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
+
 	"github.com/dgrijalva/jwt-go"
 
 	"github.com/golang/mock/gomock"
@@ -367,7 +369,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 			NowFunc = oldFunc
 		}()
 
-		token := createJwt("nuts", "urn:oid:2.16.840.1.113883.2.4.6.1:00000000", testdata.ValidIrmaContract)
+		token := createJwt("nuts", OrgWithWorkingCrypto, testdata.ValidIrmaContract)
 		actingParty := "Demo EHR"
 
 		result, err := validator.ValidateJwt(string(token), actingParty)
@@ -623,7 +625,7 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 	t.Run("unknown issuer", func(t *testing.T) {
 		validator := defaultValidator()
 		claims := map[string]interface{}{
-			"iss": "urn:oid:2.16.840.1.113883.2.4.6.1:00000001",
+			"iss": "urn:oid:2.16.840.1.113883.2.4.6.1:10000001",
 			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
 			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
 			"aud": "https://target_token_endpoint",
@@ -636,7 +638,7 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
-		assert.Equal(t, "organization not found: urn:oid:2.16.840.1.113883.2.4.6.1:00000001", err.Error())
+		assert.Equal(t, "urn:oid:2.16.840.1.113883.2.4.6.1:10000001: organization not found", err.Error())
 	})
 
 	t.Run("token not signed by issuer", func(t *testing.T) {
@@ -732,6 +734,10 @@ var cryptoInstance = &crypto.Crypto{
 }
 var testInstance *DefaultValidator
 
+const OtherOrganizationId = "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"
+const OrgWithWorkingCrypto = "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"
+const OrganizationId = "urn:oid:2.16.840.1.113883.2.4.6.1:00000002"
+
 // defaultValidator sets up a validator with a registry containing a single test organization.
 // The method is a singleton and always returns the same instance
 func defaultValidator() DefaultValidator {
@@ -743,7 +749,7 @@ func defaultValidator() DefaultValidator {
 
 		r := registry.RegistryInstance()
 		r.Config.Mode = "server"
-		r.Config.Datadir = "tmp"
+		r.Config.Datadir = "../testdata/registry"
 		r.Config.SyncMode = "fs"
 		if err := r.Configure(); err != nil {
 			panic(err)
@@ -754,14 +760,45 @@ func defaultValidator() DefaultValidator {
 		}
 
 		// Add a test organization to the registry
-		le := types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"}
+		le := types.LegalEntity{URI: OrgWithWorkingCrypto}
 		_ = cryptoInstance.GenerateKeyPairFor(le)
-		pub, _ := cryptoInstance.PublicKeyInPEM(le)
-		_ = r.RegisterOrganization(db.Organization{
-			Identifier: db.Identifier(le.URI),
-			Name:       "verpleeghuis De nootjes",
-			PublicKey:  &pub,
+		pub, _ := cryptoInstance.PublicKeyInJWK(le)
+
+		event, _ := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{Identifier: "oid:123", Name: "Awesomesoft"})
+		if err := r.EventSystem.PublishEvent(event); err != nil {
+			panic(err)
+		}
+
+		event, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+			VendorIdentifier: "oid:123",
+			OrgIdentifier:    events.Identifier(le.URI),
+			OrgName:          "verpleeghuis De nootjes",
+			OrgKeys:          []interface{}{pub},
 		})
+		if err := r.EventSystem.PublishEvent(event); err != nil {
+			panic(err)
+		}
+		event, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+			VendorIdentifier: "oid:123",
+			OrgIdentifier:    OtherOrganizationId,
+			OrgName:          "Zorggroep Nuts 2",
+			OrgKeys:          []interface{}{pub},
+		})
+		if err := r.EventSystem.PublishEvent(event); err != nil {
+			panic(err)
+		}
+
+		event, _ = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
+			Organization: OtherOrganizationId,
+			URL:          "tcp://127.0.0.1:1234",
+			EndpointType: "urn:oid:1.3.6.1.4.1.54851.1:nuts-oauth-authorization-server",
+			Identifier:   "1f7d4ea7-c1cf-4c14-ba23-7e1fddc31ad1",
+			Status:       "active",
+			Version:      "0.1",
+		})
+		if err := r.EventSystem.PublishEvent(event); err != nil {
+			panic(err)
+		}
 
 		testInstance = &DefaultValidator{
 			registry: r,
@@ -811,4 +848,32 @@ func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 		assert.Nil(t, err)
 	})
 
+}
+
+func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
+	t.Run("create a JwtBearerToken", func(t *testing.T) {
+		v := defaultValidator()
+		request := CreateJwtBearerTokenRequest{
+			Custodian: OtherOrganizationId,
+			Actor:     OrganizationId,
+			Subject:   "789",
+			Identity:  "irma identity token",
+		}
+		token, err := v.CreateJwtBearerToken(&request)
+
+		if !assert.Nil(t, err) {
+			return
+		}
+		assert.NotEmpty(t, token.BearerToken)
+		parts := strings.Split(token.BearerToken, ".")
+		bytes, err := jwt.DecodeSegment(parts[1])
+		var claims map[string]interface{}
+		json.Unmarshal(bytes, &claims)
+
+		assert.Equal(t, claims["iss"], OrganizationId)
+		assert.Equal(t, claims["sub"], OtherOrganizationId)
+		assert.Equal(t, claims["sid"], request.Subject)
+		assert.Equal(t, claims["aud"], "1f7d4ea7-c1cf-4c14-ba23-7e1fddc31ad1")
+		assert.Equal(t, claims["usi"], request.Identity)
+	})
 }

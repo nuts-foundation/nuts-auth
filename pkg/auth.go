@@ -46,6 +46,7 @@ type AuthClient interface {
 	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
 	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
+	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error)
 }
 
 // Auth is the main struct of the Auth service
@@ -225,7 +226,7 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 
 	res, err := auth.ContractValidator.ValidateJwt(claims.UserSignature, "Demo EHR")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("identity tokenen validation failed: %w", err)
 	}
 	if res.ValidationResult == Invalid {
 		return nil, fmt.Errorf("identity validation failed: %w", err)
@@ -237,4 +238,8 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 	}
 
 	return &AccessTokenResponse{AccessToken: accessToken}, nil
+}
+
+func (auth *Auth) CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error) {
+	return auth.AccessTokenHandler.CreateJwtBearerToken(&request)
 }

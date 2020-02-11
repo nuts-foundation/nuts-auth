@@ -433,7 +433,7 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 	}
 
 	expectStatusOK := func(ctx *CreateJwtBearerTokenContext, response JwtBearerTokenResponse) {
-		ctx.echoMock.EXPECT().JSON(http.StatusOK, gomock.Eq(response))
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, response)
 	}
 
 	t.Run("make request", func(t *testing.T) {
@@ -441,15 +441,16 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		body := CreateJwtBearerTokenRequest{
-			Actor:     "",
-			Custodian: "",
-			Subject:   "",
-			Identity:  "",
+			Actor:     "urn:oid:2.16.840.1.113883.2.4.6.1:48000000",
+			Custodian: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
+			Subject:   "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+			Identity:  "irma-token",
 		}
 		bindPostBody(ctx, body)
 		response := JwtBearerTokenResponse{
-			BearerToken: "",
+			BearerToken: "123.456.789",
 		}
+		ctx.authMock.EXPECT().CreateJwtBearerToken(gomock.Any()).Return(&pkg.JwtBearerAccessTokenResponse{BearerToken: response.BearerToken}, nil)
 		expectStatusOK(ctx, response)
 
 		ctx.wrapper.CreateJwtBearerToken(ctx.echoMock)
