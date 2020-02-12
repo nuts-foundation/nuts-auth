@@ -5,6 +5,10 @@ import (
 
 	"errors"
 
+	"github.com/golang/mock/gomock"
+	cryptoMock2 "github.com/nuts-foundation/nuts-crypto/mock"
+	registryMock "github.com/nuts-foundation/nuts-registry/mock"
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/stretchr/testify/assert"
@@ -210,5 +214,51 @@ func TestAuth_ValidateContract(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, Valid, result.ValidationResult)
+	})
+}
+
+func TestAuth_KeyExistsFor(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	cryptoMock := cryptoMock2.NewMockClient(ctrl)
+	auth := &Auth{
+		cryptoClient: cryptoMock,
+	}
+
+	t.Run("false when crypto returns false", func(t *testing.T) {
+		cryptoMock.EXPECT().KeyExistsFor(gomock.Any()).Return(false)
+
+		assert.False(t, auth.KeyExistsFor(""))
+	})
+
+	t.Run("true when crypto returns false", func(t *testing.T) {
+		cryptoMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
+
+		assert.True(t, auth.KeyExistsFor(""))
+	})
+}
+
+func TestAuth_OrganizationNameById(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	registryMock := registryMock.NewMockRegistryClient(ctrl)
+	auth := &Auth{
+		registryClient: registryMock,
+	}
+
+	t.Run("returns name", func(t *testing.T) {
+		registryMock.EXPECT().OrganizationById("").Return(&db.Organization{Name: "name"}, nil)
+
+		name, err := auth.OrganizationNameById("")
+		if assert.NoError(t, err) {
+			assert.Equal(t, "name", name)
+		}
+	})
+
+	t.Run("returns error", func(t *testing.T) {
+		registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, errors.New("error"))
+
+		_, err := auth.OrganizationNameById("")
+		assert.Error(t, err)
 	})
 }

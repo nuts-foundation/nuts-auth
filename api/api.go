@@ -8,17 +8,12 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-auth/pkg"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	"github.com/nuts-foundation/nuts-crypto/pkg/types"
-	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/sirupsen/logrus"
 )
 
 // Wrapper bridges the generated api types and http logic to the internal types and logic
 type Wrapper struct {
-	Auth     pkg.AuthClient
-	Registry registry.RegistryClient
-	Crypto   crypto.Client
+	Auth pkg.AuthClient
 }
 
 // CreateSession translates http params to internal format, creates a IRMA signing session
@@ -47,12 +42,12 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	}
 
 	// find legal entity in crypto
-	if !api.Crypto.KeyExistsFor(types.LegalEntity{URI: string(params.LegalEntity)}) {
+	if !api.Auth.KeyExistsFor(string(params.LegalEntity)) {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity"))
 	}
 
 	// translate legal entity to its name
-	org, err := api.Registry.OrganizationById(string(params.LegalEntity))
+	orgName, err := api.Auth.OrganizationNameById(string(params.LegalEntity))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No organization registered for legalEntity: %v", err))
 	}
@@ -62,7 +57,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		Type:        pkg.ContractType(params.Type),
 		Version:     pkg.Version(params.Version),
 		Language:    pkg.Language(params.Language),
-		LegalEntity: org.Name,
+		LegalEntity: orgName,
 		ValidFrom:   vf,
 		ValidTo:     vt,
 	}
