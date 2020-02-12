@@ -252,5 +252,17 @@ func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
 }
 
 func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
-	panic("implement me")
+	token := ctx.FormValue("token")
+
+	introspectionResponse := TokenIntrospectionResponse{
+		Active: false,
+	}
+
+	if len(token) == 0 {
+		return ctx.JSON(http.StatusOK, introspectionResponse)
+	}
+
+	// TODO: validate the token
+
+	return ctx.JSON(http.StatusOK, introspectionResponse)
 }

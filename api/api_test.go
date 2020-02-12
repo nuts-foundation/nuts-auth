@@ -458,3 +458,44 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 		}
 	})
 }
+
+func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
+	type IntrospectAccessTokenContext struct {
+		ctrl     *gomock.Controller
+		echoMock *mock.MockContext
+		authMock *mock2.MockAuthClient
+		wrapper  Wrapper
+	}
+
+	createContext := func(t *testing.T) *IntrospectAccessTokenContext {
+		ctrl := gomock.NewController(t)
+		authMock := mock2.NewMockAuthClient(ctrl)
+		return &IntrospectAccessTokenContext{
+			ctrl:     ctrl,
+			echoMock: mock.NewMockContext(ctrl),
+			authMock: authMock,
+			wrapper:  Wrapper{Auth: authMock},
+		}
+	}
+
+	bindPostBody := func(ctx *IntrospectAccessTokenContext, body TokenIntrospectionRequest) {
+		ctx.echoMock.EXPECT().FormValue("token").Return(body.Token)
+	}
+
+	expectStatusOK := func(ctx *IntrospectAccessTokenContext, response TokenIntrospectionResponse) {
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, gomock.Eq(response))
+	}
+
+	t.Run("introspect a token", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		request := TokenIntrospectionRequest{Token: "123"}
+		bindPostBody(ctx, request)
+
+		response := TokenIntrospectionResponse{Active: false}
+		expectStatusOK(ctx, response)
+
+		ctx.wrapper.IntrospectAccessToken(ctx.echoMock)
+	})
+}
