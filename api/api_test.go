@@ -28,7 +28,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		tt := time.Now().Truncate(time.Second)
 
 		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		authMock.EXPECT().OrganizationNameById("legalEntity").Return("care organization", nil)
+		authMock.EXPECT().OrganizationNameByID("legalEntity").Return("care organization", nil)
 
 		authMock.EXPECT().CreateContractSession(pkg.CreateSessionRequest{
 			Type:        "BehandelaarLogin",
@@ -99,7 +99,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		}
 
 		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		authMock.EXPECT().OrganizationNameById("legalEntity").Return("care organization", nil)
+		authMock.EXPECT().OrganizationNameByID("legalEntity").Return("care organization", nil)
 
 		authMock.EXPECT().CreateContractSession(pkg.CreateSessionRequest{
 			Type:        pkg.ContractType(params.Type),
@@ -164,7 +164,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		}
 
 		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		authMock.EXPECT().OrganizationNameById("legalEntity").Return("", errors.New("error"))
+		authMock.EXPECT().OrganizationNameByID("legalEntity").Return("", errors.New("error"))
 
 		wrapper := Wrapper{Auth: authMock}
 

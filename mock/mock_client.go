@@ -5,10 +5,9 @@
 package mock
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	pkg "github.com/nuts-foundation/nuts-auth/pkg"
+	reflect "reflect"
 )
 
 // MockAuthClient is a mock of AuthClient interface
@@ -118,7 +117,7 @@ func (m *MockAuthClient) OrganizationNameByID(legalEntity string) (string, error
 }
 
 // OrganizationNameByID indicates an expected call of OrganizationNameByID
-func (mr *MockAuthClientMockRecorder) OrganizationNameById(legalEntity interface{}) *gomock.Call {
+func (mr *MockAuthClientMockRecorder) OrganizationNameByID(legalEntity interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OrganizationNameByID", reflect.TypeOf((*MockAuthClient)(nil).OrganizationNameByID), legalEntity)
 }
