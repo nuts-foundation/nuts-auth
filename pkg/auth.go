@@ -10,6 +10,8 @@ import (
 
 	"github.com/mdp/qrterminal/v3"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-crypto/pkg/types"
+	registry2 "github.com/nuts-foundation/nuts-registry/client"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
@@ -45,6 +47,8 @@ type AuthClient interface {
 	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
 	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
 	ValidateContract(request ValidationRequest) (*ValidationResult, error)
+	KeyExistsFor(legalEntity string) bool
+	OrganizationNameByID(legalEntity string) (string, error)
 }
 
 // Auth is the main struct of the Auth service
@@ -54,6 +58,8 @@ type Auth struct {
 	configDone             bool
 	ContractSessionHandler ContractSessionHandler
 	ContractValidator      ContractValidator
+	cryptoClient           crypto.Client
+	registryClient         registry.RegistryClient
 }
 
 // AuthConfig holds all the configuration params
@@ -101,11 +107,15 @@ func (auth *Auth) Configure() (err error) {
 			return
 		}
 
+		// these are initialized before nuts-auth
+		auth.cryptoClient = crypto.NewCryptoClient()
+		auth.registryClient = registry2.NewRegistryClient()
+
 		validator := DefaultValidator{
 			IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
 			irmaConfig: GetIrmaConfig(auth.Config),
-			registry:   registry.RegistryInstance(),
-			crypto:     crypto.CryptoInstance(),
+			registry:   auth.registryClient,
+			crypto:     auth.cryptoClient,
 		}
 		auth.ContractSessionHandler = validator
 		auth.ContractValidator = validator
@@ -211,4 +221,18 @@ func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResult
 		return auth.ContractValidator.ValidateJwt(request.ContractString, request.ActingPartyCN)
 	}
 	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
+}
+
+// KeyExistsFor check if the private key exists on this node by calling the same function on the cryptoClient
+func (auth *Auth) KeyExistsFor(legalEntity string) bool {
+	return auth.cryptoClient.KeyExistsFor(types.LegalEntity{URI: legalEntity})
+}
+
+// OrganizationNameByID returns the name of an organisation from the registry
+func (auth *Auth) OrganizationNameByID(legalEntity string) (string, error) {
+	org, err := auth.registryClient.OrganizationById(legalEntity)
+	if err != nil {
+		return "", err
+	}
+	return org.Name, nil
 }
