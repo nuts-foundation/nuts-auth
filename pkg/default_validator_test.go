@@ -888,9 +888,11 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 		}
 		assert.NotEmpty(t, token.BearerToken)
 		parts := strings.Split(token.BearerToken, ".")
-		bytes, err := jwt.DecodeSegment(parts[1])
+		bytes, _ := jwt.DecodeSegment(parts[1])
 		var claims map[string]interface{}
-		json.Unmarshal(bytes, &claims)
+		if !assert.Nil(t, json.Unmarshal(bytes, &claims)) {
+			t.FailNow()
+		}
 
 		assert.Equal(t, claims["iss"], OrganizationId)
 		assert.Equal(t, claims["sub"], OtherOrganizationId)

@@ -453,6 +453,8 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 		ctx.authMock.EXPECT().CreateJwtBearerToken(gomock.Any()).Return(&pkg.JwtBearerAccessTokenResponse{BearerToken: response.BearerToken}, nil)
 		expectStatusOK(ctx, response)
 
-		ctx.wrapper.CreateJwtBearerToken(ctx.echoMock)
+		if !assert.Nil(t, ctx.wrapper.CreateJwtBearerToken(ctx.echoMock)) {
+			t.FailNow()
+		}
 	})
 }
