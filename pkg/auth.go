@@ -48,7 +48,7 @@ type AuthClient interface {
 	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
 	ValidateContract(request ValidationRequest) (*ValidationResult, error)
 	KeyExistsFor(legalEntity string) bool
-	OrganizationNameById(legalEntity string) (string, error)
+	OrganizationNameByID(legalEntity string) (string, error)
 }
 
 // Auth is the main struct of the Auth service
@@ -228,8 +228,8 @@ func (auth *Auth) KeyExistsFor(legalEntity string) bool {
 	return auth.cryptoClient.KeyExistsFor(types.LegalEntity{URI: legalEntity})
 }
 
-// OrganizationNameById returns the name of an organisation from the registry
-func (auth *Auth) OrganizationNameById(legalEntity string) (string, error) {
+// OrganizationNameByID returns the name of an organisation from the registry
+func (auth *Auth) OrganizationNameByID(legalEntity string) (string, error) {
 	org, err := auth.registryClient.OrganizationById(legalEntity)
 	if err != nil {
 		return "", err

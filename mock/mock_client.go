@@ -5,9 +5,10 @@
 package mock
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	pkg "github.com/nuts-foundation/nuts-auth/pkg"
-	reflect "reflect"
 )
 
 // MockAuthClient is a mock of AuthClient interface
@@ -107,17 +108,17 @@ func (mr *MockAuthClientMockRecorder) KeyExistsFor(legalEntity interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeyExistsFor", reflect.TypeOf((*MockAuthClient)(nil).KeyExistsFor), legalEntity)
 }
 
-// OrganizationNameById mocks base method
-func (m *MockAuthClient) OrganizationNameById(legalEntity string) (string, error) {
+// OrganizationNameByID mocks base method
+func (m *MockAuthClient) OrganizationNameByID(legalEntity string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OrganizationNameById", legalEntity)
+	ret := m.ctrl.Call(m, "OrganizationNameByID", legalEntity)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// OrganizationNameById indicates an expected call of OrganizationNameById
+// OrganizationNameByID indicates an expected call of OrganizationNameByID
 func (mr *MockAuthClientMockRecorder) OrganizationNameById(legalEntity interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OrganizationNameById", reflect.TypeOf((*MockAuthClient)(nil).OrganizationNameById), legalEntity)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OrganizationNameByID", reflect.TypeOf((*MockAuthClient)(nil).OrganizationNameByID), legalEntity)
 }

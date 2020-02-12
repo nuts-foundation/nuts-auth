@@ -249,7 +249,7 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 	t.Run("returns name", func(t *testing.T) {
 		registryMock.EXPECT().OrganizationById("").Return(&db.Organization{Name: "name"}, nil)
 
-		name, err := auth.OrganizationNameById("")
+		name, err := auth.OrganizationNameByID("")
 		if assert.NoError(t, err) {
 			assert.Equal(t, "name", name)
 		}
@@ -258,7 +258,7 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 	t.Run("returns error", func(t *testing.T) {
 		registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, errors.New("error"))
 
-		_, err := auth.OrganizationNameById("")
+		_, err := auth.OrganizationNameByID("")
 		assert.Error(t, err)
 	})
 }

@@ -47,7 +47,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	}
 
 	// translate legal entity to its name
-	orgName, err := api.Auth.OrganizationNameById(string(params.LegalEntity))
+	orgName, err := api.Auth.OrganizationNameByID(string(params.LegalEntity))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No organization registered for legalEntity: %v", err))
 	}
