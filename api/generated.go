@@ -198,6 +198,24 @@ type Timestamp struct {
 	Time *int64 `json:"time,omitempty"`
 }
 
+// TokenIntrospectionRequest defines model for TokenIntrospectionRequest.
+type TokenIntrospectionRequest struct {
+	Token string `json:"token"`
+}
+
+// TokenIntrospectionResponse defines model for TokenIntrospectionResponse.
+type TokenIntrospectionResponse struct {
+	Active bool      `json:"active"`
+	Aud    *string   `json:"aud,omitempty"`
+	Exp    *float32  `json:"exp,omitempty"`
+	Iat    *float32  `json:"iat,omitempty"`
+	Iss    *string   `json:"iss,omitempty"`
+	Scope  *[]string `json:"scope,omitempty"`
+	Sid    *string   `json:"sid,omitempty"`
+	Sub    *string   `json:"sub,omitempty"`
+	Usi    *string   `json:"usi,omitempty"`
+}
+
 // Type defines model for Type.
 type Type string
 
@@ -475,6 +493,8 @@ type ServerInterface interface {
 	GetContractByType(ctx echo.Context, contractType string, params GetContractByTypeParams) error
 	// Create a JWT Bearer Token which can be used in the createAccessToken request in the assertion field// (POST /auth/jwtbearertoken)
 	CreateJwtBearerToken(ctx echo.Context) error
+	// Introspection endpoint to retrieve information from an Access Token as described by RFC7662// (POST /auth/token_introspection)
+	IntrospectAccessToken(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -572,6 +592,15 @@ func (w *ServerInterfaceWrapper) CreateJwtBearerToken(ctx echo.Context) error {
 	return err
 }
 
+// IntrospectAccessToken converts echo context to params.
+func (w *ServerInterfaceWrapper) IntrospectAccessToken(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.IntrospectAccessToken(ctx)
+	return err
+}
+
 // RegisterHandlers adds each server route to the EchoRouter.
 func RegisterHandlers(router interface {
 	CONNECT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
@@ -595,6 +624,7 @@ func RegisterHandlers(router interface {
 	router.POST("/auth/contract/validate", wrapper.ValidateContract)
 	router.GET("/auth/contract/:contractType", wrapper.GetContractByType)
 	router.POST("/auth/jwtbearertoken", wrapper.CreateJwtBearerToken)
+	router.POST("/auth/token_introspection", wrapper.IntrospectAccessToken)
 
 }
 

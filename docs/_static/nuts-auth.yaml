@@ -160,6 +160,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/JwtBearerTokenResponse"
+  /auth/token_introspection:
+    post:
+      operationId: introspectAccessToken
+      summary: Introspection endpoint to retrieve information from an Access Token as described by RFC7662
+      tags:
+        - auth
+        - private
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/TokenIntrospectionRequest"
+      responses:
+        '200':
+          description: An Introspection response as described in RFC7662 section 2.2
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenIntrospectionResponse"
 components:
   schemas:
     ErrorString:
@@ -194,8 +214,8 @@ components:
         version:
           $ref: "#/components/schemas/Version"
         signer_attributes:
-          type: array
           example:
+          type: array
           items:
             type: string
         template:
@@ -556,6 +576,58 @@ components:
         jti:
           type: string
           description: unique identifier
+    TokenIntrospectionRequest:
+      description: Token introspection request as described in RFC7662 section 2.1
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          example:
+            eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDAiLCJleHAiOjE1ODE0MTI2NjcsImlhdCI6MTU4MTQxMTc2NywiaXNzIjoidXJuOm9pZDoyLjE2Ljg0MC4xLjExMzg4My4yLjQuNi4xOjAwMDAwMDAxIiwic2lkIjoidXJuOm9pZDoyLjE2Ljg0MC4xLjExMzg4My4yLjQuNi4zOjk5OTk5OTk5MCIsInN1YiI6IiJ9.OhniTJcPS45nhJVqXfxsngG5eYS_0BvqFg-96zaWFO90I_5_N9Eg_k7NmIF5eNZ9Xutl1aqSxlSp80EX07Gmk8uzZO9PEReo0YZxnNQV-Zeq1njCMmfdwusmiczFlwcBi5Bl1xYGmLrxP7NcAoljmDgMgmLH0xaKfP4VVim6snPkPHqBdSzAgSrrc-cgVDLl-9V2obPB1HiVsFMYfbHEIb4MPsnPRnSGavYHTxt34mHbRsS8BvoBy3v6VNYaewLr6yz-_Zstrnr4I_wxtYbSiPJUeVQHcD-a9Ck53BdjspnhVHZ4IFVvuNrpflVaB1A7P3A2xZ7G_a8gF_SHMynYSA
+    TokenIntrospectionResponse:
+      description: Token introspection response as described in RFC7662 section 2.2
+      required:
+        - active
+      properties:
+        active:
+          type: boolean
+          description: |
+            True if the token is active, false if the token is expired, malformed etc.
+        scope:
+          type: array
+          items:
+            type: string
+        iss:
+          type: string
+          description: |
+            The issuer in the JWT is always the actor, thus the care organization doing the request.
+            This is used to find the public key of the issuer from the Nuts registry.
+          example: "urn:oid:2.16.840.1.113883.2.4.6.1:48000000"
+        sub:
+          type: string
+          description: |
+            The subject (not a Nuts subject) contains the urn of the custodian. The
+            custodian information is used to find the relevant consent (together with actor
+            and subject).
+          example: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"
+        sid:
+          type: string
+          description: The Nuts subject id, patient identifier in the form of an oid encoded BSN.
+          example: "urn:oid:2.16.840.1.113883.2.4.6.3:9999990"
+        aud:
+          type: string
+          description: |
+            As per rfc7523 https://tools.ietf.org/html/rfc7523>, the aud must be the
+            token endpoint. This can be taken from the Nuts registry.
+          example: "https://target_token_endpoint"
+        usi:
+          type: string
+          description: "base64 encoded IRMA signature"
+        exp:
+          type: number
+        iat:
+          type: number
 
 
 

@@ -250,3 +250,7 @@ func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
 
 	return ctx.JSON(http.StatusOK, JwtBearerTokenResponse{BearerToken: response.BearerToken})
 }
+
+func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
+	panic("implement me")
+}
