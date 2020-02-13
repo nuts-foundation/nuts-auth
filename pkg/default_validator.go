@@ -266,12 +266,12 @@ func (v DefaultValidator) BuildAccessToken(jwtClaims *NutsJwtClaims, identityVal
 		// Issuer: custodian issuing the JWT
 		"iss": issuer,
 		// AGB code of the end-user
-		"sub": identityValidationResult.DisclosedAttributes["nuts.agb.agbcode"],
+		"aid": identityValidationResult.DisclosedAttributes["nuts.agb.agbcode"],
 		// Subject (Patient) identifier (oid encoded BSN)
 		"sid": jwtClaims.SubjectId,
 		// ActorId
-		"aid": jwtClaims.Issuer,
-		//"aud": jwtClaims.Audience,
+		"sub": jwtClaims.Issuer,
+		"aud": jwtClaims.Audience,
 		// Expires in 15 minutes
 		"exp": time.Now().Add(time.Minute * 15).Unix(),
 		"iat": time.Now().Unix(),
@@ -288,7 +288,7 @@ func (v DefaultValidator) BuildAccessToken(jwtClaims *NutsJwtClaims, identityVal
 	return token, err
 }
 
-const ssoEndpointType string = "urn:oid:1.3.6.1.4.1.54851.1:nuts-oauth-authorization-server"
+const ssoEndpointType string = "urn:ietf:rfc:3986:urn:oid:1.3.6.1.4.1.54851.1:nuts-oauth-authentication-server"
 
 func (v DefaultValidator) findTokenEndpoint(legalEntity string) (*db.Endpoint, error) {
 	// TODO make this a constant in github.com/nuts-foundation/nuts-go-core
@@ -332,4 +332,39 @@ func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequ
 	}
 
 	return &JwtBearerAccessTokenResponse{BearerToken: signingString}, nil
+}
+
+func (v DefaultValidator) ValidateAccessToken(accessToken string) (*NutsJwtClaims, error) {
+	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
+	token, err := parser.ParseWithClaims(accessToken, &NutsJwtClaims{}, func(token *jwt.Token) (i interface{}, e error) {
+		legalEntity := token.Claims.(*NutsJwtClaims).Issuer
+		if legalEntity == "" {
+			return nil, ErrLegalEntityNotProvided
+		}
+
+		// Check if the care provider which signed the token is managed by this node
+		if !v.crypto.KeyExistsFor(types.LegalEntity{URI: legalEntity}) {
+			return nil, fmt.Errorf("invalid token: not signed by a care provider of this node")
+		}
+
+		// get public key
+		org, err := v.registry.OrganizationById(legalEntity)
+		if err != nil {
+			return nil, err
+		}
+
+		pk, err := org.CurrentPublicKey()
+		if err != nil {
+			return nil, err
+		}
+
+		return pk.Materialize()
+	})
+
+	if token != nil && token.Valid {
+		if claims, ok := token.Claims.(*NutsJwtClaims); ok {
+			return claims, nil
+		}
+	}
+	return nil, err
 }

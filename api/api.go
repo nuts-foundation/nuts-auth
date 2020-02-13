@@ -267,27 +267,23 @@ func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
 
 	claims, err := api.Auth.IntrospectAccessToken(token)
 	if err != nil {
+		logrus.WithError(err).Debug("error while inspecting access token")
 		return ctx.JSON(http.StatusOK, introspectionResponse)
 	}
 
-	aud := claims["aud"].(string)
-	iss := claims["iss"].(string)
-	sub := claims["sub"].(string)
-	sid := claims["sid"].(string)
-	uid := claims["uid"].(string)
-	exp := claims["exp"].(int)
-	iat := claims["iat"].(int)
+	exp := int(claims.ExpiresAt)
+	iat := int(claims.IssuedAt)
 
 	introspectionResponse = TokenIntrospectionResponse{
 		Active: true,
-		Sub:    &sub,
-		Iss:    &iss,
-		Aud:    &aud,
+		Sub:    &claims.Subject,
+		Iss:    &claims.Issuer,
+		Aud:    &claims.Audience,
 		Exp:    &exp,
 		Iat:    &iat,
-		Uid:    &uid,
-		Sid:    &sid,
-		//Scope:  nil,
+		Uid:    &claims.UserSignature,
+		Sid:    &claims.SubjectId,
+		Scope:  &claims.Scope,
 		//Usi:    nil,
 	}
 

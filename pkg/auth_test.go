@@ -63,6 +63,10 @@ func (v MockContractSessionHandler) SessionStatus(SessionID) (*SessionStatusResu
 	return v.SessionStatusResult, nil
 }
 
+func (m MockAccessTokenHandler) ValidateAccessToken(accessToken string) (*NutsJwtClaims, error) {
+	panic("implement me")
+}
+
 func (v MockContractSessionHandler) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
 	return &irma.Qr{URL: qrURL, Type: irma.ActionSigning}, "abc-sessionid-abc", nil
 }

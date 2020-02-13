@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
+
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
 	mock2 "github.com/nuts-foundation/nuts-auth/mock"
@@ -513,18 +515,21 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 		iss := "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"
 		sid := "urn:oid:2.16.840.1.113883.2.4.6.3:999999990"
 		uid := "123.456.789"
-		sub := "9999"
+		scope := []string{"nuts-sso"}
 
-		ctx.authMock.EXPECT().IntrospectAccessToken(request.Token).Return(map[string]interface{}{
-			"aud": aud,
-			"aid": aid,
-			"exp": exp,
-			"iat": iat,
-			"iss": iss,
-			"sid": sid,
-			"uid": uid,
-			"sub": sub,
-		}, nil)
+		ctx.authMock.EXPECT().IntrospectAccessToken(request.Token).Return(
+			&pkg.NutsJwtClaims{
+				StandardClaims: jwt.StandardClaims{
+					Audience:  aud,
+					ExpiresAt: int64(exp),
+					IssuedAt:  int64(iat),
+					Issuer:    iss,
+					Subject:   aid,
+				},
+				SubjectId:     sid,
+				UserSignature: uid,
+				Scope:         scope,
+			}, nil)
 
 		response := TokenIntrospectionResponse{
 			Active: true,
@@ -533,9 +538,9 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 			Iat:    &iat,
 			Iss:    &iss,
 			Sid:    &sid,
-			Sub:    &sub,
+			Sub:    &aid,
 			Uid:    &uid,
-			//Scope:  ,
+			Scope:  &scope,
 		}
 		expectStatusOK(ctx, response)
 

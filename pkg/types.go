@@ -43,6 +43,7 @@ type AccessTokenHandler interface {
 	CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error)
 	ParseAndValidateJwtBearerToken(acString string) (*NutsJwtClaims, error)
 	BuildAccessToken(jwtClaims *NutsJwtClaims, identityValidationResult *ContractValidationResult) (token string, err error)
+	ValidateAccessToken(accessToken string) (*NutsJwtClaims, error)
 }
 
 const (
@@ -115,7 +116,7 @@ type NutsJwtClaims struct {
 	jwt.StandardClaims
 	SubjectId     string `json:"sid,omitempty"`
 	UserSignature string `json:"usi,omitempty"`
-	Audience      string `json:"aud,omitempty"`
+	Scope         []string
 }
 
 type AccessTokenResponse struct {

@@ -47,7 +47,7 @@ type AuthClient interface {
 	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
 	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error)
-	IntrospectAccessToken(token string) (map[string]interface{}, error)
+	IntrospectAccessToken(token string) (*NutsJwtClaims, error)
 }
 
 // Auth is the main struct of the Auth service
@@ -230,7 +230,7 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 		return nil, fmt.Errorf("identity tokenen validation failed: %w", err)
 	}
 	if res.ValidationResult == Invalid {
-		return nil, fmt.Errorf("identity validation failed: %w", err)
+		return nil, fmt.Errorf("identity validation failed")
 	}
 
 	accessToken, err := auth.AccessTokenHandler.BuildAccessToken(claims, res)
@@ -245,6 +245,8 @@ func (auth *Auth) CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*Jw
 	return auth.AccessTokenHandler.CreateJwtBearerToken(&request)
 }
 
-func (auth *Auth) IntrospectAccessToken(token string) (map[string]interface{}, error) {
-	return map[string]interface{}{"iss": "bar"}, nil
+func (auth *Auth) IntrospectAccessToken(token string) (*NutsJwtClaims, error) {
+	acClaims, err := auth.AccessTokenHandler.ValidateAccessToken(token)
+	return acClaims, err
+
 }

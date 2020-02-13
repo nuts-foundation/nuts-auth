@@ -652,7 +652,7 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 		validator := defaultValidator()
 
 		claims := map[string]interface{}{
-			"iss": OrganizationId,
+			"iss": OtherOrganizationId,
 			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
 			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
 			"aud": "https://target_token_endpoint",
@@ -662,10 +662,12 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 			"jti": "123-456-789",
 		}
 
-		otherParty := types.LegalEntity{URI: OtherOrganizationId}
-		_ = validator.crypto.GenerateKeyPairFor(otherParty)
+		otherParty := types.LegalEntity{URI: OrganizationId}
+
 		validJwt, err := validator.crypto.SignJwtFor(claims, otherParty)
-		assert.Nil(t, err)
+		if !assert.Nil(t, err) {
+			t.FailNow()
+		}
 		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
 		assert.Equal(t, "crypto/rsa: verification error", err.Error())
@@ -813,7 +815,7 @@ func defaultValidator() DefaultValidator {
 		event, _ = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
 			Organization: OtherOrganizationId,
 			URL:          "tcp://127.0.0.1:1234",
-			EndpointType: "urn:oid:1.3.6.1.4.1.54851.1:nuts-oauth-authorization-server",
+			EndpointType: ssoEndpointType,
 			Identifier:   "1f7d4ea7-c1cf-4c14-ba23-7e1fddc31ad1",
 			Status:       "active",
 			Version:      "0.1",
@@ -955,5 +957,61 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 			t.Fail()
 		}
 		assert.Contains(t, err.Error(), "none or multiple registred sso endpoints found")
+	})
+}
+
+func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
+	buildClaims := NutsJwtClaims{
+		StandardClaims: jwt.StandardClaims{
+			Audience:  "",
+			ExpiresAt: 0,
+			Id:        "",
+			IssuedAt:  0,
+			Issuer:    "",
+			NotBefore: 0,
+			Subject:   OrganizationId,
+		},
+		SubjectId:     "",
+		UserSignature: "",
+	}
+
+	userIdentityValidationResult := ContractValidationResult{
+		ValidationResult:    Valid,
+		ContractFormat:      "",
+		DisclosedAttributes: map[string]string{"nuts.agb.agbcode": "1234"},
+	}
+
+	t.Run("token not issued by care provider of this node", func(t *testing.T) {
+		localBuildClaims := buildClaims
+		localBuildClaims.Subject = "unknown-party"
+
+		v := defaultValidator()
+
+		// Use this code to regenerate the token if needed. Don't forget to delete the private keys from the testdata afterwards
+		//v.crypto.GenerateKeyPairFor(types.LegalEntity{URI: "unknown-party"})
+		//token, err := v.BuildAccessToken(&localBuildClaims, &userIdentityValidationResult)
+		//t.Log(token)
+
+		token := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhaWQiOiIiLCJleHAiOjE1ODE1OTk5ODQsImlhdCI6MTU4MTU5OTA4NCwiaXNzIjoidW5rbm93bi1wYXJ0eSIsInNpZCI6IiIsInN1YiI6IjEyMzQifQ.Ot9Az8tv28w2TrwuRMHAUGMdzYTw5JlwphTT1eFaxCC-8j00Pps_UHAQfQIe-5sAePgqmMrh8D_P-xxUmFNyTD6azYcw45G0nQyFcc1hvo5Hc5Ib2SMIA_W1UHIZnEUoERpoK3cZPvHKaRx4SKIqZtG1ylJPEDv3dV2MBrBroQYXBWzKOzzE6O3SjP3al9L8QzD4rZ21QtRMDKdmTfuGKqMT1u3odf49jMEdzvVpSsDeXzGonHm0SXi6TTt0Dc5ewdIRus14m3wNEsx4auPYDl012q7N02w5zMRVdVWlhkoatm5i1GIBkagKQ26ICNyK0jL6djkcPC-ZgKvSVmiv-Q"
+
+		claims, err := v.ValidateAccessToken(token)
+		if !assert.Error(t, err) || !assert.Nil(t, claims) {
+			t.FailNow()
+		}
+		assert.Equal(t, "invalid token: not signed by a care provider of this node", err.Error())
+	})
+
+	t.Run("validate access token", func(t *testing.T) {
+		v := defaultValidator()
+		token, err := v.BuildAccessToken(&buildClaims, &userIdentityValidationResult)
+		if !assert.NoError(t, err) {
+			t.FailNow()
+		}
+		claims, err := v.ValidateAccessToken(token)
+		if !assert.NoError(t, err) || !assert.NotNil(t, claims) {
+			t.FailNow()
+		}
+
+		// TODO check all claims
 	})
 }
