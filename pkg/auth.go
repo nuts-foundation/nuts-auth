@@ -47,6 +47,7 @@ type AuthClient interface {
 	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
 	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error)
+	IntrospectAccessToken(token string) (map[string]interface{}, error)
 }
 
 // Auth is the main struct of the Auth service
@@ -242,4 +243,8 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 
 func (auth *Auth) CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error) {
 	return auth.AccessTokenHandler.CreateJwtBearerToken(&request)
+}
+
+func (auth *Auth) IntrospectAccessToken(token string) (map[string]interface{}, error) {
+	return map[string]interface{}{"iss": "bar"}, nil
 }

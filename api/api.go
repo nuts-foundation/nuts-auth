@@ -12,7 +12,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Wrapper bridges the generated api types and http logic to the internal types and logic
+// Wrapper bridges the generated api types and http logic to the internal types and logic.
+// It checks required parameters and message body. It converts data from api to internal types.
+// Then passes the internal formats to the AuthClient. Converts internal results back to the generated
+// Api types. Handles errors and returns the correct http response. It does not perform any business logic.
 type Wrapper struct {
 	Auth pkg.AuthClient
 }
@@ -262,7 +265,31 @@ func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
 		return ctx.JSON(http.StatusOK, introspectionResponse)
 	}
 
-	// TODO: validate the token
+	claims, err := api.Auth.IntrospectAccessToken(token)
+	if err != nil {
+		return ctx.JSON(http.StatusOK, introspectionResponse)
+	}
+
+	aud := claims["aud"].(string)
+	iss := claims["iss"].(string)
+	sub := claims["sub"].(string)
+	sid := claims["sid"].(string)
+	uid := claims["uid"].(string)
+	exp := claims["exp"].(int)
+	iat := claims["iat"].(int)
+
+	introspectionResponse = TokenIntrospectionResponse{
+		Active: true,
+		Sub:    &sub,
+		Iss:    &iss,
+		Aud:    &aud,
+		Exp:    &exp,
+		Iat:    &iat,
+		Uid:    &uid,
+		Sid:    &sid,
+		//Scope:  nil,
+		//Usi:    nil,
+	}
 
 	return ctx.JSON(http.StatusOK, introspectionResponse)
 }

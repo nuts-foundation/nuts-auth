@@ -486,6 +486,19 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, gomock.Eq(response))
 	}
 
+	t.Run("empty token returns active false", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		request := TokenIntrospectionRequest{Token: ""}
+		bindPostBody(ctx, request)
+
+		response := TokenIntrospectionResponse{Active: false}
+		expectStatusOK(ctx, response)
+
+		ctx.wrapper.IntrospectAccessToken(ctx.echoMock)
+	})
+
 	t.Run("introspect a token", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
@@ -493,9 +506,41 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 		request := TokenIntrospectionRequest{Token: "123"}
 		bindPostBody(ctx, request)
 
-		response := TokenIntrospectionResponse{Active: false}
+		aud := "123"
+		aid := "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"
+		exp := 1581412667
+		iat := 1581411767
+		iss := "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"
+		sid := "urn:oid:2.16.840.1.113883.2.4.6.3:999999990"
+		uid := "123.456.789"
+		sub := "9999"
+
+		ctx.authMock.EXPECT().IntrospectAccessToken(request.Token).Return(map[string]interface{}{
+			"aud": aud,
+			"aid": aid,
+			"exp": exp,
+			"iat": iat,
+			"iss": iss,
+			"sid": sid,
+			"uid": uid,
+			"sub": sub,
+		}, nil)
+
+		response := TokenIntrospectionResponse{
+			Active: true,
+			Aud:    &aud,
+			Exp:    &exp,
+			Iat:    &iat,
+			Iss:    &iss,
+			Sid:    &sid,
+			Sub:    &sub,
+			Uid:    &uid,
+			//Scope:  ,
+		}
 		expectStatusOK(ctx, response)
 
-		ctx.wrapper.IntrospectAccessToken(ctx.echoMock)
+		if !assert.NoError(t, ctx.wrapper.IntrospectAccessToken(ctx.echoMock)) {
+			t.Fail()
+		}
 	})
 }

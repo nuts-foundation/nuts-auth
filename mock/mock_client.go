@@ -122,3 +122,18 @@ func (mr *MockAuthClientMockRecorder) CreateJwtBearerToken(request interface{}) 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateJwtBearerToken", reflect.TypeOf((*MockAuthClient)(nil).CreateJwtBearerToken), request)
 }
+
+// IntrospectAccessToken mocks base method
+func (m *MockAuthClient) IntrospectAccessToken(token string) (map[string]interface{}, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IntrospectAccessToken", token)
+	ret0, _ := ret[0].(map[string]interface{})
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IntrospectAccessToken indicates an expected call of IntrospectAccessToken
+func (mr *MockAuthClientMockRecorder) IntrospectAccessToken(token interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IntrospectAccessToken", reflect.TypeOf((*MockAuthClient)(nil).IntrospectAccessToken), token)
+}

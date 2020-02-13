@@ -29,7 +29,7 @@ type AccessTokenRequestJWT struct {
 	Osi *string `json:"osi,omitempty"`
 	Sid string  `json:"sid"`
 	Sub string  `json:"sub"`
-	Usi string  `json:"usi"`
+	Uid string  `json:"uid"`
 }
 
 // AccessTokenResponse defines model for AccessTokenResponse.
@@ -207,13 +207,13 @@ type TokenIntrospectionRequest struct {
 type TokenIntrospectionResponse struct {
 	Active bool      `json:"active"`
 	Aud    *string   `json:"aud,omitempty"`
-	Exp    *float32  `json:"exp,omitempty"`
-	Iat    *float32  `json:"iat,omitempty"`
+	Exp    *int      `json:"exp,omitempty"`
+	Iat    *int      `json:"iat,omitempty"`
 	Iss    *string   `json:"iss,omitempty"`
 	Scope  *[]string `json:"scope,omitempty"`
 	Sid    *string   `json:"sid,omitempty"`
 	Sub    *string   `json:"sub,omitempty"`
-	Usi    *string   `json:"usi,omitempty"`
+	Uid    *string   `json:"uid,omitempty"`
 }
 
 // Type defines model for Type.
