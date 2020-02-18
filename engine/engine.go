@@ -114,7 +114,7 @@ func flagSet() *pflag.FlagSet {
 	flags.String(pkg.ConfIrmaSchemeManager, "pbdf", "The IRMA schemeManager to use for attributes. Can be either 'pbdf' or 'irma-demo'")
 	flags.String(pkg.ConfAddress, "localhost:1323", "Interface and port for http server to bind to")
 	flags.String(pkg.PublicURL, "", "Public URL which can be reached by a users IRMA client")
-	flags.String(pkg.ConfMode, "server", "server or client, when client it uses the HttpClient")
+	flags.String(pkg.ConfMode, "", "server or client, when client it does not start any services so that CLI commands can be used.")
 	flags.String(pkg.ConfIrmaConfigPath, "", "path to IRMA config folder. If not set, a tmp folder is created.")
 	flags.String(pkg.ConfActingPartyCN, "", "The acting party Common name used in contracts")
 	flags.Bool(pkg.ConfAutoUpdateIrmaSchemas, false, "set if you want to skip the auto download of the irma schemas every 60 minutes.")

@@ -16,7 +16,7 @@ require (
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/nuts-foundation/nuts-crypto v0.0.0-20200127075335-afcefe897a71
-	github.com/nuts-foundation/nuts-go-core v0.0.0-20200130105519-4620adf455e9
+	github.com/nuts-foundation/nuts-go-core v0.0.0-20200220093939-3a4292f30472
 	github.com/nuts-foundation/nuts-registry v0.0.0-20200211142433-9d1d2985be8e
 	github.com/pkg/errors v0.8.1
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
