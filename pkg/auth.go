@@ -44,7 +44,7 @@ const ConfIrmaSchemeManager = "irmaSchemeManager"
 
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
-	CreateContractSession(sessionRequest CreateSessionRequest, actingParty string) (*CreateSessionResult, error)
+	CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error)
 	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
 	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
 	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
@@ -134,7 +134,7 @@ func (auth *Auth) Configure() (err error) {
 // CreateContractSession creates a session based on an IRMA contract. This allows the user to permit the application to
 // use the Nuts Network in its name. The user can limit the application in time and scope. By signing it with IRMA other
 // nodes in the network can verify the validity of the contract.
-func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, actingParty string) (*CreateSessionResult, error) {
+func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error) {
 
 	// Step 1: Find the correct contract
 	contract, err := ContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
@@ -241,8 +241,7 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 		return nil, fmt.Errorf("jwt bearer token validation failed: %w", err)
 	}
 
-	// TODO: take acting party from real source
-	res, err := auth.ContractValidator.ValidateJwt(claims.IdentityToken, "Demo EHR")
+	res, err := auth.ContractValidator.ValidateJwt(claims.IdentityToken, request.VendorIdentifier)
 	if err != nil {
 		return nil, fmt.Errorf("identity tokenen validation failed: %w", err)
 	}

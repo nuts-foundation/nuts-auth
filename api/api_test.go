@@ -41,7 +41,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			ValidFrom:   tt,
 			ValidTo:     tt.Add(time.Hour * 13),
 			LegalEntity: "care organization",
-		}, gomock.Any()).Return(&pkg.CreateSessionResult{
+		}).Return(&pkg.CreateSessionResult{
 			QrCodeInfo: irma.Qr{
 				URL:  "http://example.com/auth/irmaclient/123",
 				Type: irma.Action("signing")},
@@ -110,7 +110,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			Version:     "v1",
 			Language:    "NL",
 			LegalEntity: "care organization",
-		}, gomock.Any()).Return(
+		}).Return(
 			nil, pkg.ErrContractNotFound)
 
 		wrapper := Wrapper{Auth: authMock}
@@ -436,6 +436,10 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 
 	const validJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6NDgwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjoxNTc4MTEwNDgxLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.76XtU81IyR3Ak_2fgrYsuLcvxndf0eedT1mFPa-rPXk"
 
+	vendorIdentifierFromHeader = func(ctx echo.Context) string {
+		return "Demo EHR"
+	}
+
 	t.Run("create token returns error", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
@@ -448,7 +452,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: &errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
-		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{JwtString: validJwt}).Return(nil, fmt.Errorf("oh boy"))
+		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{JwtString: validJwt, VendorIdentifier: "Demo EHR"}).Return(nil, fmt.Errorf("oh boy"))
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
 
 		assert.Nil(t, err)
@@ -462,7 +466,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		bindPostBody(ctx, params)
 
 		pkgResponse := &pkg.AccessTokenResponse{AccessToken: "foo"}
-		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{JwtString: validJwt}).Return(pkgResponse, nil)
+		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{JwtString: validJwt, VendorIdentifier: "Demo EHR"}).Return(pkgResponse, nil)
 
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
 		expectStatusOK(ctx, apiResponse)

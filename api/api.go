@@ -20,6 +20,10 @@ type Wrapper struct {
 	Auth pkg.AuthClient
 }
 
+var vendorIdentifierFromHeader = func(ctx echo.Context) string {
+	return ctx.Request().Header.Get("X-Nuts-VendorIdentifier")
+}
+
 // CreateSession translates http params to internal format, creates a IRMA signing session
 // and returns the session pointer to the HTTP stack.
 func (api *Wrapper) CreateSession(ctx echo.Context) error {
@@ -66,11 +70,8 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		ValidTo:     vt,
 	}
 
-	// TODO: make it possible to provide the acting party via a JWT or other secure way
-	//actingParty := "Demo EHR"
-
 	// Initiate the actual session
-	result, err := api.Auth.CreateContractSession(sessionRequest, "")
+	result, err := api.Auth.CreateContractSession(sessionRequest)
 	if err != nil {
 		if errors.Is(err, pkg.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -230,8 +231,13 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-
-	catRequest := pkg.CreateAccessTokenRequest{JwtString: request.Assertion}
+	vendorId := vendorIdentifierFromHeader(ctx)
+	if vendorId == "" {
+		errDesc := "Vendor identifier missing in header"
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
+		return ctx.JSON(http.StatusBadRequest, errorResponse)
+	}
+	catRequest := pkg.CreateAccessTokenRequest{JwtString: request.Assertion, VendorIdentifier: vendorId}
 	acResponse, err := api.Auth.CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/labstack/echo/v4"
+
 	irma "github.com/privacybydesign/irmago"
 
 	"github.com/nuts-foundation/nuts-auth/testdata"
@@ -97,6 +99,10 @@ func Test_Integration(t *testing.T) {
 		})
 		if err := r.EventSystem.PublishEvent(event); err != nil {
 			panic(err)
+		}
+
+		vendorIdentifierFromHeader = func(ctx echo.Context) string {
+			return "Demo EHR"
 		}
 
 		// Add oauth endpoint to OtherOrganization

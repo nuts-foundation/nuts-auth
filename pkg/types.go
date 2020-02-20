@@ -112,7 +112,8 @@ type ValidationRequest struct {
 
 type CreateAccessTokenRequest struct {
 	// JwtString the string containing the unmarshalled jwt.
-	JwtString string
+	JwtString        string
+	VendorIdentifier string
 }
 
 type CreateJwtBearerTokenRequest struct {

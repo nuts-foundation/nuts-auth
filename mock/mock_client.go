@@ -34,18 +34,18 @@ func (m *MockAuthClient) EXPECT() *MockAuthClientMockRecorder {
 }
 
 // CreateContractSession mocks base method
-func (m *MockAuthClient) CreateContractSession(sessionRequest pkg.CreateSessionRequest, actingParty string) (*pkg.CreateSessionResult, error) {
+func (m *MockAuthClient) CreateContractSession(sessionRequest pkg.CreateSessionRequest) (*pkg.CreateSessionResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateContractSession", sessionRequest, actingParty)
+	ret := m.ctrl.Call(m, "CreateContractSession", sessionRequest)
 	ret0, _ := ret[0].(*pkg.CreateSessionResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateContractSession indicates an expected call of CreateContractSession
-func (mr *MockAuthClientMockRecorder) CreateContractSession(sessionRequest, actingParty interface{}) *gomock.Call {
+func (mr *MockAuthClientMockRecorder) CreateContractSession(sessionRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateContractSession", reflect.TypeOf((*MockAuthClient)(nil).CreateContractSession), sessionRequest, actingParty)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateContractSession", reflect.TypeOf((*MockAuthClient)(nil).CreateContractSession), sessionRequest)
 }
 
 // ContractSessionStatus mocks base method
