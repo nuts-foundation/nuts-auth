@@ -114,7 +114,7 @@ func TestAuth_Configure(t *testing.T) {
 			Config: AuthConfig{
 			},
 		}
-		i.Configure()
+		_ = i.Configure()
 		assert.Equal(t, core.ServerEngineMode, i.Config.Mode)
 	})
 
