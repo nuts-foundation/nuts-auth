@@ -124,10 +124,10 @@ func (mr *MockAuthClientMockRecorder) CreateJwtBearerToken(request interface{}) 
 }
 
 // IntrospectAccessToken mocks base method
-func (m *MockAuthClient) IntrospectAccessToken(token string) (*pkg.NutsJwtClaims, error) {
+func (m *MockAuthClient) IntrospectAccessToken(token string) (*pkg.NutsAccessToken, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IntrospectAccessToken", token)
-	ret0, _ := ret[0].(*pkg.NutsJwtClaims)
+	ret0, _ := ret[0].(*pkg.NutsAccessToken)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

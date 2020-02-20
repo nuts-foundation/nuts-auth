@@ -3,11 +3,12 @@ package pkg
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"time"
+
 	"github.com/cbroglie/mustache"
 	"github.com/goodsign/monday"
 	"github.com/sirupsen/logrus"
-	"regexp"
-	"time"
 )
 
 const timeLayout = "Monday, 2 January 2006 15:04:05"
@@ -42,25 +43,35 @@ var ErrContractNotFound = errors.New("contract not found")
 // ErrInvalidContractText is used when contract texts cannot be parsed or contain invalid values
 var ErrInvalidContractText = errors.New("invalid contract text")
 
+// StandardSignerAttributes defines the standard list of attributes used for a contract.
+// If SignerAttribute name starts with a dot '.', it uses the configured scheme manager
+var StandardSignerAttributes = []string{
+	".gemeente.personalData.familyname",
+	".gemeente.personalData.prefix",
+	".gemeente.personalData.initials",
+	".gemeente.personalData.fullname",
+	//"pbdf.pbdf.email.email",
+}
+
 // EN:PractitionerLogin:v1 Contract
 var contracts = map[Language]map[ContractType]map[Version]*Contract{
 	"NL": {"BehandelaarLogin": {"v1": &Contract{
-		Type:                 "BehandelaarLogin",
-		Version:              "v1",
-		Language:             "NL",
-		SignerAttributes:     []string{"nuts.agb.agbcode"},
-		Template:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om namens {{legal_entity}} en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
-		TemplateAttributes:   []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
-		Regexp:               `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
+		Type:               "BehandelaarLogin",
+		Version:            "v1",
+		Language:           "NL",
+		SignerAttributes:   StandardSignerAttributes,
+		Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om namens {{legal_entity}} en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
+		TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
+		Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
 	}}},
 	"EN": {"PractitionerLogin": {"v1": &Contract{
-		Type:                 "PractitionerLogin",
-		Version:              "v1",
-		Language:             "EN",
-		SignerAttributes:     []string{"nuts.agb.agbcode"},
-		Template:             `EN:PractitionerLogin:v1 Undersigned gives permission to {{acting_party}} to make request to the Nuts network on behalf of {{legal_entity}} and itself. This permission is valid from {{valid_from}} until {{valid_to}}.`,
-		TemplateAttributes:   []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
-		Regexp:               `EN:PractitionerLogin:v1 Undersigned gives permission to (.+) to make request to the Nuts network on behalf of (.+) and itself. This permission is valid from (.+) until (.+).`,
+		Type:               "PractitionerLogin",
+		Version:            "v1",
+		Language:           "EN",
+		SignerAttributes:   StandardSignerAttributes,
+		Template:           `EN:PractitionerLogin:v1 Undersigned gives permission to {{acting_party}} to make request to the Nuts network on behalf of {{legal_entity}} and itself. This permission is valid from {{valid_from}} until {{valid_to}}.`,
+		TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
+		Regexp:             `EN:PractitionerLogin:v1 Undersigned gives permission to (.+) to make request to the Nuts network on behalf of (.+) and itself. This permission is valid from (.+) until (.+).`,
 	}}},
 }
 
@@ -88,7 +99,7 @@ func ContractByType(contractType ContractType, language Language, version Versio
 	if version == "" {
 		version = "v1"
 	}
-	if contract, ok := contracts[Language(language)][ContractType(contractType)][Version(version)]; ok {
+	if contract, ok := contracts[language][contractType][version]; ok {
 		return contract, nil
 	}
 

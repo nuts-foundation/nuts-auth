@@ -503,6 +503,7 @@ components:
         - custodian
         - actor
         - identity
+        - scope
       properties:
         subject:
           type: string
@@ -514,6 +515,10 @@ components:
           type: string
           description: |
             Base64 encoded IRMA contract conaining the identity of the performer
+        scope:
+          type: string
+          description: Space-delimited list of strings. For what kind of operations can the access token be used? Scopes will be specified for each use-case
+          example: nuts-sso nuts-patient-transfer
     JwtBearerTokenResponse:
       description: Response with a JWT Bearer Token. It contains a JWT, signed with the private key of the requestor software vendor. Using the RS256 signing algorithm.
       required:
@@ -595,9 +600,7 @@ components:
           description: |
             True if the token is active, false if the token is expired, malformed etc.
         scope:
-          type: array
-          items:
-            type: string
+          type: string
         iss:
           type: string
           description: |

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,7 +48,7 @@ type AuthClient interface {
 	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
 	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error)
-	IntrospectAccessToken(token string) (*NutsJwtClaims, error)
+	IntrospectAccessToken(token string) (*NutsAccessToken, error)
 }
 
 // Auth is the main struct of the Auth service
@@ -107,9 +108,9 @@ func (auth *Auth) Configure() (err error) {
 
 		validator := DefaultValidator{
 			IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
-			irmaConfig: GetIrmaConfig(auth.Config),
-			registry:   registry.RegistryInstance(),
-			crypto:     crypto.CryptoInstance(),
+			IrmaConfig: GetIrmaConfig(auth.Config),
+			Registry:   registry.RegistryInstance(),
+			Crypto:     crypto.CryptoInstance(),
 		}
 		auth.ContractSessionHandler = validator
 		auth.ContractValidator = validator
@@ -145,12 +146,17 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 	signatureRequest := irma.NewSignatureRequest(message)
 	schemeManager := auth.Config.IrmaSchemeManager
 
-	attribute := fmt.Sprintf("%s.%s", schemeManager, contract.SignerAttributes[0])
+	var attributes irma.AttributeCon
+	for _, att := range contract.SignerAttributes {
+		// Checks if attribute name start with a dot, if so, add the configured scheme manager.
+		if strings.Index(att, ".") == 0 {
+			att = fmt.Sprintf("%s%s", schemeManager, att)
+		}
+		attributes = append(attributes, irma.NewAttributeRequest(att))
+	}
 	signatureRequest.Disclose = irma.AttributeConDisCon{
 		irma.AttributeDisCon{
-			irma.AttributeCon{
-				irma.NewAttributeRequest(attribute),
-			},
+			attributes,
 		},
 	}
 
@@ -225,7 +231,8 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 		return nil, fmt.Errorf("jwt bearer token validation failed: %w", err)
 	}
 
-	res, err := auth.ContractValidator.ValidateJwt(claims.UserSignature, "Demo EHR")
+	// TODO: take acting party from real source
+	res, err := auth.ContractValidator.ValidateJwt(claims.IdentityToken, "Demo EHR")
 	if err != nil {
 		return nil, fmt.Errorf("identity tokenen validation failed: %w", err)
 	}
@@ -245,8 +252,8 @@ func (auth *Auth) CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*Jw
 	return auth.AccessTokenHandler.CreateJwtBearerToken(&request)
 }
 
-func (auth *Auth) IntrospectAccessToken(token string) (*NutsJwtClaims, error) {
-	acClaims, err := auth.AccessTokenHandler.ValidateAccessToken(token)
+func (auth *Auth) IntrospectAccessToken(token string) (*NutsAccessToken, error) {
+	acClaims, err := auth.AccessTokenHandler.ParseAndValidateAccessToken(token)
 	return acClaims, err
 
 }

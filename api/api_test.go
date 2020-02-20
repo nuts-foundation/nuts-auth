@@ -293,7 +293,7 @@ func (e OAuthErrorMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	response := x.(*AccessTokenRequestFailedResponse)
+	response := x.(AccessTokenRequestFailedResponse)
 	return e.x.Error == response.Error && *e.x.ErrorDescription == *response.ErrorDescription
 }
 
@@ -447,12 +447,22 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 			Custodian: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
 			Subject:   "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
 			Identity:  "irma-token",
+			Scope:     "nuts-sso",
 		}
 		bindPostBody(ctx, body)
 		response := JwtBearerTokenResponse{
 			BearerToken: "123.456.789",
 		}
-		ctx.authMock.EXPECT().CreateJwtBearerToken(gomock.Any()).Return(&pkg.JwtBearerAccessTokenResponse{BearerToken: response.BearerToken}, nil)
+
+		expectedRequest := pkg.CreateJwtBearerTokenRequest{
+			Actor:         body.Actor,
+			Custodian:     body.Custodian,
+			IdentityToken: body.Identity,
+			Subject:       body.Subject,
+			Scope:         body.Scope,
+		}
+
+		ctx.authMock.EXPECT().CreateJwtBearerToken(expectedRequest).Return(&pkg.JwtBearerAccessTokenResponse{BearerToken: response.BearerToken}, nil)
 		expectStatusOK(ctx, response)
 
 		if !assert.Nil(t, ctx.wrapper.CreateJwtBearerToken(ctx.echoMock)) {
@@ -514,11 +524,11 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 		iat := 1581411767
 		iss := "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"
 		sid := "urn:oid:2.16.840.1.113883.2.4.6.3:999999990"
-		uid := "123.456.789"
-		scope := []string{"nuts-sso"}
+		//uid := "123.456.789"
+		scope := "nuts-sso"
 
 		ctx.authMock.EXPECT().IntrospectAccessToken(request.Token).Return(
-			&pkg.NutsJwtClaims{
+			&pkg.NutsAccessToken{
 				StandardClaims: jwt.StandardClaims{
 					Audience:  aud,
 					ExpiresAt: int64(exp),
@@ -526,9 +536,8 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 					Issuer:    iss,
 					Subject:   aid,
 				},
-				SubjectId:     sid,
-				UserSignature: uid,
-				Scope:         scope,
+				SubjectId: sid,
+				Scope:     scope,
 			}, nil)
 
 		response := TokenIntrospectionResponse{
@@ -539,8 +548,8 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 			Iss:    &iss,
 			Sid:    &sid,
 			Sub:    &aid,
-			Uid:    &uid,
-			Scope:  &scope,
+			//Uid:    &uid,
+			Scope: &scope,
 		}
 		expectStatusOK(ctx, response)
 

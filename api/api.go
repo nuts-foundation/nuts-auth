@@ -107,13 +107,13 @@ func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) err
 		}
 	}
 
-	nutsAuthToken := string(sessionStatus.NutsAuthToken)
+	nutsAuthToken := sessionStatus.NutsAuthToken
 	proofStatus := string(sessionStatus.ProofStatus)
 
 	answer := SessionResult{
 		Disclosed: &disclosedAttributes,
 		Status:    string(sessionStatus.Status),
-		Token:     string(sessionStatus.Token),
+		Token:     sessionStatus.Token,
 		Type:      string(sessionStatus.Type),
 	}
 	if nutsAuthToken != "" {
@@ -211,14 +211,14 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 
 	if request.GrantType != jwtBearerGrantType {
 		errDesc := fmt.Sprintf("grant_type must be: '%s'", jwtBearerGrantType)
-		errorResponse := &AccessTokenRequestFailedResponse{Error: "unsupported_grant_type", ErrorDescription: &errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: "unsupported_grant_type", ErrorDescription: &errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 
 	const jwtPattern = `^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$`
 	if matched, err := regexp.Match(jwtPattern, []byte(request.Assertion)); !matched || err != nil {
 		errDesc := "Assertion must be a valid encoded jwt"
-		errorResponse := &AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 
@@ -226,7 +226,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 	acResponse, err := api.Auth.CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()
-		errorResponse := &AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 	response := AccessTokenResponse{AccessToken: acResponse.AccessToken}
@@ -241,10 +241,11 @@ func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
 	}
 
 	request := pkg.CreateJwtBearerTokenRequest{
-		Actor:     requestBody.Actor,
-		Custodian: requestBody.Custodian,
-		Identity:  requestBody.Identity,
-		Subject:   requestBody.Subject,
+		Actor:         requestBody.Actor,
+		Custodian:     requestBody.Custodian,
+		IdentityToken: requestBody.Identity,
+		Subject:       requestBody.Subject,
+		Scope:         requestBody.Scope,
 	}
 	response, err := api.Auth.CreateJwtBearerToken(request)
 	if err != nil {
@@ -281,10 +282,8 @@ func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
 		Aud:    &claims.Audience,
 		Exp:    &exp,
 		Iat:    &iat,
-		Uid:    &claims.UserSignature,
 		Sid:    &claims.SubjectId,
 		Scope:  &claims.Scope,
-		//Usi:    nil,
 	}
 
 	return ctx.JSON(http.StatusOK, introspectionResponse)

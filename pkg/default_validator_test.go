@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/lestrrat-go/jwx/jwk"
 
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
@@ -44,7 +46,7 @@ func TestDefaultValidator_IsInitialized(t *testing.T) {
 	})
 
 	t.Run("with irma config returns true", func(t *testing.T) {
-		v := DefaultValidator{irmaConfig: &irma2.Configuration{}}
+		v := DefaultValidator{IrmaConfig: &irma2.Configuration{}}
 		assert.True(t, v.IsInitialized())
 	})
 }
@@ -77,7 +79,7 @@ func TestValidateContract(t *testing.T) {
 			&ContractValidationResult{
 				Valid,
 				IrmaFormat,
-				map[string]string{"irma-demo.nuts.agb.agbcode": "00000007"},
+				map[string]string{"nuts.agb.agbcode": "00000007"},
 			},
 			false,
 		},
@@ -93,7 +95,7 @@ func TestValidateContract(t *testing.T) {
 			&ContractValidationResult{
 				Invalid,
 				IrmaFormat,
-				map[string]string{"irma-demo.nuts.agb.agbcode": "00000007"},
+				map[string]string{"nuts.agb.agbcode": "00000007"},
 			},
 			false,
 		},
@@ -121,7 +123,7 @@ func TestValidateContract(t *testing.T) {
 			&ContractValidationResult{
 				Invalid,
 				IrmaFormat,
-				map[string]string{"irma-demo.nuts.agb.agbcode": "00000007"},
+				map[string]string{"nuts.agb.agbcode": "00000007"},
 			},
 			false,
 		},
@@ -208,7 +210,7 @@ func TestValidateContract(t *testing.T) {
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 
-	validator := DefaultValidator{IrmaServer: GetIrmaServer(authConfig), irmaConfig: GetIrmaConfig(authConfig)}
+	validator := DefaultValidator{IrmaServer: GetIrmaServer(authConfig), IrmaConfig: GetIrmaConfig(authConfig)}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -338,9 +340,9 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 
 		v := DefaultValidator{
 			IrmaServer: &iMock,
-			irmaConfig: GetIrmaConfig(authConfig),
-			crypto:     cMock,
-			registry:   rMock,
+			IrmaConfig: GetIrmaConfig(authConfig),
+			Crypto:     cMock,
+			Registry:   rMock,
 		}
 
 		rMock.EXPECT().ReverseLookup("verpleeghuis De nootjes").Return(&db.Organization{Identifier: "urn:id:1"}, nil)
@@ -373,14 +375,14 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 			NowFunc = oldFunc
 		}()
 
-		token := createJwt("nuts", OrganizationId, testdata.ValidIrmaContract)
+		token := createJwt(OrganizationId, OrganizationId, testdata.ValidIrmaContract)
 		actingParty := "Demo EHR"
 
 		result, err := validator.ValidateJwt(string(token), actingParty)
-		if assert.Nil(t, err) && assert.NotNil(t, result) {
+		if assert.NoError(t, err) && assert.NotNil(t, result) {
 			assert.Equal(t, ValidationState("VALID"), result.ValidationResult)
 			assert.Equal(t, ContractFormat("irma"), result.ContractFormat)
-			assert.Equal(t, map[string]string{"irma-demo.nuts.agb.agbcode": "00000007"}, result.DisclosedAttributes)
+			assert.Equal(t, map[string]string{"nuts.agb.agbcode": "00000007"}, result.DisclosedAttributes)
 		}
 	})
 
@@ -399,12 +401,12 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 			NowFunc = oldFunc
 		}()
 
-		var payload nutsJwt
+		var payload NutsIdentityToken
 
-		payload.Issuer = "nuts"
-		payload.Contract = SignedIrmaContract{}
+		//payload.Issuer = "nuts"
+		//payload.Signature = ""
 
-		_ = json.Unmarshal([]byte(testdata.ValidIrmaContract), &payload.Contract.IrmaContract)
+		//_ = json.Unmarshal([]byte(testdata.ValidIrmaContract), &payload.Signature)
 
 		var claims map[string]interface{}
 		jsonString, _ := json.Marshal(payload)
@@ -419,6 +421,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		result, err := validator.ValidateJwt(token, actingParty)
 		if assert.Nil(t, result) && assert.NotNil(t, err) {
+			//assert.EqualError(t, err, ErrLegalEntityNotFound.Error())
 			assert.True(t, strings.Contains(err.Error(), ErrLegalEntityNotFound.Error())) // jwt-go does not use Go 1.13 errors yet
 		}
 	})
@@ -430,7 +433,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		assert.Nil(t, result)
 		assert.Error(t, err)
-		assert.EqualError(t, err, "could not parse jwt: invalid character '~' looking for beginning of value")
+		assert.EqualError(t, err, "invalid character '~' looking for beginning of value")
 	})
 
 	t.Run("invalid signature", func(t *testing.T) {
@@ -447,7 +450,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 			NowFunc = oldFunc
 		}()
 
-		token := createJwt("nuts", OrganizationId, testdata.ForgedIrmaContract)
+		token := createJwt(OrganizationId, OrganizationId, testdata.ForgedIrmaContract)
 
 		result, err := validator.ValidateJwt(string(token), "Demo EHR")
 
@@ -462,8 +465,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		result, err := validator.ValidateJwt(string(token), "Demo EHR")
 		assert.Nil(t, result)
 		assert.Error(t, err)
-		assert.True(t, errors.Is(err, ErrInvalidContract))
-		assert.Equal(t, "jwt does not have the nuts issuer: invalid contract", err.Error())
+		assert.Equal(t, "wrong_issuer: organization not found", err.Error())
 	})
 
 	t.Run("wrong scheme manager", func(t *testing.T) {
@@ -487,10 +489,10 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		}
 
 		if assert.True(t, core.NutsConfig().InStrictMode()) {
-			token := createJwt("nuts", OrganizationId, testdata.ValidIrmaContract)
+			token := createJwt(OrganizationId, OrganizationId, testdata.ValidIrmaContract)
 			actingParty := "Demo EHR"
 			result, err := validator.ValidateJwt(string(token), actingParty)
-			if assert.Nil(t, err) && assert.NotNil(t, result) {
+			if assert.NoError(t, err) && assert.NotNil(t, result) {
 				assert.Equal(t, ValidationState("INVALID"), result.ValidationResult)
 			}
 		}
@@ -516,16 +518,15 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 		}()
 
 		validator := defaultValidator()
-		//defer os.RemoveAll(cryptoInstance.Config.Fspath)
 
 		var c = SignedIrmaContract{}
 		_ = json.Unmarshal([]byte(testdata.ValidIrmaContract), &c.IrmaContract)
 
-		tokenString, err := validator.createJwt(&c, OrganizationId)
+		tokenString, err := validator.CreateIdentityTokenFromIrmaContract(&c, OrganizationId)
 
 		if assert.Nil(t, err) && assert.NotEmpty(t, tokenString) {
 			result, err := validator.ValidateJwt(tokenString, "Demo EHR")
-			if assert.Nil(t, err) && assert.NotNil(t, result) {
+			if assert.NoError(t, err) && assert.NotNil(t, result) {
 				assert.Equal(t, Valid, result.ValidationResult)
 			}
 		}
@@ -543,7 +544,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 		rMock := registryMock.NewMockRegistryClient(ctrl)
 
 		v := DefaultValidator{
-			registry: rMock,
+			Registry: rMock,
 		}
 
 		return TestContext{ctrl: ctrl, v: v, rMock: rMock}
@@ -588,7 +589,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	})
 }
 
-func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
+func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 	t.Run("malformed access tokens", func(t *testing.T) {
 		validator := defaultValidator()
 
@@ -622,7 +623,7 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 			"iat": 1578910481,
 			"jti": "123-456-789",
 		}
-		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: OrganizationId})
+		validJwt, err := validator.Crypto.SignJwtFor(claims, types.LegalEntity{URI: OrganizationId})
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
@@ -641,7 +642,7 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 			"iat": 1578910481,
 			"jti": "123-456-789",
 		}
-		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: OrganizationId})
+		validJwt, err := validator.Crypto.SignJwtFor(claims, types.LegalEntity{URI: OrganizationId})
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
@@ -664,7 +665,7 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 
 		otherParty := types.LegalEntity{URI: OrganizationId}
 
-		validJwt, err := validator.crypto.SignJwtFor(claims, otherParty)
+		validJwt, err := validator.Crypto.SignJwtFor(claims, otherParty)
 		if !assert.Nil(t, err) {
 			t.FailNow()
 		}
@@ -687,7 +688,7 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 			"jti": "123-456-789",
 		}
 
-		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: claims["iss"].(string)})
+		validJwt, err := validator.Crypto.SignJwtFor(claims, types.LegalEntity{URI: claims["iss"].(string)})
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
@@ -697,37 +698,62 @@ func TestDefaultValidator_ParseAndValidateAccessTokenJwt(t *testing.T) {
 	t.Run("valid jwt", func(t *testing.T) {
 		validator := defaultValidator()
 
-		claims := map[string]interface{}{
-			"iss": OrganizationId,
-			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
-			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
-			"aud": "https://target_token_endpoint",
-			"usi": "base64 encoded signature",
-			"exp": 4070908800,
-			"iat": 1578910481,
-			"jti": "123-456-789",
+		//claims := map[string]interface{}{
+		//	"iss": OrganizationId,
+		//	"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
+		//	"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+		//	"aud": "https://target_token_endpoint",
+		//	"usi": "base64 encoded signature",
+		//	"exp": 4070908800,
+		//	"iat": 1578910481,
+		//	"jti": "123-456-789",
+		//}
+		claims := NutsJwtBearerToken{
+			StandardClaims: jwt.StandardClaims{
+				Audience:  "https://target_token_endpoint",
+				ExpiresAt: 4070908800,
+				Id:        "123-456-789",
+				IssuedAt:  1578910481,
+				Issuer:    OrganizationId,
+			},
+			Custodian:     OtherOrganizationId,
+			IdentityToken: "base64 encoded signature",
+			SubjectId:     "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+			Scope:         "nuts-sso",
 		}
 
-		_ = validator.crypto.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
-		validJwt, err := validator.crypto.SignJwtFor(claims, types.LegalEntity{URI: claims["iss"].(string)})
-		assert.Nil(t, err)
-		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
+		var inInterface map[string]interface{}
+		inrec, _ := json.Marshal(claims)
+		json.Unmarshal(inrec, &inInterface)
+
+		//_ = validator.crypto.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
+		validAccessToken, err := validator.Crypto.SignJwtFor(inInterface, types.LegalEntity{URI: claims.Issuer})
+		if !assert.NoError(t, err) {
+			t.FailNow()
+		}
+		response, err := validator.ParseAndValidateJwtBearerToken(validAccessToken)
+		assert.NoError(t, err)
 		assert.NotEmpty(t, response)
-		assert.Nil(t, err)
 	})
 }
 
-func createJwt(iss string, sub string, irmaContract string) []byte {
-	var payload nutsJwt
+func createJwt(iss string, sub string, contractStr string) []byte {
+	contract := SignedIrmaContract{}
+	err := json.Unmarshal([]byte(contractStr), &contract.IrmaContract)
+	if err != nil {
+		panic(err)
+	}
 
+	encodedContract := base64.StdEncoding.EncodeToString([]byte(contractStr))
+
+	var payload NutsIdentityToken
 	payload.Issuer = iss
+	payload.Type = IrmaFormat
 	payload.Subject = sub
-	payload.Contract = SignedIrmaContract{}
+	payload.Signature = encodedContract
 
-	_ = json.Unmarshal([]byte(irmaContract), &payload.Contract.IrmaContract)
-
-	var claims map[string]interface{}
 	jsonString, _ := json.Marshal(payload)
+	var claims map[string]interface{}
 	_ = json.Unmarshal(jsonString, &claims)
 
 	tokenString, _ := cryptoInstance.SignJwtFor(claims, types.LegalEntity{URI: sub})
@@ -815,7 +841,7 @@ func defaultValidator() DefaultValidator {
 		event, _ = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
 			Organization: OtherOrganizationId,
 			URL:          "tcp://127.0.0.1:1234",
-			EndpointType: ssoEndpointType,
+			EndpointType: SsoEndpointType,
 			Identifier:   "1f7d4ea7-c1cf-4c14-ba23-7e1fddc31ad1",
 			Status:       "active",
 			Version:      "0.1",
@@ -825,9 +851,9 @@ func defaultValidator() DefaultValidator {
 		}
 
 		testInstance = &DefaultValidator{
-			registry: r,
-			crypto:   cryptoInstance,
-			irmaConfig: GetIrmaConfig(AuthConfig{
+			Registry: r,
+			Crypto:   cryptoInstance,
+			IrmaConfig: GetIrmaConfig(AuthConfig{
 				IrmaConfigPath:            "../testdata/irma",
 				SkipAutoUpdateIrmaSchemas: true,
 			}),
@@ -840,7 +866,7 @@ func defaultValidator() DefaultValidator {
 func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 	t.Run("missing subject", func(t *testing.T) {
 		v := defaultValidator()
-		claims := &NutsJwtClaims{}
+		claims := &NutsJwtBearerToken{}
 		identityValidationResult := &ContractValidationResult{ValidationResult: Valid}
 		token, err := v.BuildAccessToken(claims, identityValidationResult)
 		assert.Empty(t, token)
@@ -849,12 +875,12 @@ func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 
 	t.Run("build an access token", func(t *testing.T) {
 		v := defaultValidator()
-		claims := &NutsJwtClaims{StandardClaims: jwt.StandardClaims{Subject: OrganizationId}}
+		claims := &NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: OrganizationId}}
 		identityValidationResult := &ContractValidationResult{ValidationResult: Valid}
 		token, err := v.BuildAccessToken(claims, identityValidationResult)
 		if assert.NotEmpty(t, token) {
 			token, err := jwt.Parse(token, func(token *jwt.Token) (i interface{}, err error) {
-				org, _ := v.registry.OrganizationById(claims.Subject)
+				org, _ := v.Registry.OrganizationById(claims.Subject)
 				pk, _ := org.CurrentPublicKey()
 				return pk.Materialize()
 			})
@@ -878,10 +904,11 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 	t.Run("create a JwtBearerToken", func(t *testing.T) {
 		v := defaultValidator()
 		request := CreateJwtBearerTokenRequest{
-			Custodian: OtherOrganizationId,
-			Actor:     OrganizationId,
-			Subject:   "789",
-			Identity:  "irma identity token",
+			Custodian:     OtherOrganizationId,
+			Actor:         OrganizationId,
+			Subject:       "789",
+			IdentityToken: "irma identity token",
+			Scope:         "nuts-sso",
 		}
 		token, err := v.CreateJwtBearerToken(&request)
 
@@ -896,21 +923,22 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 			t.FailNow()
 		}
 
-		assert.Equal(t, claims["iss"], OrganizationId)
-		assert.Equal(t, claims["sub"], OtherOrganizationId)
-		assert.Equal(t, claims["sid"], request.Subject)
-		assert.Equal(t, claims["aud"], "1f7d4ea7-c1cf-4c14-ba23-7e1fddc31ad1")
-		assert.Equal(t, claims["usi"], request.Identity)
+		assert.Equal(t, OrganizationId, claims["iss"])
+		assert.Equal(t, OtherOrganizationId, claims["sub"])
+		assert.Equal(t, request.Subject, claims["sid"])
+		assert.Equal(t, "1f7d4ea7-c1cf-4c14-ba23-7e1fddc31ad1", claims["aud"])
+		assert.Equal(t, request.IdentityToken, claims["usi"])
+		//assert.Equal(t, request.Scope.([]interface{}), claims["scope"])
 	})
 
 	t.Run("invalid custodian", func(t *testing.T) {
 		v := defaultValidator()
 
 		request := CreateJwtBearerTokenRequest{
-			Custodian: "123",
-			Actor:     OrganizationId,
-			Subject:   "789",
-			Identity:  "irma identity token",
+			Custodian:     "123",
+			Actor:         OrganizationId,
+			Subject:       "789",
+			IdentityToken: "irma identity token",
 		}
 
 		token, err := v.CreateJwtBearerToken(&request)
@@ -926,10 +954,10 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 		v := defaultValidator()
 
 		request := CreateJwtBearerTokenRequest{
-			Custodian: OtherOrganizationId,
-			Actor:     "456",
-			Subject:   "789",
-			Identity:  "irma identity token",
+			Custodian:     OtherOrganizationId,
+			Actor:         "456",
+			Subject:       "789",
+			IdentityToken: "irma identity token",
 		}
 
 		token, err := v.CreateJwtBearerToken(&request)
@@ -944,10 +972,10 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 		v := defaultValidator()
 
 		request := CreateJwtBearerTokenRequest{
-			Custodian: OrganizationId,
-			Actor:     "456",
-			Subject:   "789",
-			Identity:  "irma identity token",
+			Custodian:     OrganizationId,
+			Actor:         "456",
+			Subject:       "789",
+			IdentityToken: "irma identity token",
 		}
 
 		token, err := v.CreateJwtBearerToken(&request)
@@ -961,18 +989,20 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 }
 
 func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
-	buildClaims := NutsJwtClaims{
+	tokenId, _ := uuid.NewRandom()
+	buildClaims := NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "",
-			ExpiresAt: 0,
-			Id:        "",
-			IssuedAt:  0,
-			Issuer:    "",
-			NotBefore: 0,
+			Id:        tokenId.String(),
+			IssuedAt:  time.Now().Unix(),
+			Issuer:    OtherOrganizationId,
+			NotBefore: time.Now().Unix(),
+			ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
 			Subject:   OrganizationId,
 		},
-		SubjectId:     "",
-		UserSignature: "",
+		SubjectId:     "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+		IdentityToken: "base64 encoded identity ",
+		Scope:         "nuts-sso",
 	}
 
 	userIdentityValidationResult := ContractValidationResult{
@@ -982,36 +1012,47 @@ func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 	}
 
 	t.Run("token not issued by care provider of this node", func(t *testing.T) {
-		localBuildClaims := buildClaims
-		localBuildClaims.Subject = "unknown-party"
 
 		v := defaultValidator()
 
 		// Use this code to regenerate the token if needed. Don't forget to delete the private keys from the testdata afterwards
-		//v.crypto.GenerateKeyPairFor(types.LegalEntity{URI: "unknown-party"})
+		//localBuildClaims := buildClaims
+		//localBuildClaims.Subject = "unknown-party"
+		//v.crypto.GenerateKeyPairFor(types.LegalEntity{URI: localBuildClaims.Subject})
 		//token, err := v.BuildAccessToken(&localBuildClaims, &userIdentityValidationResult)
 		//t.Log(token)
 
 		token := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhaWQiOiIiLCJleHAiOjE1ODE1OTk5ODQsImlhdCI6MTU4MTU5OTA4NCwiaXNzIjoidW5rbm93bi1wYXJ0eSIsInNpZCI6IiIsInN1YiI6IjEyMzQifQ.Ot9Az8tv28w2TrwuRMHAUGMdzYTw5JlwphTT1eFaxCC-8j00Pps_UHAQfQIe-5sAePgqmMrh8D_P-xxUmFNyTD6azYcw45G0nQyFcc1hvo5Hc5Ib2SMIA_W1UHIZnEUoERpoK3cZPvHKaRx4SKIqZtG1ylJPEDv3dV2MBrBroQYXBWzKOzzE6O3SjP3al9L8QzD4rZ21QtRMDKdmTfuGKqMT1u3odf49jMEdzvVpSsDeXzGonHm0SXi6TTt0Dc5ewdIRus14m3wNEsx4auPYDl012q7N02w5zMRVdVWlhkoatm5i1GIBkagKQ26ICNyK0jL6djkcPC-ZgKvSVmiv-Q"
 
-		claims, err := v.ValidateAccessToken(token)
+		claims, err := v.ParseAndValidateAccessToken(token)
 		if !assert.Error(t, err) || !assert.Nil(t, claims) {
 			t.FailNow()
 		}
 		assert.Equal(t, "invalid token: not signed by a care provider of this node", err.Error())
 	})
 
+	// Other organization sends access token to Organization in a request.
+	// Validate the Access Token
+	// Everything should be fine
 	t.Run("validate access token", func(t *testing.T) {
 		v := defaultValidator()
+		// First build an access token
 		token, err := v.BuildAccessToken(&buildClaims, &userIdentityValidationResult)
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
-		claims, err := v.ValidateAccessToken(token)
+		// Then validate it
+		claims, err := v.ParseAndValidateAccessToken(token)
 		if !assert.NoError(t, err) || !assert.NotNil(t, claims) {
 			t.FailNow()
 		}
 
-		// TODO check all claims
+		// Check this organization signed the access token
+		assert.Equal(t, OrganizationId, claims.Issuer)
+		// Check the other organization is the subject
+		assert.Equal(t, OtherOrganizationId, claims.Subject)
+		// Check the if SubjectId contains the citizen service number
+		assert.Equal(t, buildClaims.SubjectId, claims.SubjectId)
+		assert.Equal(t, "nuts-sso", claims.Scope)
 	})
 }

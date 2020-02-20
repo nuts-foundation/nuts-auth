@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
@@ -56,7 +57,12 @@ func (sc *SignedIrmaContract) verifySignature(configuration *irma.Configuration)
 				logrus.Infof("IRMA schemeManager %s is not valid in strictMode", schemaManager)
 				validationResult = Invalid
 			}
-			disclosedAttributes[att.Identifier.String()] = *att.RawValue
+			identifier := att.Identifier.String()
+			// strip of the schemeManager
+			if i := strings.Index(identifier, "."); i != -1 {
+				identifier = identifier[i+1:]
+			}
+			disclosedAttributes[identifier] = *att.RawValue
 		}
 	}
 

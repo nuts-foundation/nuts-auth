@@ -40,10 +40,14 @@ type ContractSessionHandler interface {
 }
 
 type AccessTokenHandler interface {
-	CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error)
-	ParseAndValidateJwtBearerToken(acString string) (*NutsJwtClaims, error)
-	BuildAccessToken(jwtClaims *NutsJwtClaims, identityValidationResult *ContractValidationResult) (token string, err error)
-	ValidateAccessToken(accessToken string) (*NutsJwtClaims, error)
+	// CreateJwtBearerToken from a JwtBearerTokenRequest. Returns a signed JWT string.
+	CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (token *JwtBearerAccessTokenResponse, err error)
+
+	ParseAndValidateJwtBearerToken(token string) (*NutsJwtBearerToken, error)
+
+	BuildAccessToken(jwtClaims *NutsJwtBearerToken, identityValidationResult *ContractValidationResult) (token string, err error)
+
+	ParseAndValidateAccessToken(accessToken string) (*NutsAccessToken, error)
 }
 
 const (
@@ -106,17 +110,54 @@ type CreateAccessTokenRequest struct {
 }
 
 type CreateJwtBearerTokenRequest struct {
-	Actor     string
-	Custodian string
-	Identity  string
-	Subject   string
+	Actor         string
+	Custodian     string
+	IdentityToken string
+	Subject       string
+	Scope         string
 }
 
-type NutsJwtClaims struct {
+// NutsIdentityToken contains the signed identity of the user performing the request
+type NutsIdentityToken struct {
 	jwt.StandardClaims
-	SubjectId     string `json:"sid,omitempty"`
-	UserSignature string `json:"usi,omitempty"`
-	Scope         []string
+	//Identifier of the legalEntity who issued and signed the token
+	//Issuer string
+	// What kind of signature? Currently only IRMA is supported
+	Type ContractFormat `json:"type"`
+	// The base64 encoded signature
+	Signature string `json:"sig"`
+	//Contract SignedIrmaContract `json:"nuts_signature"`
+}
+
+// NutsJwtBearerToken contains the deserialized Jwt Bearer Token as defined in rfc7523. It contains a NutsIdentity token which can be
+// verified by the authorization server.
+type NutsJwtBearerToken struct {
+	jwt.StandardClaims
+	Custodian     string `json:"custodian"`
+	IdentityToken string `json:"usi"`
+	SubjectId     string `json:"sid"`
+	Scope         string `json:"scope"`
+}
+
+// NutsAccessToken is a OAuth 2.0 access token which provides context to a request.
+// Its contents are derived from a Jwt Bearer token. The Jwt Bearer token is verified by the authorization server and
+// stripped from the proof to make it compact.
+type NutsAccessToken struct {
+	jwt.StandardClaims
+	SubjectId  string `json:"sid"`
+	Scope      string `json:"scope"`
+	FamilyName string `json:"family_name"`
+	Prefix     string `json:"prefix"`
+	Initials   string `json:"initials"`
+	Name       string `json:"name"`
+	Email      string `json:"email"`
+}
+
+type RequestContext struct {
+	Actor         string
+	Custodian     string
+	IdentityToken string
+	Subject       string
 }
 
 type AccessTokenResponse struct {

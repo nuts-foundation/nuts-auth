@@ -16,17 +16,17 @@ type MockContractSessionHandler struct {
 }
 
 type MockAccessTokenHandler struct {
-	claims                              *NutsJwtClaims
+	claims                              *NutsJwtBearerToken
 	parseAndValidateAccessTokenJwtError error
 	accessToken                         string
 	accessTokenError                    error
 }
 
-func (m MockAccessTokenHandler) ParseAndValidateJwtBearerToken(acString string) (*NutsJwtClaims, error) {
+func (m MockAccessTokenHandler) ParseAndValidateJwtBearerToken(acString string) (*NutsJwtBearerToken, error) {
 	return m.claims, m.parseAndValidateAccessTokenJwtError
 }
 
-func (m MockAccessTokenHandler) BuildAccessToken(jwtClaims *NutsJwtClaims, identityValidationResult *ContractValidationResult) (string, error) {
+func (m MockAccessTokenHandler) BuildAccessToken(jwtClaims *NutsJwtBearerToken, identityValidationResult *ContractValidationResult) (string, error) {
 	if m.accessTokenError != nil {
 		return "", m.accessTokenError
 	}
@@ -63,7 +63,7 @@ func (v MockContractSessionHandler) SessionStatus(SessionID) (*SessionStatusResu
 	return v.SessionStatusResult, nil
 }
 
-func (m MockAccessTokenHandler) ValidateAccessToken(accessToken string) (*NutsJwtClaims, error) {
+func (m MockAccessTokenHandler) ParseAndValidateAccessToken(accessToken string) (*NutsAccessToken, error) {
 	panic("implement me")
 }
 
@@ -256,7 +256,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 
 	t.Run("invalid identity", func(t *testing.T) {
 		i := &Auth{
-			AccessTokenHandler: MockAccessTokenHandler{claims: &NutsJwtClaims{}},
+			AccessTokenHandler: MockAccessTokenHandler{claims: &NutsJwtBearerToken{}},
 			ContractValidator: MockContractValidator{
 				jwtResult: ContractValidationResult{ValidationResult: Invalid},
 			},
@@ -274,7 +274,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 			ContractValidator: MockContractValidator{
 				jwtResult: ContractValidationResult{ValidationResult: Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}},
 			},
-			AccessTokenHandler: MockAccessTokenHandler{claims: &NutsJwtClaims{}, accessToken: expectedAT},
+			AccessTokenHandler: MockAccessTokenHandler{claims: &NutsJwtBearerToken{}, accessToken: expectedAT},
 		}
 
 		response, err := i.CreateAccessToken(CreateAccessTokenRequest{JwtString: "foo"})
@@ -284,5 +284,4 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		}
 
 	})
-
 }
