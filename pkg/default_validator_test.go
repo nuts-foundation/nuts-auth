@@ -403,11 +403,6 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		var payload NutsIdentityToken
 
-		//payload.Issuer = "nuts"
-		//payload.Signature = ""
-
-		//_ = json.Unmarshal([]byte(testdata.ValidIrmaContract), &payload.Signature)
-
 		var claims map[string]interface{}
 		jsonString, _ := json.Marshal(payload)
 		_ = json.Unmarshal(jsonString, &claims)
@@ -724,7 +719,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 
 		var inInterface map[string]interface{}
 		inrec, _ := json.Marshal(claims)
-		json.Unmarshal(inrec, &inInterface)
+		_ = json.Unmarshal(inrec, &inInterface)
 
 		//_ = validator.crypto.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
 		validAccessToken, err := validator.Crypto.SignJwtFor(inInterface, types.LegalEntity{URI: claims.Issuer})

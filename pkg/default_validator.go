@@ -275,7 +275,9 @@ func (v DefaultValidator) BuildAccessToken(jwtBearerToken *NutsJwtBearerToken, i
 
 	var keyVals map[string]interface{}
 	inrec, _ := json.Marshal(at)
-	json.Unmarshal(inrec, &keyVals)
+	if err := json.Unmarshal(inrec, &keyVals); err != nil {
+		return "", err
+	}
 
 	// Sign with the private key of the issuer
 	token, err := v.Crypto.SignJwtFor(keyVals, types.LegalEntity{URI: issuer})
@@ -329,7 +331,9 @@ func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequ
 
 	var keyVals map[string]interface{}
 	inrec, _ := json.Marshal(jwtBearerToken)
-	json.Unmarshal(inrec, &keyVals)
+	if err := json.Unmarshal(inrec, &keyVals); err != nil {
+		return nil, err
+	}
 
 	signingString, err := v.Crypto.SignJwtFor(keyVals, types.LegalEntity{URI: request.Actor})
 	if err != nil {
