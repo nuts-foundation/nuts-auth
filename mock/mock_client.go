@@ -137,3 +137,32 @@ func (mr *MockAuthClientMockRecorder) IntrospectAccessToken(token interface{}) *
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IntrospectAccessToken", reflect.TypeOf((*MockAuthClient)(nil).IntrospectAccessToken), token)
 }
+
+// KeyExistsFor mocks base method
+func (m *MockAuthClient) KeyExistsFor(legalEntity string) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KeyExistsFor", legalEntity)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// KeyExistsFor indicates an expected call of KeyExistsFor
+func (mr *MockAuthClientMockRecorder) KeyExistsFor(legalEntity interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeyExistsFor", reflect.TypeOf((*MockAuthClient)(nil).KeyExistsFor), legalEntity)
+}
+
+// OrganizationNameByID mocks base method
+func (m *MockAuthClient) OrganizationNameByID(legalEntity string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OrganizationNameByID", legalEntity)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OrganizationNameByID indicates an expected call of OrganizationNameByID
+func (mr *MockAuthClientMockRecorder) OrganizationNameByID(legalEntity interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OrganizationNameByID", reflect.TypeOf((*MockAuthClient)(nil).OrganizationNameByID), legalEntity)
+}

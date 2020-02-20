@@ -45,12 +45,23 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		vt = vft
 	}
 
+	// find legal entity in crypto
+	if !api.Auth.KeyExistsFor(string(params.LegalEntity)) {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity"))
+	}
+
+	// translate legal entity to its name
+	orgName, err := api.Auth.OrganizationNameByID(string(params.LegalEntity))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No organization registered for legalEntity: %v", err))
+	}
+
 	// convert generated api format to internal struct
 	sessionRequest := pkg.CreateSessionRequest{
 		Type:        pkg.ContractType(params.Type),
 		Version:     pkg.Version(params.Version),
 		Language:    pkg.Language(params.Language),
-		LegalEntity: string(params.LegalEntity),
+		LegalEntity: orgName,
 		ValidFrom:   vf,
 		ValidTo:     vt,
 	}

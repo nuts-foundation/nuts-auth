@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
+
 	"github.com/google/uuid"
 
 	"github.com/lestrrat-go/jwx/jwk"
-
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
 
 	"github.com/dgrijalva/jwt-go"
 
@@ -843,6 +843,38 @@ func defaultValidator() DefaultValidator {
 		})
 		if err := r.EventSystem.PublishEvent(event); err != nil {
 			panic(err)
+			//=======
+			//		_ = cryptoInstance.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"})
+			//		{
+			//			vendorEvent, err := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{
+			//				Identifier: "1",
+			//				Name:       "BecauseWeCare Software",
+			//			})
+			//			if err != nil {
+			//				panic(err)
+			//			}
+			//			if err := r.EventSystem.PublishEvent(vendorEvent); err != nil {
+			//				panic(err)
+			//			}
+			//		}
+			//		{
+			//			le := types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:00000000"}
+			//			_ = cryptoInstance.GenerateKeyPairFor(le)
+			//			pub, _ := cryptoInstance.PublicKeyInJWK(le)
+			//			pubJwkAsMap, _ := crypto.JwkToMap(pub)
+			//			claimEvent, err := events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+			//				VendorIdentifier: "1",
+			//				OrgIdentifier:    "urn:oid:2.16.840.1.113883.2.4.6.1:00000000",
+			//				OrgName:          "verpleeghuis De nootjes",
+			//				OrgKeys:          []interface{}{pubJwkAsMap},
+			//			})
+			//			if err != nil {
+			//				panic(err)
+			//			}
+			//			if err := r.EventSystem.PublishEvent(claimEvent); err != nil {
+			//				panic(err)
+			//			}
+			//>>>>>>> master
 		}
 
 		testInstance = &DefaultValidator{
@@ -961,7 +993,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 		if !assert.NotNil(t, err) {
 			t.Fail()
 		}
-		assert.Contains(t, err.Error(), "could not open private key for legalEntity")
+		assert.Contains(t, err.Error(), "could not open entry for legalEntity")
 	})
 	t.Run("custodian without endpoint", func(t *testing.T) {
 		v := defaultValidator()
