@@ -10,7 +10,7 @@ conf
 .idea
 vendor
 
-// ignore executable
+# ignore executable
 nuts-auth
 
 # Docs
