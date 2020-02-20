@@ -286,8 +286,6 @@ func (v DefaultValidator) BuildAccessToken(jwtBearerToken *NutsJwtBearerToken, i
 	return token, err
 }
 
-const SsoEndpointType string = "urn:ietf:rfc:3986:urn:oid:1.3.6.1.4.1.54851.1:nuts-oauth-authentication-server"
-
 func (v DefaultValidator) findTokenEndpoint(legalEntity string) (*db.Endpoint, error) {
 	// TODO make this a constant in github.com/nuts-foundation/nuts-go-core
 	ssoEP := SsoEndpointType

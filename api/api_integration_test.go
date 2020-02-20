@@ -206,7 +206,7 @@ func Test_Integration(t *testing.T) {
 			}
 
 			// make sure the echo mock returns the correct form values
-			ctx.echoMock.EXPECT().FormValue("grant_type").Return(jwtBearerGrantType)
+			ctx.echoMock.EXPECT().FormValue("grant_type").Return(pkg.JwtBearerGrantType)
 			ctx.echoMock.EXPECT().FormValue("assertion").Return(jwtBearerTokenResponse.BearerToken)
 
 			// store the response for later use
