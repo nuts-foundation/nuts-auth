@@ -221,27 +221,27 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 
 	if request.GrantType != pkg.JwtBearerGrantType {
 		errDesc := fmt.Sprintf("grant_type must be: '%s'", pkg.JwtBearerGrantType)
-		errorResponse := AccessTokenRequestFailedResponse{Error: "unsupported_grant_type", ErrorDescription: &errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: "unsupported_grant_type", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 
 	const jwtPattern = `^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$`
 	if matched, err := regexp.Match(jwtPattern, []byte(request.Assertion)); !matched || err != nil {
 		errDesc := "Assertion must be a valid encoded jwt"
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 	vendorId := vendorIdentifierFromHeader(ctx)
 	if vendorId == "" {
 		errDesc := "Vendor identifier missing in header"
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 	catRequest := pkg.CreateAccessTokenRequest{JwtString: request.Assertion, VendorIdentifier: vendorId}
 	acResponse, err := api.Auth.CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: &errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 	response := AccessTokenResponse{AccessToken: acResponse.AccessToken}

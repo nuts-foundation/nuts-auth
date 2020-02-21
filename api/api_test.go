@@ -361,11 +361,11 @@ func (e OAuthErrorMatcher) Matches(x interface{}) bool {
 	}
 
 	response := x.(AccessTokenRequestFailedResponse)
-	return e.x.Error == response.Error && *e.x.ErrorDescription == *response.ErrorDescription
+	return e.x.Error == response.Error && e.x.ErrorDescription == response.ErrorDescription
 }
 
 func (e OAuthErrorMatcher) String() string {
-	return fmt.Sprintf("is equal to {%v, %v}", e.x.Error, *e.x.ErrorDescription)
+	return fmt.Sprintf("is equal to {%v, %v}", e.x.Error, e.x.ErrorDescription)
 }
 
 func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
@@ -409,7 +409,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 
 		errorDescription := "grant_type must be: 'urn:ietf:params:oauth:grant-type:jwt-bearer'"
 		errorType := "unsupported_grant_type"
-		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: &errorDescription, Error: errorType}
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
@@ -426,7 +426,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 
 		errorDescription := "Assertion must be a valid encoded jwt"
 		errorType := "invalid_grant"
-		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: &errorDescription, Error: errorType}
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
@@ -449,7 +449,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 
 		errorDescription := "oh boy"
 		errorType := "invalid_grant"
-		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: &errorDescription, Error: errorType}
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
 		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{JwtString: validJwt, VendorIdentifier: "Demo EHR"}).Return(nil, fmt.Errorf("oh boy"))

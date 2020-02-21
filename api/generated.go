@@ -14,8 +14,8 @@ import (
 
 // AccessTokenRequestFailedResponse defines model for AccessTokenRequestFailedResponse.
 type AccessTokenRequestFailedResponse struct {
-	Error            string  `json:"error"`
-	ErrorDescription *string `json:"error_description,omitempty"`
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
 }
 
 // AccessTokenRequestJWT defines model for AccessTokenRequestJWT.
