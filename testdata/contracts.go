@@ -4,6 +4,76 @@ const InvalidContract = `
     { "thisdatas": "smellz bad"}
 	`
 
+const ValidIrmaContract2 = `
+
+{
+  "@context": "https://irma.app/ld/signature/v2",
+  "signature": [
+    {
+      "c": "NTwGXJkjxcrS2Oht5U/W21HCi2VAtNL1KQdlV/kSuOs=",
+      "A": "tt1MWQrqFJD1ciuBm8y7t3hGv+7BbRQMft4pQH32eITczMZKHOzdfXeX7hAOuvg434RmhxBnMVE34/GNc7UItf6ZDiaI+jVPFOUNvcV96j3gHU3yWq1yq81kfJmuwJEp4B5AnED0cadsbdrvl5N+H0rmQ6RREp+Br+NGgM0lPbc=",
+      "e_response": "jD+bYXbA8KZB07E/11kPq6YCDh/6t+o7+oe7/HlptxJkOZef4fRU+2ufweW9HeSz5unqnc9BJxTi",
+      "v_response": "DivDy7yq4iIxtebi6NZKpKUOkN7/oSMZTGjTOSWwGKXZU02kGBUhFAmVgXwuAZLPdwBXPSgKxQY3OyVx4ace682zW2URDR81WrzUhInLwy44cVBdk6NBJyuUKUGiCurrC4q1qSGsBg46nNFRrmmf1qtoGCK4Ylg+1JOxq3oTp49eusTs7CFfCN5GcfHiXbp0KUWBKI8k0HycQEFAr7aBRTUxdagG+BWTnfIjhKb9CDdXepqnNovxI3wFycAaYlkgb7FDXpEVjWkSSs71mKPhxjiScZmBFGKUuUuJCCJWl7dnZakBUMwNFukobtG+pnnmzHLAxw4TXnV1nNha3Wfb",
+      "a_responses": {
+        "0": "pgr1oi3BR+Y3F+Z5+lzelAGpbMd7JfGEAl4QZuG17rfRdaSguVZ7mAEMKZmTU2kb8PdeSqO40/EB/hKNZUXtlS5j6ETbzCIsTgs=",
+        "10": "m2Fox2cxW0DuX8WLHj9utmxDdKdgDdke7BC0dCj/ZzqUZGJBWBEGfX9l2hvjx4qAsCWNUezx9Q6RVDeDr949olbie8KKNHxXiPc=",
+        "11": "hcP1sMPlf9kcmY/8ndNolCXiRK+dSeiEJkjTlIRX9Iw9WLBNQWpGMRBledyE0Y6D3I8GbRkvNqiFcAmPavymwD8w1KCYVYgj0MU=",
+        "12": "vMKW9U4+70AJwPI2zhJ60lvuJxryhkR1fAr0XOv6TjzuLEfvFM5bCEx25oaOYMath3W5YFPevZskNLyKjbCjzHWdYV51fVjI+lI=",
+        "13": "dEaEWJ/9wLB8IrFwmf/POQJa/PAAqcapgrTh2pjKAYAAnYckDP2DJ4ProAiQI73DvRoJUvceIICdWPgMNhQ2eyLKV3vecaj7w2U=",
+        "14": "tkWgWWJ+ZLC8v36IwZ+dsYIoXWvP5EXWSxia9CswHBBlTKGf3uiUL+QwyPfdpaVVz7YJmS84yWIqY+wNHJjRaIpf2GnzuJKBDhY=",
+        "15": "FQByDbQeEy1nMBDPv3f2mV21f8tqr1ogXsQS8+4qjlZCvaNwdXAAxw7Kzo60jMeFdIi0TE99/Vk8gyM3pm2yjZazYPlpfjh8Oog=",
+        "16": "SIXCf0FCQl2w6hxhWywk+M8piTYmPGnOsYwqlWxQgmhq1qI3YNeS15/d42I/v3E2ZhVT86b354oRTyWoA23KCwv0gAvuRVsYvyk=",
+        "17": "sx4/VrCkggjkgpHtwfFqQO+f/CCoji6u49LBHWmgWVrPFp6x/G7Vd8iWWRPdhfVKOsAdfgGotg5PN7ELHCJjtN3ReJemnssqlx0=",
+        "18": "t1UUIKrG0xjT08G2yZA9W3VwKi1Zfdb307aidkzfoDzg/L9CWondJv/vtKWstv0uOKgg6R8btj4X+rdnq/aJFolwr5e0PvJ+n6k=",
+        "19": "p38t7gSyxs/2VwrsCykROqGzIHX99+maoZjIncBPK3JjL5skYwJXAuCCTfXhFOnTtRG6DCIUJGieTwNbNuuLfdEdkb7+yNOmxb8=",
+        "3": "wJycjF+RCWsWdC5Tb32cF1TtXcHA+3psPocCf6aqilwjt28oPeslEq9e0sJcdvYAsEVRpoSu56GO6pKdG6E0qDULM5+BU58YmF0=",
+        "7": "ZBJObrxuXkUtYq/sZ9uLQ9z3zQI6VgACrMyMA2D/g9ZHrcPHUEiVoTUHgbi58chH0qoZKffANxDUm9A0JG5bWLUDzqo5vG5QOb4=",
+        "8": "SN455VrUUN+z6mH3n81TBCGtC6hst0KdgWTD9VSjtg2ARVYa2B4BHTFEHzGsHZVblVmh1n9N21VCkRLS6e+nId7EOcZuc2658F8=",
+        "9": "4bzxFjSoazwanF3LUdYXVP/mPxDxTbKnJhWHefIVT5DRWs8hxlytlwnDmLpA3Kz3ffui0X79JtCcNOy+rCaK5tMqhik2EVbIMr0="
+      },
+      "a_disclosed": {
+        "1": "AwAKNwAaAADzEDKAtyC9EOmkzPGKMnV8",
+        "2": "kw==",
+        "4": "AQ==",
+        "5": "mN7kytz1",
+        "6": "kubCwsZAmN7kytz1"
+      }
+    }
+  ],
+  "indices": [
+    [
+      {
+        "cred": 0,
+        "attr": 5
+      },
+      {
+        "cred": 0,
+        "attr": 4
+      },
+      {
+        "cred": 0,
+        "attr": 2
+      },
+      {
+        "cred": 0,
+        "attr": 6
+      }
+    ]
+  ],
+  "nonce": "85hvLZNUUzPOKL276rHZNg==",
+  "context": "AQ==",
+  "message": "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens Zorggroep Nuts en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van woensdag, 19 februari 2020 16:18:34 tot woensdag, 19 februari 2020 17:18:34.",
+  "timestamp": {
+    "Time": 1582125563,
+    "ServerUrl": "https://keyshare.privacybydesign.foundation/atumd/",
+    "Sig": {
+      "Alg": "ed25519",
+      "Data": "GWOU8o6p1wJDIldRfqjp6Zzkwcy9yUNBClxEn2NH6411Y6W1cehTY5lVConrey9rce1nnesXJ3QcP8kIBNRICA==",
+      "PublicKey": "MKdXxJxEWPRIwNP7SuvP0J/M/NV51VZvqCyO+7eDwJ8="
+    }
+  }
+}
+`
 const ValidIrmaContract = `
 {
   "@context": "https://irma.app/ld/signature/v2",

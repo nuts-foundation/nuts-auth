@@ -175,7 +175,7 @@ func Test_Integration(t *testing.T) {
 	t.Run("complete flow from identity token to access token introspection", func(t *testing.T) {
 
 		// use a fake time so the identity token is valid
-		testTime, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
+		testTime, err := time.Parse(time.RFC3339, "2020-02-19T16:38:45+01:00")
 		if err != nil {
 			panic(err)
 		}
@@ -186,7 +186,7 @@ func Test_Integration(t *testing.T) {
 			// create an id token from a valid irma contract
 			defaultValidator := pkg.DefaultValidator{Crypto: cryptoInstance}
 			signedIrmaContract := irma.SignedMessage{}
-			_ = json.Unmarshal([]byte(testdata.ValidIrmaContract), &signedIrmaContract)
+			_ = json.Unmarshal([]byte(testdata.ValidIrmaContract2), &signedIrmaContract)
 			contract := pkg.SignedIrmaContract{IrmaContract: signedIrmaContract}
 			idToken, err := defaultValidator.CreateIdentityTokenFromIrmaContract(&contract, OrganizationId)
 			if !assert.NoError(t, err) {
