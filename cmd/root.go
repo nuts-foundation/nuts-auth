@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/nuts-foundation/nuts-auth/engine"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	nutsGo "github.com/nuts-foundation/nuts-go-core"
+	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -16,7 +16,7 @@ var rootCmd = e.Cmd
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	c := nutsGo.NutsConfig()
+	c := core.NutsConfig()
 	c.IgnoredPrefixes = append(c.IgnoredPrefixes, e.ConfigKey)
 	c.RegisterFlags(rootCmd, e)
 	if err := c.Load(rootCmd); err != nil {
@@ -40,7 +40,7 @@ func Execute() {
 	}
 
 	r := registry.RegistryInstance()
-	r.Config.Mode = "server"
+	r.Config.Mode = core.ServerEngineMode
 	r.Config.Datadir = "tmp"
 	r.Config.SyncMode = "fs"
 	if err := r.Configure(); err != nil {

@@ -596,7 +596,7 @@ func defaultValidator() DefaultValidator {
 	if testInstance == nil {
 
 		r := registry.RegistryInstance()
-		r.Config.Mode = "server"
+		r.Config.Mode = core.ServerEngineMode
 		r.Config.Datadir = "tmp"
 		r.Config.SyncMode = "fs"
 		if err := r.Configure(); err != nil {

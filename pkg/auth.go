@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"os"
 	"sync"
 	"time"
@@ -97,28 +98,31 @@ var ErrMissingPublicURL = errors.New("missing publicUrl")
 // Configure the Auth struct by creating a validator and create an Irma server
 func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
-		if auth.Config.ActingPartyCn == "" {
-			err = ErrMissingActingParty
-			return
-		}
+		auth.Config.Mode = core.NutsConfig().GetEngineMode(auth.Config.Mode)
+		if auth.Config.Mode == core.ServerEngineMode {
+			if auth.Config.ActingPartyCn == "" {
+				err = ErrMissingActingParty
+				return
+			}
 
-		if auth.Config.PublicUrl == "" {
-			err = ErrMissingPublicURL
-			return
-		}
+			if auth.Config.PublicUrl == "" {
+				err = ErrMissingPublicURL
+				return
+			}
 
-		// these are initialized before nuts-auth
-		auth.cryptoClient = crypto.NewCryptoClient()
-		auth.registryClient = registry2.NewRegistryClient()
+			// these are initialized before nuts-auth
+			auth.cryptoClient = crypto.NewCryptoClient()
+			auth.registryClient = registry2.NewRegistryClient()
 
-		validator := DefaultValidator{
-			IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
-			irmaConfig: GetIrmaConfig(auth.Config),
-			registry:   auth.registryClient,
-			crypto:     auth.cryptoClient,
+			validator := DefaultValidator{
+				IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
+				irmaConfig: GetIrmaConfig(auth.Config),
+				registry:   auth.registryClient,
+				crypto:     auth.cryptoClient,
+			}
+			auth.ContractSessionHandler = validator
+			auth.ContractValidator = validator
 		}
-		auth.ContractSessionHandler = validator
-		auth.ContractValidator = validator
 		auth.configDone = true
 	})
 
