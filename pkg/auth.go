@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	core "github.com/nuts-foundation/nuts-go-core"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	core "github.com/nuts-foundation/nuts-go-core"
 
 	"github.com/mdp/qrterminal/v3"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -119,16 +120,17 @@ func (auth *Auth) Configure() (err error) {
 			auth.cryptoClient = crypto.NewCryptoClient()
 			auth.registryClient = registry2.NewRegistryClient()
 
-		validator := DefaultValidator{
-			IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
-			IrmaConfig: GetIrmaConfig(auth.Config),
-			Registry:   auth.registryClient,
-			Crypto:     auth.cryptoClient,
+			validator := DefaultValidator{
+				IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
+				IrmaConfig: GetIrmaConfig(auth.Config),
+				Registry:   auth.registryClient,
+				Crypto:     auth.cryptoClient,
+			}
+			auth.ContractSessionHandler = validator
+			auth.ContractValidator = validator
+			auth.AccessTokenHandler = validator
+			auth.configDone = true
 		}
-		auth.ContractSessionHandler = validator
-		auth.ContractValidator = validator
-		auth.AccessTokenHandler = validator
-		auth.configDone = true
 	})
 
 	return err
