@@ -51,8 +51,6 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 	return nil, ErrUnknownContractFormat
 }
 
-var InvalidContractFormatErr = errors.New("unknown contract type")
-
 // ValidateJwt validates a JWT formatted identity token
 func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ContractValidationResult, error) {
 	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
@@ -85,7 +83,7 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Cont
 	claims := parsedToken.Claims.(*NutsIdentityToken)
 
 	if claims.Type != IrmaFormat {
-		return nil, fmt.Errorf("%s: %w", claims.Type, InvalidContractFormatErr)
+		return nil, fmt.Errorf("%s: %w", claims.Type, ErrInvalidContractFormat)
 	}
 
 	contractStr, err := base64.StdEncoding.DecodeString(claims.Signature)
@@ -204,8 +202,6 @@ func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.S
 	return v.IrmaServer.StartSession(request, handler)
 }
 
-var ErrLegalEntityNotProvided = errors.New("legalEntity not provided")
-
 // ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
 func (v DefaultValidator) ParseAndValidateJwtBearerToken(acString string) (*NutsJwtBearerToken, error) {
 	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
@@ -259,7 +255,7 @@ func (v DefaultValidator) BuildAccessToken(jwtBearerToken *NutsJwtBearerToken, i
 			Issuer:    issuer,
 			Subject:   jwtBearerToken.Issuer,
 		},
-		SubjectId: jwtBearerToken.SubjectId,
+		SubjectID: jwtBearerToken.SubjectID,
 		Scope:     jwtBearerToken.Scope,
 		// based on
 		// https://privacybydesign.foundation/attribute-index/en/pbdf.gemeente.personalData.html
@@ -302,7 +298,8 @@ func (v DefaultValidator) findTokenEndpoint(legalEntity string) (*db.Endpoint, e
 	return &endpoint, nil
 }
 
-func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error) {
+// CreateJwtBearerToken creates a JwtBearerTokenResponse containing a jwtBearerToken from a CreateJwtBearerTokenRequest.
+func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error) {
 	jti, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
@@ -325,7 +322,7 @@ func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequ
 		},
 		Custodian:     "",
 		IdentityToken: request.IdentityToken,
-		SubjectId:     request.Subject,
+		SubjectID:     request.Subject,
 		Scope:         request.Scope,
 	}
 
@@ -340,9 +337,10 @@ func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequ
 		return nil, err
 	}
 
-	return &JwtBearerAccessTokenResponse{BearerToken: signingString}, nil
+	return &JwtBearerTokenResponse{BearerToken: signingString}, nil
 }
 
+// ParseAndValidateAccessToken parses and validates a accesstoken string and returns a filled in NutsAccessToken.
 func (v DefaultValidator) ParseAndValidateAccessToken(accessToken string) (*NutsAccessToken, error) {
 	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
 	token, err := parser.ParseWithClaims(accessToken, &NutsAccessToken{}, func(token *jwt.Token) (i interface{}, e error) {

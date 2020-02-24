@@ -5,9 +5,10 @@
 package mock
 
 import (
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	pkg "github.com/nuts-foundation/nuts-auth/pkg"
-	reflect "reflect"
 )
 
 // MockAuthClient is a mock of AuthClient interface
@@ -109,10 +110,10 @@ func (mr *MockAuthClientMockRecorder) CreateAccessToken(request interface{}) *go
 }
 
 // CreateJwtBearerToken mocks base method
-func (m *MockAuthClient) CreateJwtBearerToken(request pkg.CreateJwtBearerTokenRequest) (*pkg.JwtBearerAccessTokenResponse, error) {
+func (m *MockAuthClient) CreateJwtBearerToken(request pkg.CreateJwtBearerTokenRequest) (*pkg.JwtBearerTokenResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateJwtBearerToken", request)
-	ret0, _ := ret[0].(*pkg.JwtBearerAccessTokenResponse)
+	ret0, _ := ret[0].(*pkg.JwtBearerTokenResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

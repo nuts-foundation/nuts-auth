@@ -533,7 +533,7 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 			Scope:         body.Scope,
 		}
 
-		ctx.authMock.EXPECT().CreateJwtBearerToken(expectedRequest).Return(&pkg.JwtBearerAccessTokenResponse{BearerToken: response.BearerToken}, nil)
+		ctx.authMock.EXPECT().CreateJwtBearerToken(expectedRequest).Return(&pkg.JwtBearerTokenResponse{BearerToken: response.BearerToken}, nil)
 		expectStatusOK(ctx, response)
 
 		if !assert.Nil(t, ctx.wrapper.CreateJwtBearerToken(ctx.echoMock)) {
@@ -579,7 +579,7 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 		response := TokenIntrospectionResponse{Active: false}
 		expectStatusOK(ctx, response)
 
-		ctx.wrapper.IntrospectAccessToken(ctx.echoMock)
+		_ = ctx.wrapper.IntrospectAccessToken(ctx.echoMock)
 	})
 
 	t.Run("introspect a token", func(t *testing.T) {
@@ -595,7 +595,6 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 		iat := 1581411767
 		iss := "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"
 		sid := "urn:oid:2.16.840.1.113883.2.4.6.3:999999990"
-		//uid := "123.456.789"
 		scope := "nuts-sso"
 
 		ctx.authMock.EXPECT().IntrospectAccessToken(request.Token).Return(
@@ -607,7 +606,7 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 					Issuer:    iss,
 					Subject:   aid,
 				},
-				SubjectId: sid,
+				SubjectID: sid,
 				Scope:     scope,
 			}, nil)
 

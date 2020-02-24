@@ -51,7 +51,7 @@ type AuthClient interface {
 	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
 	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
-	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error)
+	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error)
 	IntrospectAccessToken(token string) (*NutsAccessToken, error)
 	KeyExistsFor(legalEntity string) bool
 	OrganizationNameByID(legalEntity string) (string, error)
@@ -262,7 +262,7 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 	return &AccessTokenResponse{AccessToken: accessToken}, nil
 }
 
-func (auth *Auth) CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error) {
+func (auth *Auth) CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error) {
 	return auth.AccessTokenHandler.CreateJwtBearerToken(&request)
 }
 

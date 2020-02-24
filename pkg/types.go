@@ -32,6 +32,12 @@ var ErrUnknownContractFormat = errors.New("unknown contract format")
 // ErrSessionNotFound is returned when there is no contract signing session found for a certain SessionID
 var ErrSessionNotFound = errors.New("session not found")
 
+// ErrInvalidContractFormat indicates tha a contract format is unknown.
+var ErrInvalidContractFormat = errors.New("unknown contract type")
+
+// ErrLegalEntityNotProvided indicates that the legalEntity is missing
+var ErrLegalEntityNotProvided = errors.New("legalEntity not provided")
+
 // ContractValidator interface must be implemented by contract validators
 type ContractValidator interface {
 	ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ContractValidationResult, error)
@@ -45,14 +51,23 @@ type ContractSessionHandler interface {
 	StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error)
 }
 
+// AccessTokenHandler interface must be implemented by Access token handlers. Ir defines the interface to handle all
+// logic concerning creating and introspecting OAuth 2.0 Access tokens
 type AccessTokenHandler interface {
 	// CreateJwtBearerToken from a JwtBearerTokenRequest. Returns a signed JWT string.
-	CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (token *JwtBearerAccessTokenResponse, err error)
+	CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (token *JwtBearerTokenResponse, err error)
 
+	// ParseAndValidateJwtBearerToken accepts a jwt encoded bearer token as string and returns the NutsJwtBearerToken object if valid.
+	// it returns a ErrLegalEntityNotProvided if the issuer does not contain an legal entity
+	// it returns a ErrOrganizationNotFound if the organization in the issuer could not be found in the registry
 	ParseAndValidateJwtBearerToken(token string) (*NutsJwtBearerToken, error)
 
+	// BuildAccessToken create a jwt encoded access token from a NutsJwtBearerToken and a ContractValidationResult.
 	BuildAccessToken(jwtClaims *NutsJwtBearerToken, identityValidationResult *ContractValidationResult) (token string, err error)
 
+	// ParseAndValidateAccessToken parses and validates an AccessToken and returns a filled NutsAccessToken as result.
+	// it returns a ErrLegalEntityNotProvided if the issuer does not contain an legal entity
+	// it returns a ErrOrganizationNotFound if the organization in the issuer could not be found in the registry
 	ParseAndValidateAccessToken(accessToken string) (*NutsAccessToken, error)
 }
 
@@ -142,7 +157,7 @@ type NutsJwtBearerToken struct {
 	jwt.StandardClaims
 	Custodian     string `json:"custodian"`
 	IdentityToken string `json:"usi"`
-	SubjectId     string `json:"sid"`
+	SubjectID     string `json:"sid"`
 	Scope         string `json:"scope"`
 }
 
@@ -151,7 +166,7 @@ type NutsJwtBearerToken struct {
 // stripped from the proof to make it compact.
 type NutsAccessToken struct {
 	jwt.StandardClaims
-	SubjectId  string `json:"sid"`
+	SubjectID  string `json:"sid"`
 	Scope      string `json:"scope"`
 	FamilyName string `json:"family_name"`
 	Prefix     string `json:"prefix"`
@@ -160,18 +175,13 @@ type NutsAccessToken struct {
 	Email      string `json:"email"`
 }
 
-type RequestContext struct {
-	Actor         string
-	Custodian     string
-	IdentityToken string
-	Subject       string
-}
-
+// AccessTokenResponse defines the return value back to the api for the CreateAccessToken method
 type AccessTokenResponse struct {
 	AccessToken string
 }
 
-type JwtBearerAccessTokenResponse struct {
+// JwtBearerTokenResponse defines the return value back to the api for the createJwtBearerToken method
+type JwtBearerTokenResponse struct {
 	BearerToken string
 }
 

@@ -1,14 +1,14 @@
 package pkg
 
 import (
+	"errors"
 	"fmt"
 	"testing"
-	"errors"
 
 	"github.com/golang/mock/gomock"
 	cryptoMock2 "github.com/nuts-foundation/nuts-crypto/mock"
+	core "github.com/nuts-foundation/nuts-go-core"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
-  core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
@@ -45,7 +45,7 @@ type MockContractValidator struct {
 	irmaResult ContractValidationResult
 }
 
-func (m MockAccessTokenHandler) CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerAccessTokenResponse, error) {
+func (m MockAccessTokenHandler) CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error) {
 	panic("implement me")
 }
 
@@ -140,8 +140,7 @@ func TestAuthInstance(t *testing.T) {
 func TestAuth_Configure(t *testing.T) {
 	t.Run("mode defaults to server", func(t *testing.T) {
 		i := &Auth{
-			Config: AuthConfig{
-			},
+			Config: AuthConfig{},
 		}
 		_ = i.Configure()
 		assert.Equal(t, core.ServerEngineMode, i.Config.Mode)
@@ -153,10 +152,9 @@ func TestAuth_Configure(t *testing.T) {
 				Mode: core.ClientEngineMode,
 			},
 		}
-		
+
 		assert.NoError(t, i.Configure())
 	})
-
 
 	t.Run("Configure returns error on missing actingPartyCn", func(t *testing.T) {
 		i := &Auth{

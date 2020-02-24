@@ -231,13 +231,13 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-	vendorId := vendorIdentifierFromHeader(ctx)
-	if vendorId == "" {
+	vendorID := vendorIdentifierFromHeader(ctx)
+	if vendorID == "" {
 		errDesc := "Vendor identifier missing in header"
 		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-	catRequest := pkg.CreateAccessTokenRequest{JwtString: request.Assertion, VendorIdentifier: vendorId}
+	catRequest := pkg.CreateAccessTokenRequest{JwtString: request.Assertion, VendorIdentifier: vendorID}
 	acResponse, err := api.Auth.CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()
@@ -249,6 +249,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 	return ctx.JSON(http.StatusOK, response)
 }
 
+// CreateJwtBearerToken fills a CreateJwtBearerTokenRequest from the request body and passes it to the auth module.
 func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
 	requestBody := &CreateJwtBearerTokenRequest{}
 	if err := ctx.Bind(requestBody); err != nil {
@@ -270,6 +271,7 @@ func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, JwtBearerTokenResponse{BearerToken: response.BearerToken})
 }
 
+// IntrospectAccessToken takes the access token from the request form value and passes it to the auth client.
 func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
 	token := ctx.FormValue("token")
 
@@ -297,7 +299,7 @@ func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
 		Aud:    &claims.Audience,
 		Exp:    &exp,
 		Iat:    &iat,
-		Sid:    &claims.SubjectId,
+		Sid:    &claims.SubjectID,
 		Scope:  &claims.Scope,
 	}
 
