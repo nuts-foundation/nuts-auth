@@ -1016,11 +1016,11 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 }
 
 func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
-	tokenId, _ := uuid.NewRandom()
+	tokenID, _ := uuid.NewRandom()
 	buildClaims := NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "",
-			Id:        tokenId.String(),
+			Id:        tokenID.String(),
 			IssuedAt:  time.Now().Unix(),
 			Issuer:    OtherOrganizationID,
 			NotBefore: time.Now().Unix(),

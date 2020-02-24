@@ -125,12 +125,13 @@ type ValidationRequest struct {
 	ActingPartyCN string
 }
 
+// CreateAccessTokenRequest contains all information to create an access token from a JwtBearerToken
 type CreateAccessTokenRequest struct {
-	// JwtString the string containing the unmarshalled jwt.
-	JwtString        string
+	JwtBearerToken   string
 	VendorIdentifier string
 }
 
+// CreateJwtBearerTokenRequest contains all information to create a JwtBearerToken
 type CreateJwtBearerTokenRequest struct {
 	Actor         string
 	Custodian     string

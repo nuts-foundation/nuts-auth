@@ -239,9 +239,9 @@ func (auth *Auth) ValidateContract(request ValidationRequest) (*ContractValidati
 	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
 }
 
-// ParseAndValidateJwtBearerToken Passes the call to the AccessTokenHandler.
+// CreateAccessToken extracts the claims out of the request, checks the validity and builds the access token
 func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error) {
-	claims, err := auth.AccessTokenHandler.ParseAndValidateJwtBearerToken(request.JwtString)
+	claims, err := auth.AccessTokenHandler.ParseAndValidateJwtBearerToken(request.JwtBearerToken)
 	if err != nil {
 		return nil, fmt.Errorf("jwt bearer token validation failed: %w", err)
 	}
@@ -262,10 +262,12 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 	return &AccessTokenResponse{AccessToken: accessToken}, nil
 }
 
+// CreateJwtBearerToken creates a JwtBearerToken from the given CreateJwtBearerTokenRequest
 func (auth *Auth) CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error) {
 	return auth.AccessTokenHandler.CreateJwtBearerToken(&request)
 }
 
+// IntrospectAccessToken fills the fields in NutsAccessToken from the given Jwt Access Token
 func (auth *Auth) IntrospectAccessToken(token string) (*NutsAccessToken, error) {
 	acClaims, err := auth.AccessTokenHandler.ParseAndValidateAccessToken(token)
 	return acClaims, err

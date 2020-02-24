@@ -452,7 +452,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
-		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{JwtString: validJwt, VendorIdentifier: "Demo EHR"}).Return(nil, fmt.Errorf("oh boy"))
+		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{JwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(nil, fmt.Errorf("oh boy"))
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
 
 		assert.Nil(t, err)
@@ -466,7 +466,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		bindPostBody(ctx, params)
 
 		pkgResponse := &pkg.AccessTokenResponse{AccessToken: "foo"}
-		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{JwtString: validJwt, VendorIdentifier: "Demo EHR"}).Return(pkgResponse, nil)
+		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{JwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(pkgResponse, nil)
 
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
 		expectStatusOK(ctx, apiResponse)

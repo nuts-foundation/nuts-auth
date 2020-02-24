@@ -26,8 +26,8 @@ import (
 var cryptoInstance *crypto.Crypto
 
 func Test_Integration(t *testing.T) {
-	const OrganizationId = "urn:oid:2.16.840.1.113883.2.4.6.1:00000003"
-	const OtherOrganizationId = "urn:oid:2.16.840.1.113883.2.4.6.1:00000002"
+	const OrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000003"
+	const OtherOrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000002"
 
 	type IntegrationTestContext struct {
 		wrapper  Wrapper
@@ -70,14 +70,14 @@ func Test_Integration(t *testing.T) {
 		}
 
 		// Generate keys for Organization
-		le := types.LegalEntity{URI: OrganizationId}
+		le := types.LegalEntity{URI: OrganizationID}
 		_ = cryptoInstance.GenerateKeyPairFor(le)
 		pub, _ := cryptoInstance.PublicKeyInJWK(le)
 
 		// Add Organization to registry
 		event, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
 			VendorIdentifier: "oid:123",
-			OrgIdentifier:    OrganizationId,
+			OrgIdentifier:    OrganizationID,
 			OrgName:          "Zorggroep Nuts",
 			OrgKeys:          []interface{}{pub},
 		})
@@ -86,14 +86,14 @@ func Test_Integration(t *testing.T) {
 		}
 
 		// Generate keys for OtherOrganization
-		le = types.LegalEntity{URI: OtherOrganizationId}
+		le = types.LegalEntity{URI: OtherOrganizationID}
 		_ = cryptoInstance.GenerateKeyPairFor(le)
 		pub, _ = cryptoInstance.PublicKeyInJWK(le)
 
 		// Add Organization to registry
 		event, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
 			VendorIdentifier: "oid:123",
-			OrgIdentifier:    OtherOrganizationId,
+			OrgIdentifier:    OtherOrganizationID,
 			OrgName:          "verpleeghuis De nootjes",
 			OrgKeys:          []interface{}{pub},
 		})
@@ -107,7 +107,7 @@ func Test_Integration(t *testing.T) {
 
 		// Add oauth endpoint to OtherOrganization
 		event, _ = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
-			Organization: OtherOrganizationId,
+			Organization: OtherOrganizationID,
 			URL:          "tcp://127.0.0.1:1234",
 			EndpointType: pkg.SsoEndpointType,
 			Identifier:   "1f7d4ea7-c1cf-4c14-ba23-7e1fddc31ad1",
@@ -188,15 +188,15 @@ func Test_Integration(t *testing.T) {
 			signedIrmaContract := irma.SignedMessage{}
 			_ = json.Unmarshal([]byte(testdata.ValidIrmaContract2), &signedIrmaContract)
 			contract := pkg.SignedIrmaContract{IrmaContract: signedIrmaContract}
-			idToken, err := defaultValidator.CreateIdentityTokenFromIrmaContract(&contract, OrganizationId)
+			idToken, err := defaultValidator.CreateIdentityTokenFromIrmaContract(&contract, OrganizationID)
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}
 
 			// build a request to create the jwt bearer token
 			jwtBearerTokenRequest := CreateJwtBearerTokenRequest{
-				Actor:     OrganizationId,
-				Custodian: OtherOrganizationId,
+				Actor:     OrganizationID,
+				Custodian: OtherOrganizationID,
 				Identity:  idToken,
 				Scope:     "nuts-sso",
 				Subject:   "99999990",
@@ -243,8 +243,8 @@ func Test_Integration(t *testing.T) {
 
 			// check the results
 			assert.True(t, keyVals["active"].(bool))
-			assert.Equal(t, OtherOrganizationId, keyVals["iss"].(string))
-			assert.Equal(t, OrganizationId, keyVals["sub"].(string))
+			assert.Equal(t, OtherOrganizationID, keyVals["iss"].(string))
+			assert.Equal(t, OrganizationID, keyVals["sub"].(string))
 			assert.Equal(t, "nuts-sso", keyVals["scope"].(string))
 		})
 	})
