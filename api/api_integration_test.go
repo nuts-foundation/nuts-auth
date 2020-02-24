@@ -1,9 +1,11 @@
 package api
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -169,13 +171,20 @@ func Test_Integration(t *testing.T) {
 		f(t)
 	}
 
+	printTokenConents := func(t *testing.T, tokenDesc, token string) {
+		t.Helper()
+		tokenBody := strings.Split(token, ".")[1]
+		decodedBody, _ := base64.StdEncoding.DecodeString(tokenBody)
+		t.Logf("type: %s, %s", tokenDesc, string(decodedBody))
+	}
+
 	// This is a full integration test for the OAuth JWT bearer flow. Only the identity token part is mocked.
 	// Organization wants to make a request to OtherOrganization. It builds an JWT Bearer token, request the access token.
 	// OtherOrganization then inspect the access token.
 	t.Run("complete flow from identity token to access token introspection", func(t *testing.T) {
 
 		// use a fake time so the identity token is valid
-		testTime, err := time.Parse(time.RFC3339, "2020-02-19T16:38:45+01:00")
+		testTime, err := time.Parse(time.RFC3339, "2020-02-24T16:38:45+01:00")
 		if err != nil {
 			panic(err)
 		}
@@ -211,6 +220,8 @@ func Test_Integration(t *testing.T) {
 				t.FailNow()
 			}
 
+			printTokenConents(t, "jwtBearerToken", jwtBearerTokenResponse.BearerToken)
+
 			// make sure the echo mock returns the correct form values
 			ctx.echoMock.EXPECT().FormValue("grant_type").Return(pkg.JwtBearerGrantType)
 			ctx.echoMock.EXPECT().FormValue("assertion").Return(jwtBearerTokenResponse.BearerToken)
@@ -222,6 +233,7 @@ func Test_Integration(t *testing.T) {
 			if !assert.NoError(t, ctx.wrapper.CreateAccessToken(ctx.echoMock)) {
 				t.FailNow()
 			}
+			printTokenConents(t, "accessToken", accessTokenResponse.AccessToken)
 
 			// make sure the echo mock returns the correct form value
 			ctx.echoMock.EXPECT().FormValue("token").Return(accessTokenResponse.AccessToken)
@@ -246,6 +258,10 @@ func Test_Integration(t *testing.T) {
 			assert.Equal(t, OtherOrganizationID, keyVals["iss"].(string))
 			assert.Equal(t, OrganizationID, keyVals["sub"].(string))
 			assert.Equal(t, "nuts-sso", keyVals["scope"].(string))
+			assert.Equal(t, "Bruijn", keyVals["family_name"].(string))
+			assert.Equal(t, "de", keyVals["prefix"].(string))
+			assert.Equal(t, "Willeke", keyVals["given_name"].(string))
+			assert.Equal(t, "Willeke de Bruijn", keyVals["name"].(string))
 		})
 	})
 }

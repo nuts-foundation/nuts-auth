@@ -169,10 +169,10 @@ type NutsAccessToken struct {
 	jwt.StandardClaims
 	SubjectID  string `json:"sid"`
 	Scope      string `json:"scope"`
-	FamilyName string `json:"family_name"`
-	Prefix     string `json:"prefix"`
-	Initials   string `json:"initials"`
 	Name       string `json:"name"`
+	GivenName  string `json:"given_name"`
+	Prefix     string `json:"prefix"`
+	FamilyName string `json:"family_name"`
 	Email      string `json:"email"`
 }
 

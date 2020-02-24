@@ -610,6 +610,7 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 				Scope:     scope,
 			}, nil)
 
+		emptyStr := ""
 		response := TokenIntrospectionResponse{
 			Active: true,
 			Aud:    &aud,
@@ -619,7 +620,12 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 			Sid:    &sid,
 			Sub:    &aid,
 			//Uid:    &uid,
-			Scope: &scope,
+			Scope:      &scope,
+			Email:      &emptyStr,
+			GivenName:  &emptyStr,
+			Prefix:     &emptyStr,
+			FamilyName: &emptyStr,
+			Name:       &emptyStr,
 		}
 		expectStatusOK(ctx, response)
 

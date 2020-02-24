@@ -46,10 +46,10 @@ var ErrInvalidContractText = errors.New("invalid contract text")
 // StandardSignerAttributes defines the standard list of attributes used for a contract.
 // If SignerAttribute name starts with a dot '.', it uses the configured scheme manager
 var StandardSignerAttributes = []string{
-	".gemeente.personalData.familyname",
-	".gemeente.personalData.prefix",
-	".gemeente.personalData.initials",
 	".gemeente.personalData.fullname",
+	".gemeente.personalData.firstnames",
+	".gemeente.personalData.prefix",
+	".gemeente.personalData.familyname",
 	//"pbdf.pbdf.email.email",
 }
 

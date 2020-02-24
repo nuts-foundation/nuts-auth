@@ -263,8 +263,8 @@ func (v DefaultValidator) BuildAccessToken(jwtBearerToken *NutsJwtBearerToken, i
 		// and
 		// https://openid.net/specs/openid-connect-basic-1_0.html#StandardClaims
 		FamilyName: identityValidationResult.DisclosedAttributes["gemeente.personalData.familyname"],
+		GivenName:  identityValidationResult.DisclosedAttributes["gemeente.personalData.firstnames"],
 		Prefix:     identityValidationResult.DisclosedAttributes["gemeente.personalData.prefix"],
-		Initials:   identityValidationResult.DisclosedAttributes["gemeente.personalData.initials"],
 		Name:       identityValidationResult.DisclosedAttributes["gemeente.personalData.fullname"],
 		Email:      identityValidationResult.DisclosedAttributes["pbdf.email.email"],
 	}

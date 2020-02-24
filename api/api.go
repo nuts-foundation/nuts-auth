@@ -20,8 +20,9 @@ type Wrapper struct {
 	Auth pkg.AuthClient
 }
 
+// TODO when the registry allows
 var vendorIdentifierFromHeader = func(ctx echo.Context) string {
-	return ctx.Request().Header.Get("X-Nuts-VendorIdentifier")
+	return ctx.Request().Header.Get("X-Nuts-LegalEntity")
 }
 
 // CreateSession translates http params to internal format, creates a IRMA signing session
@@ -293,14 +294,19 @@ func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
 	iat := int(claims.IssuedAt)
 
 	introspectionResponse = TokenIntrospectionResponse{
-		Active: true,
-		Sub:    &claims.Subject,
-		Iss:    &claims.Issuer,
-		Aud:    &claims.Audience,
-		Exp:    &exp,
-		Iat:    &iat,
-		Sid:    &claims.SubjectID,
-		Scope:  &claims.Scope,
+		Active:     true,
+		Sub:        &claims.Subject,
+		Iss:        &claims.Issuer,
+		Aud:        &claims.Audience,
+		Exp:        &exp,
+		Iat:        &iat,
+		Sid:        &claims.SubjectID,
+		Scope:      &claims.Scope,
+		Name:       &claims.Name,
+		GivenName:  &claims.GivenName,
+		Prefix:     &claims.Prefix,
+		FamilyName: &claims.FamilyName,
+		Email:      &claims.Email,
 	}
 
 	return ctx.JSON(http.StatusOK, introspectionResponse)

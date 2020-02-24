@@ -6,38 +6,37 @@ const InvalidContract = `
 
 // ValidIrmaContract2 is a contract with more attributes that ValidIrmaContract like name and email
 const ValidIrmaContract2 = `
-
 {
   "@context": "https://irma.app/ld/signature/v2",
   "signature": [
     {
-      "c": "NTwGXJkjxcrS2Oht5U/W21HCi2VAtNL1KQdlV/kSuOs=",
-      "A": "tt1MWQrqFJD1ciuBm8y7t3hGv+7BbRQMft4pQH32eITczMZKHOzdfXeX7hAOuvg434RmhxBnMVE34/GNc7UItf6ZDiaI+jVPFOUNvcV96j3gHU3yWq1yq81kfJmuwJEp4B5AnED0cadsbdrvl5N+H0rmQ6RREp+Br+NGgM0lPbc=",
-      "e_response": "jD+bYXbA8KZB07E/11kPq6YCDh/6t+o7+oe7/HlptxJkOZef4fRU+2ufweW9HeSz5unqnc9BJxTi",
-      "v_response": "DivDy7yq4iIxtebi6NZKpKUOkN7/oSMZTGjTOSWwGKXZU02kGBUhFAmVgXwuAZLPdwBXPSgKxQY3OyVx4ace682zW2URDR81WrzUhInLwy44cVBdk6NBJyuUKUGiCurrC4q1qSGsBg46nNFRrmmf1qtoGCK4Ylg+1JOxq3oTp49eusTs7CFfCN5GcfHiXbp0KUWBKI8k0HycQEFAr7aBRTUxdagG+BWTnfIjhKb9CDdXepqnNovxI3wFycAaYlkgb7FDXpEVjWkSSs71mKPhxjiScZmBFGKUuUuJCCJWl7dnZakBUMwNFukobtG+pnnmzHLAxw4TXnV1nNha3Wfb",
+      "c": "yIAiQyBhpME2mOEMxLzXur/Kik5+9z9w/CP8z3HWHRc=",
+      "A": "RlJ2zRDAJR1GTf0Bm05sDMKw3vGON9VGvH4Y1v+gXdbI71Nh1ReUfsUd2ACurCx2TtKVc6XqylF1G70NimJdt2sA3ItfYz3R5+TxXypwTfCYbXz8AYlgG+MRowzM45xTqqfZMqS4Fs8oIrdAI9ayUeKFDpTQju8b/JpC+v8U5ww=",
+      "e_response": "bTHAQd2FYOzTJL3BbWZg2DeW91o9b1WAmQPWnJTwrDYNVHkZ6NVgo1V9paGMtX7OySN5yvO3gR1u",
+      "v_response": "BbFK6CKsKnBzCzjYuAAUB9mZfJZ6OA0rnd+mCviL5hlu4v7DXdNrFWyIOqBDfeUce2vESyJnGi59JAbCfLROGK9Ehp+sRTbTvBHazZk5coyalz18nlARj+yi6pnORuU+nAMBhTpQXhnewNSQATuDOTS+KB1mY02Um3KQVXT1jLRhAJlU5yM0jnt1kuuRGh/tTCWmp0TMt5pS3J3yLS1ob909nuJB8Iv6Eaco2YGCFuc6gqNXtTGEhcG4CEHVe7MqLYPh9BC9Uk4bQiTeafZ9d88FBG1Uk2PBvrZMFItFDRmzWnYWU9MiMRSOBJzVtN6t2ofET9/HJ4mP5WfIcdo/",
       "a_responses": {
-        "0": "pgr1oi3BR+Y3F+Z5+lzelAGpbMd7JfGEAl4QZuG17rfRdaSguVZ7mAEMKZmTU2kb8PdeSqO40/EB/hKNZUXtlS5j6ETbzCIsTgs=",
-        "10": "m2Fox2cxW0DuX8WLHj9utmxDdKdgDdke7BC0dCj/ZzqUZGJBWBEGfX9l2hvjx4qAsCWNUezx9Q6RVDeDr949olbie8KKNHxXiPc=",
-        "11": "hcP1sMPlf9kcmY/8ndNolCXiRK+dSeiEJkjTlIRX9Iw9WLBNQWpGMRBledyE0Y6D3I8GbRkvNqiFcAmPavymwD8w1KCYVYgj0MU=",
-        "12": "vMKW9U4+70AJwPI2zhJ60lvuJxryhkR1fAr0XOv6TjzuLEfvFM5bCEx25oaOYMath3W5YFPevZskNLyKjbCjzHWdYV51fVjI+lI=",
-        "13": "dEaEWJ/9wLB8IrFwmf/POQJa/PAAqcapgrTh2pjKAYAAnYckDP2DJ4ProAiQI73DvRoJUvceIICdWPgMNhQ2eyLKV3vecaj7w2U=",
-        "14": "tkWgWWJ+ZLC8v36IwZ+dsYIoXWvP5EXWSxia9CswHBBlTKGf3uiUL+QwyPfdpaVVz7YJmS84yWIqY+wNHJjRaIpf2GnzuJKBDhY=",
-        "15": "FQByDbQeEy1nMBDPv3f2mV21f8tqr1ogXsQS8+4qjlZCvaNwdXAAxw7Kzo60jMeFdIi0TE99/Vk8gyM3pm2yjZazYPlpfjh8Oog=",
-        "16": "SIXCf0FCQl2w6hxhWywk+M8piTYmPGnOsYwqlWxQgmhq1qI3YNeS15/d42I/v3E2ZhVT86b354oRTyWoA23KCwv0gAvuRVsYvyk=",
-        "17": "sx4/VrCkggjkgpHtwfFqQO+f/CCoji6u49LBHWmgWVrPFp6x/G7Vd8iWWRPdhfVKOsAdfgGotg5PN7ELHCJjtN3ReJemnssqlx0=",
-        "18": "t1UUIKrG0xjT08G2yZA9W3VwKi1Zfdb307aidkzfoDzg/L9CWondJv/vtKWstv0uOKgg6R8btj4X+rdnq/aJFolwr5e0PvJ+n6k=",
-        "19": "p38t7gSyxs/2VwrsCykROqGzIHX99+maoZjIncBPK3JjL5skYwJXAuCCTfXhFOnTtRG6DCIUJGieTwNbNuuLfdEdkb7+yNOmxb8=",
-        "3": "wJycjF+RCWsWdC5Tb32cF1TtXcHA+3psPocCf6aqilwjt28oPeslEq9e0sJcdvYAsEVRpoSu56GO6pKdG6E0qDULM5+BU58YmF0=",
-        "7": "ZBJObrxuXkUtYq/sZ9uLQ9z3zQI6VgACrMyMA2D/g9ZHrcPHUEiVoTUHgbi58chH0qoZKffANxDUm9A0JG5bWLUDzqo5vG5QOb4=",
-        "8": "SN455VrUUN+z6mH3n81TBCGtC6hst0KdgWTD9VSjtg2ARVYa2B4BHTFEHzGsHZVblVmh1n9N21VCkRLS6e+nId7EOcZuc2658F8=",
-        "9": "4bzxFjSoazwanF3LUdYXVP/mPxDxTbKnJhWHefIVT5DRWs8hxlytlwnDmLpA3Kz3ffui0X79JtCcNOy+rCaK5tMqhik2EVbIMr0="
+        "0": "ZyTWJl0205ubywYFH2bGPWp/71sOwAjMEr0ZHW1R9D7xK1tOFO9GYVI8CQ4tD6fZuHrHmwFWBy6QQA2EP9A8kSvuNR0A28MXOiY=",
+        "10": "GamYIBWLPlPJ1woU0WrCQ9SQaDW3vK0ikUQCW0097ssuWC62mXm+a9AIjdSxa/AFTr8Q5N7bMkV08N640qdA5wpYgF/uN3Dlw/c=",
+        "11": "mEym6gcrFps/XQihA/9gQWYEQszD3+101Kz04cBWJqcBtGl+qjq9ybtaCZiGBqlj8EKom5u6zC8DRsusxuKYCceU4kWKZjEI0I4=",
+        "12": "3VZPNJ6xkThx2VJlDzCxCGVwin+6bSY5YwhKISVgphc9oeF8AyMkmKZkvV2JiwfUvNs7KpQlNyiLXw2s8iddpV8zLDlRHcHJDkE=",
+        "13": "zieEles1/UQBuP/JH7fmYAAK/7ofiL5bkcUM49dPJaQGU7FuOzVZyBH1nSgocUr/IqhQTelzh2Yy0DDlS6JUSkP4FEhTDaoV4Bc=",
+        "14": "GYDhalrXE0+7Qwzk/4Lyyz3kvZceT/gSB/Nxin4f+d4F3weuUnN13FvKDlARVEcIN427ex054dJxq1FtR2mjHK6HY1mmsFzYUi8=",
+        "15": "kWH1kZCoiSz/EnbZh0GK7Nohte02KDnPsjjjMPIylSOCzqTi7YlaHy04YqypOLZWKXBHYMoNC6s9lEBpa8eQGMIKgBEOmfwXgj4=",
+        "16": "8kO9SIYdGFr1j2dcw81E2poBNmPVCcdeuxMRBIIxVFj6yNOG/VT61B5NNlIruK2c3iLfGB5IzkHfggQiZ/qiamSfSjYeHo3BlRU=",
+        "17": "wtN7WXZO7PC2bMpP+BTBIuW3ek4zIe9CagQIv8kZRueqZ8zJjTi6gfG+CmFV7Zv0Wnz1UaR4uk1UUIZM8PNKeFlOKef8t9wbcxU=",
+        "18": "ncGLDudDnGucNaPd2KgAzAycVSs8RRtQCXknl7R9LUgf9xNyRT89Y6SdHOS82t9lijF1cnoBJWnafSAAEylqXTsBVDsKkM/ebcc=",
+        "19": "iccLNvHK/WcVVUtr/NU59okczziBGyBL4ZlRfQ9tTQwpxnB3Qrew74AIVd+3mnx29NUxMw89Yp0sRqvLSKeQjoFYalD3sr9QLrE=",
+        "2": "1TXHps+1ipZL8sb0yk+dQUVeV5Sps0FeRoL9TksPwEQ48zaB7+d3h0ery7ORjIN9F/X5/xfDoN4pTxylSzinkd1r6NrpVkN3sAQ=",
+        "7": "r3/vPSuNl5g+azUiPfXXsao4PWuX1MsJgEAR6yQUXEctsokdBNQgprBulsofKMY3+emaW1KQatmIC99AQYO8p8qf8HdlnotrpPw=",
+        "8": "OB7YmQXtpbRc/PBMCKIevou8GaAzQ1yx2995hPCNdA7Bzw83XInoQlUV381Tjn3GSi2bFFSEB06EfEvvM8qwcsEWrHjNzw+f5Ks=",
+        "9": "PYVsNO5RP3BYMPDHlG88WArTKScAI70Zr7OVCkzIErnAL9AiaVgxGNeDhtsgC6ikHWqlEsalUDYs2vYXy68lYHpiSKT4FrL10VM="
       },
       "a_disclosed": {
-        "1": "AwAKNwAaAADzEDKAtyC9EOmkzPGKMnV8",
-        "2": "kw==",
-        "4": "AQ==",
-        "5": "mN7kytz1",
-        "6": "kubCwsZAmN7kytz1"
+        "1": "AwAKOAAaAADzEDKAtyC9EOmkzPGKMnV8",
+        "3": "rtLY2MrWyw==",
+        "4": "yMs=",
+        "5": "hOTq0tTd",
+        "6": "rtLY2MrWykDIykCE5OrS1N0="
       }
     }
   ],
@@ -45,7 +44,11 @@ const ValidIrmaContract2 = `
     [
       {
         "cred": 0,
-        "attr": 5
+        "attr": 6
+      },
+      {
+        "cred": 0,
+        "attr": 3
       },
       {
         "cred": 0,
@@ -53,23 +56,19 @@ const ValidIrmaContract2 = `
       },
       {
         "cred": 0,
-        "attr": 2
-      },
-      {
-        "cred": 0,
-        "attr": 6
+        "attr": 5
       }
     ]
   ],
-  "nonce": "85hvLZNUUzPOKL276rHZNg==",
+  "nonce": "VShoLPhVET+5/jq1HyG70w==",
   "context": "AQ==",
-  "message": "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens Zorggroep Nuts en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van woensdag, 19 februari 2020 16:18:34 tot woensdag, 19 februari 2020 17:18:34.",
+  "message": "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens Zorggroep Nuts en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van maandag, 24 februari 2020 16:15:47 tot maandag, 24 februari 2020 17:15:47.",
   "timestamp": {
-    "Time": 1582125563,
+    "Time": 1582557442,
     "ServerUrl": "https://keyshare.privacybydesign.foundation/atumd/",
     "Sig": {
       "Alg": "ed25519",
-      "Data": "GWOU8o6p1wJDIldRfqjp6Zzkwcy9yUNBClxEn2NH6411Y6W1cehTY5lVConrey9rce1nnesXJ3QcP8kIBNRICA==",
+      "Data": "+owJxphmD16dXlfpVfdRGfGnKp84RMU7ewk9lpCxV7DeQfvYgztSEVozqISLvnSz5ABNiQr1zyYOb3bths5TBw==",
       "PublicKey": "MKdXxJxEWPRIwNP7SuvP0J/M/NV51VZvqCyO+7eDwJ8="
     }
   }

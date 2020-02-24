@@ -206,15 +206,20 @@ type TokenIntrospectionRequest struct {
 
 // TokenIntrospectionResponse defines model for TokenIntrospectionResponse.
 type TokenIntrospectionResponse struct {
-	Active bool    `json:"active"`
-	Aud    *string `json:"aud,omitempty"`
-	Exp    *int    `json:"exp,omitempty"`
-	Iat    *int    `json:"iat,omitempty"`
-	Iss    *string `json:"iss,omitempty"`
-	Scope  *string `json:"scope,omitempty"`
-	Sid    *string `json:"sid,omitempty"`
-	Sub    *string `json:"sub,omitempty"`
-	Uid    *string `json:"uid,omitempty"`
+	Active     bool    `json:"active"`
+	Aud        *string `json:"aud,omitempty"`
+	Email      *string `json:"email,omitempty"`
+	Exp        *int    `json:"exp,omitempty"`
+	FamilyName *string `json:"family_name,omitempty"`
+	GivenName  *string `json:"given_name,omitempty"`
+	Iat        *int    `json:"iat,omitempty"`
+	Iss        *string `json:"iss,omitempty"`
+	Name       *string `json:"name,omitempty"`
+	Prefix     *string `json:"prefix,omitempty"`
+	Scope      *string `json:"scope,omitempty"`
+	Sid        *string `json:"sid,omitempty"`
+	Sub        *string `json:"sub,omitempty"`
+	Uid        *string `json:"uid,omitempty"`
 }
 
 // Type defines model for Type.
