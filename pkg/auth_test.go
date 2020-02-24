@@ -3,12 +3,12 @@ package pkg
 import (
 	"fmt"
 	"testing"
-
 	"errors"
 
 	"github.com/golang/mock/gomock"
 	cryptoMock2 "github.com/nuts-foundation/nuts-crypto/mock"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
+  core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
@@ -138,9 +138,30 @@ func TestAuthInstance(t *testing.T) {
 }
 
 func TestAuth_Configure(t *testing.T) {
+	t.Run("mode defaults to server", func(t *testing.T) {
+		i := &Auth{
+			Config: AuthConfig{
+			},
+		}
+		_ = i.Configure()
+		assert.Equal(t, core.ServerEngineMode, i.Config.Mode)
+	})
+
+	t.Run("Configure in client mode", func(t *testing.T) {
+		i := &Auth{
+			Config: AuthConfig{
+				Mode: core.ClientEngineMode,
+			},
+		}
+		
+		assert.NoError(t, i.Configure())
+	})
+
+
 	t.Run("Configure returns error on missing actingPartyCn", func(t *testing.T) {
 		i := &Auth{
 			Config: AuthConfig{
+				Mode:      core.ServerEngineMode,
 				PublicUrl: "url",
 			},
 		}
@@ -151,6 +172,7 @@ func TestAuth_Configure(t *testing.T) {
 	t.Run("Configure returns error on missing publicUrl", func(t *testing.T) {
 		i := &Auth{
 			Config: AuthConfig{
+				Mode:          core.ServerEngineMode,
 				ActingPartyCn: "url",
 			},
 		}
@@ -161,6 +183,7 @@ func TestAuth_Configure(t *testing.T) {
 	t.Run("Configure returns no error on valid config", func(t *testing.T) {
 		i := &Auth{
 			Config: AuthConfig{
+				Mode:                      core.ServerEngineMode,
 				PublicUrl:                 "url",
 				ActingPartyCn:             "url",
 				IrmaConfigPath:            "../testdata/irma",
