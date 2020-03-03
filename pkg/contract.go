@@ -50,7 +50,7 @@ var StandardSignerAttributes = []string{
 	".gemeente.personalData.firstnames",
 	".gemeente.personalData.prefix",
 	".gemeente.personalData.familyname",
-	//"pbdf.pbdf.email.email",
+	"pbdf.pbdf.email.email",
 }
 
 // EN:PractitionerLogin:v1 Contract
