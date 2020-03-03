@@ -305,14 +305,14 @@ func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequ
 		return nil, err
 	}
 
-	endpoint, err := v.findTokenEndpoint(request.Custodian)
-	if err != nil {
-		return nil, err
-	}
+	//endpoint, err := v.findTokenEndpoint(request.Custodian)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	jwtBearerToken := NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
-			Audience:  endpoint.Identifier.String(),
+			//Audience:  endpoint.Identifier.String(),
 			ExpiresAt: time.Now().Add(30 * time.Minute).Unix(),
 			Id:        jti.String(),
 			IssuedAt:  time.Now().Unix(),
