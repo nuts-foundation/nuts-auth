@@ -201,6 +201,7 @@ func Test_Integration(t *testing.T) {
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}
+			subjectBsn := "99999990"
 
 			// build a request to create the jwt bearer token
 			jwtBearerTokenRequest := CreateJwtBearerTokenRequest{
@@ -208,7 +209,7 @@ func Test_Integration(t *testing.T) {
 				Custodian: OtherOrganizationID,
 				Identity:  idToken,
 				Scope:     "nuts-sso",
-				Subject:   "99999990",
+				Subject:   subjectBsn,
 			}
 			bindPostBody(ctx, jwtBearerTokenRequest)
 
@@ -257,6 +258,7 @@ func Test_Integration(t *testing.T) {
 			assert.True(t, keyVals["active"].(bool))
 			assert.Equal(t, OtherOrganizationID, keyVals["iss"].(string))
 			assert.Equal(t, OrganizationID, keyVals["sub"].(string))
+			assert.Equal(t, subjectBsn, keyVals["sid"].(string))
 			assert.Equal(t, "nuts-sso", keyVals["scope"].(string))
 			assert.Equal(t, "Bruijn", keyVals["family_name"].(string))
 			assert.Equal(t, "de", keyVals["prefix"].(string))
