@@ -20,7 +20,8 @@ type Wrapper struct {
 	Auth pkg.AuthClient
 }
 
-// TODO when the registry allows
+// TODO: use the name of the care organization here. Eventually we will use the vendor urn from the ssl client cert.
+// This vendor urn should be looked-up in the registry and a connection between the care organization and vendor should be proven
 var vendorIdentifierFromHeader = func(ctx echo.Context) string {
 	return ctx.Request().Header.Get("X-Nuts-LegalEntity")
 }
