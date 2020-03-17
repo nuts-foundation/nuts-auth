@@ -320,7 +320,6 @@ func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequ
 			NotBefore: 0,
 			Subject:   request.Custodian,
 		},
-		Custodian:     "",
 		IdentityToken: request.IdentityToken,
 		SubjectID:     request.Subject,
 		Scope:         request.Scope,

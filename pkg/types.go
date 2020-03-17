@@ -156,7 +156,6 @@ type NutsIdentityToken struct {
 // verified by the authorization server.
 type NutsJwtBearerToken struct {
 	jwt.StandardClaims
-	Custodian     string `json:"custodian"`
 	IdentityToken string `json:"usi"`
 	SubjectID     string `json:"sid"`
 	Scope         string `json:"scope"`
