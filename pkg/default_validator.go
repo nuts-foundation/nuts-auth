@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
-
 	"github.com/google/uuid"
 
 	"github.com/dgrijalva/jwt-go"
@@ -284,31 +282,12 @@ func (v DefaultValidator) BuildAccessToken(jwtBearerToken *NutsJwtBearerToken, i
 	return token, err
 }
 
-func (v DefaultValidator) findTokenEndpoint(legalEntity string) (*db.Endpoint, error) {
-	// TODO make this a constant in github.com/nuts-foundation/nuts-go-core
-	ssoEP := SsoEndpointType
-	endpoints, err := v.Registry.EndpointsByOrganizationAndType(legalEntity, &ssoEP)
-	if err != nil {
-		return nil, fmt.Errorf("token endpoint not found: %w", err)
-	}
-	if len(endpoints) != 1 {
-		return nil, fmt.Errorf("none or multiple registred sso endpoints found, there can only be one")
-	}
-	endpoint := endpoints[0]
-	return &endpoint, nil
-}
-
 // CreateJwtBearerToken creates a JwtBearerTokenResponse containing a jwtBearerToken from a CreateJwtBearerTokenRequest.
 func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error) {
 	jti, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
 	}
-
-	//endpoint, err := v.findTokenEndpoint(request.Custodian)
-	//if err != nil {
-	//	return nil, err
-	//}
 
 	jwtBearerToken := NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{

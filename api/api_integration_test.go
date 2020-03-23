@@ -107,19 +107,6 @@ func Test_Integration(t *testing.T) {
 			return "Demo EHR"
 		}
 
-		// Add oauth endpoint to OtherOrganization
-		event, _ = events.CreateEvent(events.RegisterEndpoint, events.RegisterEndpointEvent{
-			Organization: OtherOrganizationID,
-			URL:          "tcp://127.0.0.1:1234",
-			EndpointType: pkg.SsoEndpointType,
-			Identifier:   "1f7d4ea7-c1cf-4c14-ba23-7e1fddc31ad1",
-			Status:       "active",
-			Version:      "0.1",
-		})
-		if err := r.EventSystem.PublishEvent(event); err != nil {
-			panic(err)
-		}
-
 		validator := pkg.DefaultValidator{
 			//IrmaServer: &pkg.DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
 			//irmaConfig: GetIrmaConfig(auth.Config),
