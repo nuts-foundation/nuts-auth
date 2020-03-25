@@ -108,7 +108,10 @@ func (v DefaultValidator) SessionStatus(id SessionID) (*SessionStatusResult, err
 				return nil, fmt.Errorf("could not create JWT for given session: %w", err)
 			}
 
-			token, _ = v.CreateIdentityTokenFromIrmaContract(&sic, le)
+			token, err = v.CreateIdentityTokenFromIrmaContract(&sic, le)
+			if err != nil {
+				return nil, err
+			}
 		}
 		result := &SessionStatusResult{*result, token}
 		logrus.Info(result.NutsAuthToken)
@@ -160,16 +163,12 @@ func (v DefaultValidator) CreateIdentityTokenFromIrmaContract(contract *SignedIr
 
 	claims, err := convertPayloadToClaims(payload)
 	if err != nil {
-		err = fmt.Errorf("could not construct claims: %w", err)
-		logrus.Error(err)
-		return "", err
+		return "", fmt.Errorf("could not construct claims: %w", err)
 	}
 
 	tokenString, err := v.Crypto.SignJwtFor(claims, types.LegalEntity{URI: legalEntity})
 	if err != nil {
-		err = fmt.Errorf("could not sign jwt: %w", err)
-		logrus.Error(err)
-		return "", err
+		return "", fmt.Errorf("could not sign jwt: %w", err)
 	}
 	return tokenString, nil
 }
