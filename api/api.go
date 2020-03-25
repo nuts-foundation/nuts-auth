@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -11,9 +12,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Wrapper bridges the generated api types and http logic to the internal types and logic
+// Wrapper bridges the generated api types and http logic to the internal types and logic.
+// It checks required parameters and message body. It converts data from api to internal types.
+// Then passes the internal formats to the AuthClient. Converts internal results back to the generated
+// Api types. Handles errors and returns the correct http response. It does not perform any business logic.
 type Wrapper struct {
 	Auth pkg.AuthClient
+}
+
+// TODO: Use the client certificate here, added by a revere proxy. Than the vendor urn can be fetched from the subject alternative name.
+var vendorIdentifierFromHeader = func(ctx echo.Context) string {
+	return ctx.Request().Header.Get("X-Nuts-LegalEntity")
 }
 
 // CreateSession translates http params to internal format, creates a IRMA signing session
@@ -62,11 +71,8 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		ValidTo:     vt,
 	}
 
-	// TODO: make it possible to provide the acting party via a JWT or other secure way
-	//actingParty := "Demo EHR"
-
 	// Initiate the actual session
-	result, err := api.Auth.CreateContractSession(sessionRequest, "")
+	result, err := api.Auth.CreateContractSession(sessionRequest)
 	if err != nil {
 		if errors.Is(err, pkg.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -93,7 +99,7 @@ func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) err
 		if errors.Is(err, pkg.ErrSessionNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
-		return err
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	// convert internal result back to generated api format
@@ -114,13 +120,13 @@ func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) err
 		}
 	}
 
-	nutsAuthToken := string(sessionStatus.NutsAuthToken)
+	nutsAuthToken := sessionStatus.NutsAuthToken
 	proofStatus := string(sessionStatus.ProofStatus)
 
 	answer := SessionResult{
 		Disclosed: &disclosedAttributes,
 		Status:    string(sessionStatus.Status),
-		Token:     string(sessionStatus.Token),
+		Token:     sessionStatus.Token,
 		Type:      string(sessionStatus.Type),
 	}
 	if nutsAuthToken != "" {
@@ -204,4 +210,104 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 	}
 
 	return ctx.JSON(http.StatusOK, answer)
+}
+
+// CreateAccessToken handles the api call to create an access token.
+// It consumes and checks the JWT and returns a smaller sessionToken
+func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
+	// Can't use echo.Bind() here since it requires extra tags on generated code
+	request := new(CreateAccessTokenRequest)
+	request.Assertion = ctx.FormValue("assertion")
+	request.GrantType = ctx.FormValue("grant_type")
+
+	if request.GrantType != pkg.JwtBearerGrantType {
+		errDesc := fmt.Sprintf("grant_type must be: '%s'", pkg.JwtBearerGrantType)
+		errorResponse := AccessTokenRequestFailedResponse{Error: "unsupported_grant_type", ErrorDescription: errDesc}
+		return ctx.JSON(http.StatusBadRequest, errorResponse)
+	}
+
+	const jwtPattern = `^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$`
+	if matched, err := regexp.Match(jwtPattern, []byte(request.Assertion)); !matched || err != nil {
+		errDesc := "Assertion must be a valid encoded jwt"
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
+		return ctx.JSON(http.StatusBadRequest, errorResponse)
+	}
+	vendorID := vendorIdentifierFromHeader(ctx)
+	if vendorID == "" {
+		errDesc := "Vendor identifier missing in header"
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
+		return ctx.JSON(http.StatusBadRequest, errorResponse)
+	}
+	catRequest := pkg.CreateAccessTokenRequest{JwtBearerToken: request.Assertion, VendorIdentifier: vendorID}
+	acResponse, err := api.Auth.CreateAccessToken(catRequest)
+	if err != nil {
+		errDesc := err.Error()
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
+		return ctx.JSON(http.StatusBadRequest, errorResponse)
+	}
+	response := AccessTokenResponse{AccessToken: acResponse.AccessToken}
+
+	return ctx.JSON(http.StatusOK, response)
+}
+
+// CreateJwtBearerToken fills a CreateJwtBearerTokenRequest from the request body and passes it to the auth module.
+func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
+	requestBody := &CreateJwtBearerTokenRequest{}
+	if err := ctx.Bind(requestBody); err != nil {
+		return err
+	}
+
+	request := pkg.CreateJwtBearerTokenRequest{
+		Actor:         requestBody.Actor,
+		Custodian:     requestBody.Custodian,
+		IdentityToken: requestBody.Identity,
+		Subject:       requestBody.Subject,
+		Scope:         requestBody.Scope,
+	}
+	response, err := api.Auth.CreateJwtBearerToken(request)
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, err.Error())
+	}
+
+	return ctx.JSON(http.StatusOK, JwtBearerTokenResponse{BearerToken: response.BearerToken})
+}
+
+// IntrospectAccessToken takes the access token from the request form value and passes it to the auth client.
+func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
+	token := ctx.FormValue("token")
+
+	introspectionResponse := TokenIntrospectionResponse{
+		Active: false,
+	}
+
+	if len(token) == 0 {
+		return ctx.JSON(http.StatusOK, introspectionResponse)
+	}
+
+	claims, err := api.Auth.IntrospectAccessToken(token)
+	if err != nil {
+		logrus.WithError(err).Debug("error while inspecting access token")
+		return ctx.JSON(http.StatusOK, introspectionResponse)
+	}
+
+	exp := int(claims.ExpiresAt)
+	iat := int(claims.IssuedAt)
+
+	introspectionResponse = TokenIntrospectionResponse{
+		Active:     true,
+		Sub:        &claims.Subject,
+		Iss:        &claims.Issuer,
+		Aud:        &claims.Audience,
+		Exp:        &exp,
+		Iat:        &iat,
+		Sid:        &claims.SubjectID,
+		Scope:      &claims.Scope,
+		Name:       &claims.Name,
+		GivenName:  &claims.GivenName,
+		Prefix:     &claims.Prefix,
+		FamilyName: &claims.FamilyName,
+		Email:      &claims.Email,
+	}
+
+	return ctx.JSON(http.StatusOK, introspectionResponse)
 }

@@ -12,6 +12,33 @@ import (
 	"net/http"
 )
 
+// AccessTokenRequestFailedResponse defines model for AccessTokenRequestFailedResponse.
+type AccessTokenRequestFailedResponse struct {
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
+// AccessTokenRequestJWT defines model for AccessTokenRequestJWT.
+type AccessTokenRequestJWT struct {
+	Aud string  `json:"aud"`
+	Con *string `json:"con,omitempty"`
+	Exp float32 `json:"exp"`
+	Iat float32 `json:"iat"`
+	Iss string  `json:"iss"`
+	Jti string  `json:"jti"`
+	Osi *string `json:"osi,omitempty"`
+	Sid string  `json:"sid"`
+	Sub string  `json:"sub"`
+	Uid string  `json:"uid"`
+}
+
+// AccessTokenResponse defines model for AccessTokenResponse.
+type AccessTokenResponse struct {
+	AccessToken string  `json:"access_token"`
+	ExpiresIn   float32 `json:"expires_in"`
+	TokenType   string  `json:"token_type"`
+}
+
 // Contract defines model for Contract.
 type Contract struct {
 	Language           Language  `json:"language"`
@@ -30,6 +57,21 @@ type ContractSigningRequest struct {
 	ValidFrom   *string     `json:"valid_from,omitempty"`
 	ValidTo     *string     `json:"valid_to,omitempty"`
 	Version     Version     `json:"version"`
+}
+
+// CreateAccessTokenRequest defines model for CreateAccessTokenRequest.
+type CreateAccessTokenRequest struct {
+	Assertion string `json:"assertion"`
+	GrantType string `json:"grant_type"`
+}
+
+// CreateJwtBearerTokenRequest defines model for CreateJwtBearerTokenRequest.
+type CreateJwtBearerTokenRequest struct {
+	Actor     string `json:"actor"`
+	Custodian string `json:"custodian"`
+	Identity  string `json:"identity"`
+	Scope     string `json:"scope"`
+	Subject   string `json:"subject"`
 }
 
 // CreateSessionResult defines model for CreateSessionResult.
@@ -64,6 +106,11 @@ type ErrorString string
 type IrmaQR struct {
 	Irmaqr string `json:"irmaqr"`
 	U      string `json:"u"`
+}
+
+// JwtBearerTokenResponse defines model for JwtBearerTokenResponse.
+type JwtBearerTokenResponse struct {
+	BearerToken string `json:"bearer_token"`
 }
 
 // Language defines model for Language.
@@ -152,6 +199,29 @@ type Timestamp struct {
 	Time *int64 `json:"time,omitempty"`
 }
 
+// TokenIntrospectionRequest defines model for TokenIntrospectionRequest.
+type TokenIntrospectionRequest struct {
+	Token string `json:"token"`
+}
+
+// TokenIntrospectionResponse defines model for TokenIntrospectionResponse.
+type TokenIntrospectionResponse struct {
+	Active     bool    `json:"active"`
+	Aud        *string `json:"aud,omitempty"`
+	Email      *string `json:"email,omitempty"`
+	Exp        *int    `json:"exp,omitempty"`
+	FamilyName *string `json:"family_name,omitempty"`
+	GivenName  *string `json:"given_name,omitempty"`
+	Iat        *int    `json:"iat,omitempty"`
+	Iss        *string `json:"iss,omitempty"`
+	Name       *string `json:"name,omitempty"`
+	Prefix     *string `json:"prefix,omitempty"`
+	Scope      *string `json:"scope,omitempty"`
+	Sid        *string `json:"sid,omitempty"`
+	Sub        *string `json:"sub,omitempty"`
+	Uid        *string `json:"uid,omitempty"`
+}
+
 // Type defines model for Type.
 type Type string
 
@@ -185,15 +255,23 @@ type validateContractJSONBody ValidationRequest
 
 // GetContractByTypeParams defines parameters for GetContractByType.
 type GetContractByTypeParams struct {
+
+	// The version of this contract. If omitted, the most recent version will be returned
 	Version  *string `json:"version,omitempty"`
 	Language *string `json:"language,omitempty"`
 }
+
+// createJwtBearerTokenJSONBody defines parameters for CreateJwtBearerToken.
+type createJwtBearerTokenJSONBody CreateJwtBearerTokenRequest
 
 // CreateSessionRequestBody defines body for CreateSession for application/json ContentType.
 type CreateSessionJSONRequestBody createSessionJSONBody
 
 // ValidateContractRequestBody defines body for ValidateContract for application/json ContentType.
 type ValidateContractJSONRequestBody validateContractJSONBody
+
+// CreateJwtBearerTokenRequestBody defines body for CreateJwtBearerToken for application/json ContentType.
+type CreateJwtBearerTokenJSONRequestBody createJwtBearerTokenJSONBody
 
 // Getter for additional properties for DisclosedAttribute_Value. Returns the specified
 // element and whether it was found
@@ -409,6 +487,8 @@ func (a ValidationResult_SignerAttributes) MarshalJSON() ([]byte, error) {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Create an access token based on the OAuth JWT Bearer flow.// (POST /auth/accesstoken)
+	CreateAccessToken(ctx echo.Context) error
 	// CreateSessionHandler Initiates an IRMA signing session with the correct contract.// (POST /auth/contract/session)
 	CreateSession(ctx echo.Context) error
 	// returns the result of the contract request// (GET /auth/contract/session/{id})
@@ -417,11 +497,24 @@ type ServerInterface interface {
 	ValidateContract(ctx echo.Context) error
 	// Get a contract by type and version// (GET /auth/contract/{contractType})
 	GetContractByType(ctx echo.Context, contractType string, params GetContractByTypeParams) error
+	// Create a JWT Bearer Token which can be used in the createAccessToken request in the assertion field// (POST /auth/jwtbearertoken)
+	CreateJwtBearerToken(ctx echo.Context) error
+	// Introspection endpoint to retrieve information from an Access Token as described by RFC7662// (POST /auth/token_introspection)
+	IntrospectAccessToken(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler ServerInterface
+}
+
+// CreateAccessToken converts echo context to params.
+func (w *ServerInterfaceWrapper) CreateAccessToken(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.CreateAccessToken(ctx)
+	return err
 }
 
 // CreateSession converts echo context to params.
@@ -496,17 +589,48 @@ func (w *ServerInterfaceWrapper) GetContractByType(ctx echo.Context) error {
 	return err
 }
 
+// CreateJwtBearerToken converts echo context to params.
+func (w *ServerInterfaceWrapper) CreateJwtBearerToken(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.CreateJwtBearerToken(ctx)
+	return err
+}
+
+// IntrospectAccessToken converts echo context to params.
+func (w *ServerInterfaceWrapper) IntrospectAccessToken(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.IntrospectAccessToken(ctx)
+	return err
+}
+
 // RegisterHandlers adds each server route to the EchoRouter.
-func RegisterHandlers(router runtime.EchoRouter, si ServerInterface) {
+func RegisterHandlers(router interface {
+	CONNECT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	DELETE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	GET(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	HEAD(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	OPTIONS(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	PATCH(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	POST(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	PUT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	TRACE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+}, si ServerInterface) {
 
 	wrapper := ServerInterfaceWrapper{
 		Handler: si,
 	}
 
+	router.POST("/auth/accesstoken", wrapper.CreateAccessToken)
 	router.POST("/auth/contract/session", wrapper.CreateSession)
 	router.GET("/auth/contract/session/:id", wrapper.SessionRequestStatus)
 	router.POST("/auth/contract/validate", wrapper.ValidateContract)
 	router.GET("/auth/contract/:contractType", wrapper.GetContractByType)
+	router.POST("/auth/jwtbearertoken", wrapper.CreateJwtBearerToken)
+	router.POST("/auth/token_introspection", wrapper.IntrospectAccessToken)
 
 }
 

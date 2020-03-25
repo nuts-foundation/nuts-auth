@@ -1,13 +1,13 @@
 package pkg
 
 import (
-	core "github.com/nuts-foundation/nuts-go-core"
-	"testing"
-
 	"errors"
+	"fmt"
+	"testing"
 
 	"github.com/golang/mock/gomock"
 	cryptoMock2 "github.com/nuts-foundation/nuts-crypto/mock"
+	core "github.com/nuts-foundation/nuts-go-core"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	irma "github.com/privacybydesign/irmago"
@@ -19,20 +19,45 @@ type MockContractSessionHandler struct {
 	SessionStatusResult *SessionStatusResult
 }
 
+type MockAccessTokenHandler struct {
+	claims                              *NutsJwtBearerToken
+	parseAndValidateAccessTokenJwtError error
+	accessToken                         string
+	accessTokenError                    error
+}
+
+func (m MockAccessTokenHandler) ParseAndValidateJwtBearerToken(acString string) (*NutsJwtBearerToken, error) {
+	return m.claims, m.parseAndValidateAccessTokenJwtError
+}
+
+func (m MockAccessTokenHandler) BuildAccessToken(jwtClaims *NutsJwtBearerToken, identityValidationResult *ContractValidationResult) (string, error) {
+	if m.accessTokenError != nil {
+		return "", m.accessTokenError
+	}
+	if len(m.accessToken) > 0 {
+		return m.accessToken, nil
+	}
+	return "fresh access token", nil
+}
+
 type MockContractValidator struct {
-	jwtResult  ValidationResult
-	irmaResult ValidationResult
+	jwtResult  ContractValidationResult
+	irmaResult ContractValidationResult
+}
+
+func (m MockAccessTokenHandler) CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error) {
+	panic("implement me")
 }
 
 func (m MockContractValidator) IsInitialized() bool {
 	return true
 }
 
-func (m MockContractValidator) ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ValidationResult, error) {
+func (m MockContractValidator) ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ContractValidationResult, error) {
 	return &m.irmaResult, nil
 }
 
-func (m MockContractValidator) ValidateJwt(contract string, actingPartyCN string) (*ValidationResult, error) {
+func (m MockContractValidator) ValidateJwt(contract string, actingPartyCN string) (*ContractValidationResult, error) {
 	return &m.jwtResult, nil
 }
 
@@ -40,6 +65,10 @@ const qrURL = "https://api.helder.health/auth/irmaclient/123-session-ref-123"
 
 func (v MockContractSessionHandler) SessionStatus(SessionID) (*SessionStatusResult, error) {
 	return v.SessionStatusResult, nil
+}
+
+func (m MockAccessTokenHandler) ParseAndValidateAccessToken(accessToken string) (*NutsAccessToken, error) {
+	panic("implement me")
 }
 
 func (v MockContractSessionHandler) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
@@ -52,7 +81,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 			ContractSessionHandler: MockContractSessionHandler{},
 		}
 		request := CreateSessionRequest{Type: ContractType("BehandelaarLogin"), Language: Language("NL")}
-		result, err := sut.CreateContractSession(request, "Demo EHR")
+		result, err := sut.CreateContractSession(request)
 
 		if err != nil {
 			t.Error("ContractCreation failed with error:", err)
@@ -67,7 +96,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 			ContractSessionHandler: MockContractSessionHandler{},
 		}
 		request := CreateSessionRequest{Type: ContractType("ShadyDeal"), Language: Language("NL")}
-		result, err := sut.CreateContractSession(request, "Demo EHR")
+		result, err := sut.CreateContractSession(request)
 
 		assert.Nil(t, result, "result should be nil")
 		assert.NotNil(t, err, "expected an error")
@@ -111,8 +140,7 @@ func TestAuthInstance(t *testing.T) {
 func TestAuth_Configure(t *testing.T) {
 	t.Run("mode defaults to server", func(t *testing.T) {
 		i := &Auth{
-			Config: AuthConfig{
-			},
+			Config: AuthConfig{},
 		}
 		_ = i.Configure()
 		assert.Equal(t, core.ServerEngineMode, i.Config.Mode)
@@ -124,10 +152,9 @@ func TestAuth_Configure(t *testing.T) {
 				Mode: core.ClientEngineMode,
 			},
 		}
-		
+
 		assert.NoError(t, i.Configure())
 	})
-
 
 	t.Run("Configure returns error on missing actingPartyCn", func(t *testing.T) {
 		i := &Auth{
@@ -211,7 +238,7 @@ func TestAuth_ValidateContract(t *testing.T) {
 	t.Run("Returns validation result for JWT", func(t *testing.T) {
 		i := &Auth{
 			ContractValidator: MockContractValidator{
-				jwtResult: ValidationResult{
+				jwtResult: ContractValidationResult{
 					ValidationResult: Valid,
 				},
 			},
@@ -227,7 +254,7 @@ func TestAuth_ValidateContract(t *testing.T) {
 	t.Run("Returns validation result for Irma", func(t *testing.T) {
 		i := &Auth{
 			ContractValidator: MockContractValidator{
-				irmaResult: ValidationResult{
+				irmaResult: ContractValidationResult{
 					ValidationResult: Valid,
 				},
 			},
@@ -238,6 +265,48 @@ func TestAuth_ValidateContract(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, result)
 		assert.Equal(t, Valid, result.ValidationResult)
+	})
+}
+
+func TestAuth_CreateAccessToken(t *testing.T) {
+
+	t.Run("invalid jwt", func(t *testing.T) {
+		i := &Auth{AccessTokenHandler: MockAccessTokenHandler{claims: nil, parseAndValidateAccessTokenJwtError: fmt.Errorf("validationError")}}
+		response, err := i.CreateAccessToken(CreateAccessTokenRequest{JwtBearerToken: "foo"})
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "jwt bearer token validation failed")
+		}
+	})
+
+	t.Run("invalid identity", func(t *testing.T) {
+		i := &Auth{
+			AccessTokenHandler: MockAccessTokenHandler{claims: &NutsJwtBearerToken{}},
+			ContractValidator: MockContractValidator{
+				jwtResult: ContractValidationResult{ValidationResult: Invalid},
+			},
+		}
+		response, err := i.CreateAccessToken(CreateAccessTokenRequest{JwtBearerToken: "foo"})
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "identity validation failed")
+		}
+	})
+
+	t.Run("it creates a token", func(t *testing.T) {
+		expectedAT := "ac"
+		i := &Auth{
+			ContractValidator: MockContractValidator{
+				jwtResult: ContractValidationResult{ValidationResult: Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}},
+			},
+			AccessTokenHandler: MockAccessTokenHandler{claims: &NutsJwtBearerToken{}, accessToken: expectedAT},
+		}
+
+		response, err := i.CreateAccessToken(CreateAccessTokenRequest{JwtBearerToken: "foo"})
+		assert.Nil(t, err)
+		if assert.NotNil(t, response) {
+			assert.Equal(t, expectedAT, response.AccessToken)
+		}
 	})
 }
 

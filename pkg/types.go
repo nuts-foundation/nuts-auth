@@ -4,10 +4,15 @@ import (
 	"errors"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
+
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 )
+
+// JwtBearerGrantType defines the grant-type to use in the access token request
+const JwtBearerGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
 // SessionID contains a number to uniquely identify a contract signing session
 type SessionID string
@@ -24,10 +29,16 @@ var ErrUnknownContractFormat = errors.New("unknown contract format")
 // ErrSessionNotFound is returned when there is no contract signing session found for a certain SessionID
 var ErrSessionNotFound = errors.New("session not found")
 
+// ErrInvalidContractFormat indicates tha a contract format is unknown.
+var ErrInvalidContractFormat = errors.New("unknown contract type")
+
+// ErrLegalEntityNotProvided indicates that the legalEntity is missing
+var ErrLegalEntityNotProvided = errors.New("legalEntity not provided")
+
 // ContractValidator interface must be implemented by contract validators
 type ContractValidator interface {
-	ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ValidationResult, error)
-	ValidateJwt(contract string, actingPartyCN string) (*ValidationResult, error)
+	ValidateContract(contract string, format ContractFormat, actingPartyCN string) (*ContractValidationResult, error)
+	ValidateJwt(contract string, actingPartyCN string) (*ContractValidationResult, error)
 	IsInitialized() bool
 }
 
@@ -35,6 +46,26 @@ type ContractValidator interface {
 type ContractSessionHandler interface {
 	SessionStatus(session SessionID) (*SessionStatusResult, error)
 	StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error)
+}
+
+// AccessTokenHandler interface must be implemented by Access token handlers. Ir defines the interface to handle all
+// logic concerning creating and introspecting OAuth 2.0 Access tokens
+type AccessTokenHandler interface {
+	// CreateJwtBearerToken from a JwtBearerTokenRequest. Returns a signed JWT string.
+	CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (token *JwtBearerTokenResponse, err error)
+
+	// ParseAndValidateJwtBearerToken accepts a jwt encoded bearer token as string and returns the NutsJwtBearerToken object if valid.
+	// it returns a ErrLegalEntityNotProvided if the issuer does not contain an legal entity
+	// it returns a ErrOrganizationNotFound if the organization in the issuer could not be found in the registry
+	ParseAndValidateJwtBearerToken(token string) (*NutsJwtBearerToken, error)
+
+	// BuildAccessToken create a jwt encoded access token from a NutsJwtBearerToken and a ContractValidationResult.
+	BuildAccessToken(jwtClaims *NutsJwtBearerToken, identityValidationResult *ContractValidationResult) (token string, err error)
+
+	// ParseAndValidateAccessToken parses and validates an AccessToken and returns a filled NutsAccessToken as result.
+	// it returns a ErrLegalEntityNotProvided if the issuer does not contain an legal entity
+	// it returns a ErrOrganizationNotFound if the organization in the issuer could not be found in the registry
+	ParseAndValidateAccessToken(accessToken string) (*NutsAccessToken, error)
 }
 
 const (
@@ -91,8 +122,68 @@ type ValidationRequest struct {
 	ActingPartyCN string
 }
 
-// ValidationResult contains the result of a contract validation
-type ValidationResult struct {
+// CreateAccessTokenRequest contains all information to create an access token from a JwtBearerToken
+type CreateAccessTokenRequest struct {
+	JwtBearerToken   string
+	VendorIdentifier string
+}
+
+// CreateJwtBearerTokenRequest contains all information to create a JwtBearerToken
+type CreateJwtBearerTokenRequest struct {
+	Actor         string
+	Custodian     string
+	IdentityToken string
+	Subject       string
+	Scope         string
+}
+
+// NutsIdentityToken contains the signed identity of the user performing the request
+type NutsIdentityToken struct {
+	jwt.StandardClaims
+	//Identifier of the legalEntity who issued and signed the token
+	//Issuer string
+	// What kind of signature? Currently only IRMA is supported
+	Type ContractFormat `json:"type"`
+	// The base64 encoded signature
+	Signature string `json:"sig"`
+	//Contract SignedIrmaContract `json:"nuts_signature"`
+}
+
+// NutsJwtBearerToken contains the deserialized Jwt Bearer Token as defined in rfc7523. It contains a NutsIdentity token which can be
+// verified by the authorization server.
+type NutsJwtBearerToken struct {
+	jwt.StandardClaims
+	IdentityToken string `json:"usi"`
+	SubjectID     string `json:"sid"`
+	Scope         string `json:"scope"`
+}
+
+// NutsAccessToken is a OAuth 2.0 access token which provides context to a request.
+// Its contents are derived from a Jwt Bearer token. The Jwt Bearer token is verified by the authorization server and
+// stripped from the proof to make it compact.
+type NutsAccessToken struct {
+	jwt.StandardClaims
+	SubjectID  string `json:"sid"`
+	Scope      string `json:"scope"`
+	Name       string `json:"name"`
+	GivenName  string `json:"given_name"`
+	Prefix     string `json:"prefix"`
+	FamilyName string `json:"family_name"`
+	Email      string `json:"email"`
+}
+
+// AccessTokenResponse defines the return value back to the api for the CreateAccessToken method
+type AccessTokenResponse struct {
+	AccessToken string
+}
+
+// JwtBearerTokenResponse defines the return value back to the api for the createJwtBearerToken method
+type JwtBearerTokenResponse struct {
+	BearerToken string
+}
+
+// ContractValidationResult contains the result of a contract validation
+type ContractValidationResult struct {
 	ValidationResult ValidationState `json:"validation_result"`
 	ContractFormat   ContractFormat  `json:"contract_format"`
 	// DisclosedAttributes contain the attributes used to sign this contract

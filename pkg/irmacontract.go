@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+
 	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/sirupsen/logrus"
@@ -19,9 +21,7 @@ func ParseIrmaContract(rawContract string) (*SignedIrmaContract, error) {
 	signedContract := &SignedIrmaContract{}
 
 	if err := json.Unmarshal([]byte(rawContract), &signedContract.IrmaContract); err != nil {
-		logMsg := fmt.Sprint("Could not parse irma contract")
-		logrus.WithError(err).Info(logMsg)
-		return nil, errors.New(logMsg)
+		return nil, fmt.Errorf("could not parse IRMA contract: %w", err)
 	}
 
 	return signedContract, nil
@@ -29,15 +29,11 @@ func ParseIrmaContract(rawContract string) (*SignedIrmaContract, error) {
 }
 
 // Verify the IRMA signature. This method only checks the IRMA crypto, not the contents of the contract.
-func (sc *SignedIrmaContract) verifySignature(configuration *irma.Configuration) (*ValidationResult, error) {
+func (sc *SignedIrmaContract) verifySignature(configuration *irma.Configuration) (*ContractValidationResult, error) {
 	// Actual verification
 	attributes, status, err := sc.IrmaContract.Verify(configuration, nil)
-
-	// error handling
 	if err != nil {
-		logMsg := "Unable to verify contract signature"
-		logrus.WithError(err).Info(logMsg)
-		return nil, err
+		return nil, fmt.Errorf("contract signature verification failed: %w", err)
 	}
 
 	var disclosedAttributes map[string]string
@@ -61,12 +57,17 @@ func (sc *SignedIrmaContract) verifySignature(configuration *irma.Configuration)
 				logrus.Infof("IRMA schemeManager %s is not valid in strictMode", schemaManager)
 				validationResult = Invalid
 			}
-			disclosedAttributes[att.Identifier.String()] = *att.RawValue
+			identifier := att.Identifier.String()
+			// strip of the schemeManager
+			if i := strings.Index(identifier, "."); i != -1 {
+				identifier = identifier[i+1:]
+			}
+			disclosedAttributes[identifier] = *att.RawValue
 		}
 	}
 
 	// Assemble and return the validation response
-	return &ValidationResult{
+	return &ContractValidationResult{
 		validationResult,
 		IrmaFormat,
 		disclosedAttributes,
@@ -76,7 +77,7 @@ func (sc *SignedIrmaContract) verifySignature(configuration *irma.Configuration)
 
 // Validate the SignedIrmaContract looks at the irma crypto and the actual message such as:
 // Is the timeframe valid and does the common name corresponds with the contract message.
-func (sc *SignedIrmaContract) Validate(actingPartyCn string, configuration *irma.Configuration) (*ValidationResult, error) {
+func (sc *SignedIrmaContract) Validate(actingPartyCn string, configuration *irma.Configuration) (*ContractValidationResult, error) {
 	// Verify signature:
 	verifiedContract, err := sc.verifySignature(configuration)
 	if err != nil {
@@ -120,26 +121,15 @@ func (sc *SignedIrmaContract) Validate(actingPartyCn string, configuration *irma
 func validateActingParty(params map[string]string, actingParty string) (bool, error) {
 	// If no acting party is given, that is probably an implementation error.
 	if actingParty == "" {
-		logrus.Error("No acting party provided. Origin of contract cannot be checked.")
-		return false, errors.New("actingParty cannot be empty")
+		return false, errors.New("actingParty validation failed: actingParty cannot be empty")
 	}
 
-	var (
-		actingPartyFromContract string
-		ok                      bool
-	)
-
 	// if no acting party in the params, error
-	if actingPartyFromContract, ok = params["acting_party"]; !ok {
-		return false, errors.New("no acting party found by contract but one given to verify")
+	actingPartyFromContract, ok := params["acting_party"]
+	if !ok {
+		return false, errors.New("actingParty validation failed: no acting party found in contract params")
 	}
 
 	// perform the actual check
-	if actingParty == actingPartyFromContract {
-		return true, nil
-	}
-
-	logrus.Infof("expected actingParty %s not equal to contract %s", actingParty, actingPartyFromContract)
-	// false by default
-	return false, nil
+	return actingParty == actingPartyFromContract, nil
 }

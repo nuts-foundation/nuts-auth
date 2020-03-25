@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	core "github.com/nuts-foundation/nuts-go-core"
 	"os"
+	"strings"
 	"sync"
 	"time"
+
+	core "github.com/nuts-foundation/nuts-go-core"
 
 	"github.com/mdp/qrterminal/v3"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -44,10 +46,13 @@ const ConfIrmaSchemeManager = "irmaSchemeManager"
 
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
-	CreateContractSession(sessionRequest CreateSessionRequest, actingParty string) (*CreateSessionResult, error)
+	CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error)
 	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
 	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
-	ValidateContract(request ValidationRequest) (*ValidationResult, error)
+	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
+	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
+	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error)
+	IntrospectAccessToken(token string) (*NutsAccessToken, error)
 	KeyExistsFor(legalEntity string) bool
 	OrganizationNameByID(legalEntity string) (string, error)
 }
@@ -59,6 +64,7 @@ type Auth struct {
 	configDone             bool
 	ContractSessionHandler ContractSessionHandler
 	ContractValidator      ContractValidator
+	AccessTokenHandler     AccessTokenHandler
 	cryptoClient           crypto.Client
 	registryClient         registry.RegistryClient
 }
@@ -116,14 +122,15 @@ func (auth *Auth) Configure() (err error) {
 
 			validator := DefaultValidator{
 				IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
-				irmaConfig: GetIrmaConfig(auth.Config),
-				registry:   auth.registryClient,
-				crypto:     auth.cryptoClient,
+				IrmaConfig: GetIrmaConfig(auth.Config),
+				Registry:   auth.registryClient,
+				Crypto:     auth.cryptoClient,
 			}
 			auth.ContractSessionHandler = validator
 			auth.ContractValidator = validator
+			auth.AccessTokenHandler = validator
+			auth.configDone = true
 		}
-		auth.configDone = true
 	})
 
 	return err
@@ -132,7 +139,7 @@ func (auth *Auth) Configure() (err error) {
 // CreateContractSession creates a session based on an IRMA contract. This allows the user to permit the application to
 // use the Nuts Network in its name. The user can limit the application in time and scope. By signing it with IRMA other
 // nodes in the network can verify the validity of the contract.
-func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, actingParty string) (*CreateSessionResult, error) {
+func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error) {
 
 	// Step 1: Find the correct contract
 	contract, err := ContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
@@ -154,12 +161,17 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest, act
 	signatureRequest := irma.NewSignatureRequest(message)
 	schemeManager := auth.Config.IrmaSchemeManager
 
-	attribute := fmt.Sprintf("%s.%s", schemeManager, contract.SignerAttributes[0])
+	var attributes irma.AttributeCon
+	for _, att := range contract.SignerAttributes {
+		// Checks if attribute name start with a dot, if so, add the configured scheme manager.
+		if strings.Index(att, ".") == 0 {
+			att = fmt.Sprintf("%s%s", schemeManager, att)
+		}
+		attributes = append(attributes, irma.NewAttributeRequest(att))
+	}
 	signatureRequest.Disclose = irma.AttributeConDisCon{
 		irma.AttributeDisCon{
-			irma.AttributeCon{
-				irma.NewAttributeRequest(attribute),
-			},
+			attributes,
 		},
 	}
 
@@ -218,13 +230,47 @@ func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult,
 
 // ValidateContract validates a given contract. Currently two ContractType's are accepted: Irma and Jwt.
 // Both types should be passed as a base64 encoded string in the ContractString of the request paramContractString of the request param
-func (auth *Auth) ValidateContract(request ValidationRequest) (*ValidationResult, error) {
+func (auth *Auth) ValidateContract(request ValidationRequest) (*ContractValidationResult, error) {
 	if request.ContractFormat == IrmaFormat {
 		return auth.ContractValidator.ValidateContract(request.ContractString, IrmaFormat, request.ActingPartyCN)
 	} else if request.ContractFormat == JwtFormat {
 		return auth.ContractValidator.ValidateJwt(request.ContractString, request.ActingPartyCN)
 	}
 	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
+}
+
+// CreateAccessToken extracts the claims out of the request, checks the validity and builds the access token
+func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error) {
+	claims, err := auth.AccessTokenHandler.ParseAndValidateJwtBearerToken(request.JwtBearerToken)
+	if err != nil {
+		return nil, fmt.Errorf("jwt bearer token validation failed: %w", err)
+	}
+
+	res, err := auth.ContractValidator.ValidateJwt(claims.IdentityToken, request.VendorIdentifier)
+	if err != nil {
+		return nil, fmt.Errorf("identity tokenen validation failed: %w", err)
+	}
+	if res.ValidationResult == Invalid {
+		return nil, fmt.Errorf("identity validation failed")
+	}
+
+	accessToken, err := auth.AccessTokenHandler.BuildAccessToken(claims, res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AccessTokenResponse{AccessToken: accessToken}, nil
+}
+
+// CreateJwtBearerToken creates a JwtBearerToken from the given CreateJwtBearerTokenRequest
+func (auth *Auth) CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error) {
+	return auth.AccessTokenHandler.CreateJwtBearerToken(&request)
+}
+
+// IntrospectAccessToken fills the fields in NutsAccessToken from the given Jwt Access Token
+func (auth *Auth) IntrospectAccessToken(token string) (*NutsAccessToken, error) {
+	acClaims, err := auth.AccessTokenHandler.ParseAndValidateAccessToken(token)
+	return acClaims, err
 }
 
 // KeyExistsFor check if the private key exists on this node by calling the same function on the cryptoClient

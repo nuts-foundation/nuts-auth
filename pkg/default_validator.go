@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/dgrijalva/jwt-go"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -18,20 +21,20 @@ import (
 // DefaultValidator validates contracts using the irma logic.
 type DefaultValidator struct {
 	IrmaServer IrmaServerClient
-	irmaConfig *irma.Configuration
-	registry   registry.RegistryClient
-	crypto     nutscrypto.Client
+	IrmaConfig *irma.Configuration
+	Registry   registry.RegistryClient
+	Crypto     nutscrypto.Client
 }
 
 // IsInitialized is a helper function to determine if the validator has been initialized properly.
 func (v DefaultValidator) IsInitialized() bool {
-	return v.irmaConfig != nil
+	return v.IrmaConfig != nil
 }
 
 // ValidateContract is the entrypoint for contract validation.
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
 // Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
-func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ValidationResult, error) {
+func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ContractValidationResult, error) {
 	if format == IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
@@ -41,24 +44,23 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 		if err != nil {
 			return nil, err
 		}
-		return signedContract.Validate(actingPartyCN, v.irmaConfig)
+		return signedContract.Validate(actingPartyCN, v.IrmaConfig)
 	}
 	return nil, ErrUnknownContractFormat
 }
 
-// ErrInvalidContract is returned when the JWT or included signature is not up to spec
-var ErrInvalidContract = errors.New("invalid contract")
-
-// ValidateJwt validates a JWT formatted contract.
-func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ValidationResult, error) {
-	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (i interface{}, e error) {
-		legalEntity := token.Claims.(jwt.MapClaims)["sub"]
-		if legalEntity == nil || legalEntity == "" {
+// ValidateJwt validates a JWT formatted identity token
+func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ContractValidationResult, error) {
+	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
+	parsedToken, err := parser.ParseWithClaims(token, &NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
+		//parsedToken, err := parser.Parse(token, func(token *jwt.Token) (i interface{}, e error) {
+		legalEntity := token.Claims.(*NutsIdentityToken).Issuer
+		if legalEntity == "" {
 			return nil, ErrLegalEntityNotFound
 		}
 
 		// get public key
-		org, err := v.registry.OrganizationById(legalEntity.(string))
+		org, err := v.Registry.OrganizationById(legalEntity)
 		if err != nil {
 			return nil, err
 		}
@@ -73,19 +75,25 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Vali
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("could not parse jwt: %w", err)
-	}
-
-	if parsedToken.Claims.(jwt.MapClaims)["iss"] != "nuts" {
-		return nil, fmt.Errorf("jwt does not have the nuts issuer: %w", ErrInvalidContract)
-	}
-
-	payload, err := convertClaimsToPayload(parsedToken.Claims.(jwt.MapClaims))
-	if err != nil {
 		return nil, err
 	}
 
-	return payload.Contract.Validate(actingPartyCN, v.irmaConfig)
+	claims := parsedToken.Claims.(*NutsIdentityToken)
+
+	if claims.Type != IrmaFormat {
+		return nil, fmt.Errorf("%s: %w", claims.Type, ErrInvalidContractFormat)
+	}
+
+	contractStr, err := base64.StdEncoding.DecodeString(claims.Signature)
+	if err != nil {
+		return nil, err
+	}
+	irmaContract := SignedIrmaContract{}
+
+	if json.Unmarshal(contractStr, &irmaContract.IrmaContract) != nil {
+		return nil, err
+	}
+	return irmaContract.Validate(actingPartyCN, v.IrmaConfig)
 }
 
 // SessionStatus returns the current status of a certain session.
@@ -100,7 +108,10 @@ func (v DefaultValidator) SessionStatus(id SessionID) (*SessionStatusResult, err
 				return nil, fmt.Errorf("could not create JWT for given session: %w", err)
 			}
 
-			token, _ = v.createJwt(&sic, le)
+			token, err = v.CreateIdentityTokenFromIrmaContract(&sic, le)
+			if err != nil {
+				return nil, err
+			}
 		}
 		result := &SessionStatusResult{*result, token}
 		logrus.Info(result.NutsAuthToken)
@@ -124,10 +135,10 @@ func (v DefaultValidator) legalEntityFromContract(sic SignedIrmaContract) (strin
 	}
 
 	if _, ok := params["legal_entity"]; !ok {
-		return "", ErrLegalEntityNotFound
+		return "", ErrLegalEntityNotProvided
 	}
 
-	le, err := v.registry.ReverseLookup(params["legal_entity"])
+	le, err := v.Registry.ReverseLookup(params["legal_entity"])
 	if err != nil {
 		return "", err
 	}
@@ -135,37 +146,35 @@ func (v DefaultValidator) legalEntityFromContract(sic SignedIrmaContract) (strin
 	return string(le.Identifier), nil
 }
 
-type nutsJwt struct {
-	jwt.StandardClaims
-	Contract SignedIrmaContract `json:"nuts_signature"`
-}
-
-func (v DefaultValidator) createJwt(contract *SignedIrmaContract, legalEntity string) (string, error) {
-	payload := nutsJwt{
+// CreateIdentityTokenFromIrmaContract from a signed irma contract. Returns a JWT signed with the provided legalEntity.
+func (v DefaultValidator) CreateIdentityTokenFromIrmaContract(contract *SignedIrmaContract, legalEntity string) (string, error) {
+	signature, err := json.Marshal(contract.IrmaContract)
+	encodedSignature := base64.StdEncoding.EncodeToString(signature)
+	if err != nil {
+		return "", err
+	}
+	payload := NutsIdentityToken{
 		StandardClaims: jwt.StandardClaims{
-			Issuer:  "nuts",
-			Subject: legalEntity,
+			Issuer: legalEntity,
 		},
-		Contract: *contract,
+		Signature: encodedSignature,
+		Type:      IrmaFormat,
 	}
 
 	claims, err := convertPayloadToClaims(payload)
 	if err != nil {
-		err = fmt.Errorf("could not construct claims: %w", err)
-		logrus.Error(err)
-		return "", err
+		return "", fmt.Errorf("could not construct claims: %w", err)
 	}
 
-	tokenString, err := v.crypto.SignJwtFor(claims, types.LegalEntity{URI: legalEntity})
+	tokenString, err := v.Crypto.SignJwtFor(claims, types.LegalEntity{URI: legalEntity})
 	if err != nil {
-		err = fmt.Errorf("could not sign jwt: %w", err)
-		logrus.Error(err)
-		return "", err
+		return "", fmt.Errorf("could not sign jwt: %w", err)
 	}
 	return tokenString, nil
 }
 
-func convertPayloadToClaims(payload nutsJwt) (map[string]interface{}, error) {
+// convertPayloadToClaims converts a nutsJwt struct to a map of strings so it can be signed with the crypto module
+func convertPayloadToClaims(payload NutsIdentityToken) (map[string]interface{}, error) {
 
 	var (
 		jsonString []byte
@@ -174,7 +183,6 @@ func convertPayloadToClaims(payload nutsJwt) (map[string]interface{}, error) {
 	)
 
 	if jsonString, err = json.Marshal(payload); err != nil {
-		logrus.WithError(err).Error("could not sign jwt")
 		return nil, fmt.Errorf("could not marshall payload: %w", err)
 	}
 
@@ -185,26 +193,162 @@ func convertPayloadToClaims(payload nutsJwt) (map[string]interface{}, error) {
 	return claims, nil
 }
 
-func convertClaimsToPayload(claims map[string]interface{}) (*nutsJwt, error) {
-	var (
-		jsonString []byte
-		err        error
-		payload    nutsJwt
-	)
-
-	if jsonString, err = json.Marshal(claims); err != nil {
-		return nil, fmt.Errorf("could not marshall payload: %w", err)
-	}
-
-	if err := json.Unmarshal(jsonString, &payload); err != nil {
-		return nil, fmt.Errorf("could not unmarshall string: %w", err)
-	}
-
-	return &payload, nil
-}
-
 // StartSession starts an irma session.
 // This is mainly a wrapper around the irma.IrmaServer.StartSession
 func (v DefaultValidator) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
 	return v.IrmaServer.StartSession(request, handler)
+}
+
+// ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
+func (v DefaultValidator) ParseAndValidateJwtBearerToken(acString string) (*NutsJwtBearerToken, error) {
+	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
+	token, err := parser.ParseWithClaims(acString, &NutsJwtBearerToken{}, func(token *jwt.Token) (i interface{}, e error) {
+		legalEntity := token.Claims.(*NutsJwtBearerToken).Issuer
+		if legalEntity == "" {
+			return nil, ErrLegalEntityNotProvided
+		}
+
+		// get public key
+		org, err := v.Registry.OrganizationById(legalEntity)
+		if err != nil {
+			return nil, err
+		}
+
+		pk, err := org.CurrentPublicKey()
+		if err != nil {
+			return nil, err
+		}
+
+		return pk.Materialize()
+	})
+
+	if token != nil && token.Valid {
+		if claims, ok := token.Claims.(*NutsJwtBearerToken); ok {
+			return claims, nil
+		}
+	}
+
+	return nil, err
+}
+
+// BuildAccessToken builds an access token based on the oauth claims and the identity of the user provided by the identityValidationResult
+// The token gets signed with the custodians private key and returned as a string.
+func (v DefaultValidator) BuildAccessToken(jwtBearerToken *NutsJwtBearerToken, identityValidationResult *ContractValidationResult) (string, error) {
+
+	if identityValidationResult.ValidationResult != Valid {
+		return "", fmt.Errorf("could not build accessToken: %w", errors.New("invalid contract"))
+	}
+
+	issuer := jwtBearerToken.Subject
+	if issuer == "" {
+		return "", fmt.Errorf("could not build accessToken: %w", errors.New("subject is missing"))
+	}
+
+	at := NutsAccessToken{
+		StandardClaims: jwt.StandardClaims{
+			// Expires in 15 minutes
+			ExpiresAt: time.Now().Add(time.Minute * 15).Unix(),
+			IssuedAt:  time.Now().Unix(),
+			Issuer:    issuer,
+			Subject:   jwtBearerToken.Issuer,
+		},
+		SubjectID: jwtBearerToken.SubjectID,
+		Scope:     jwtBearerToken.Scope,
+		// based on
+		// https://privacybydesign.foundation/attribute-index/en/pbdf.gemeente.personalData.html
+		// https://privacybydesign.foundation/attribute-index/en/pbdf.pbdf.email.html
+		// and
+		// https://openid.net/specs/openid-connect-basic-1_0.html#StandardClaims
+		FamilyName: identityValidationResult.DisclosedAttributes["gemeente.personalData.familyname"],
+		GivenName:  identityValidationResult.DisclosedAttributes["gemeente.personalData.firstnames"],
+		Prefix:     identityValidationResult.DisclosedAttributes["gemeente.personalData.prefix"],
+		Name:       identityValidationResult.DisclosedAttributes["gemeente.personalData.fullname"],
+		Email:      identityValidationResult.DisclosedAttributes["pbdf.email.email"],
+	}
+
+	var keyVals map[string]interface{}
+	inrec, _ := json.Marshal(at)
+	if err := json.Unmarshal(inrec, &keyVals); err != nil {
+		return "", err
+	}
+
+	// Sign with the private key of the issuer
+	token, err := v.Crypto.SignJwtFor(keyVals, types.LegalEntity{URI: issuer})
+	if err != nil {
+		return token, fmt.Errorf("could not build accessToken: %w", err)
+	}
+
+	return token, err
+}
+
+// CreateJwtBearerToken creates a JwtBearerTokenResponse containing a jwtBearerToken from a CreateJwtBearerTokenRequest.
+func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error) {
+	jti, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+
+	jwtBearerToken := NutsJwtBearerToken{
+		StandardClaims: jwt.StandardClaims{
+			//Audience:  endpoint.Identifier.String(),
+			ExpiresAt: time.Now().Add(30 * time.Minute).Unix(),
+			Id:        jti.String(),
+			IssuedAt:  time.Now().Unix(),
+			Issuer:    request.Actor,
+			NotBefore: 0,
+			Subject:   request.Custodian,
+		},
+		IdentityToken: request.IdentityToken,
+		SubjectID:     request.Subject,
+		Scope:         request.Scope,
+	}
+
+	var keyVals map[string]interface{}
+	inrec, _ := json.Marshal(jwtBearerToken)
+	if err := json.Unmarshal(inrec, &keyVals); err != nil {
+		return nil, err
+	}
+
+	signingString, err := v.Crypto.SignJwtFor(keyVals, types.LegalEntity{URI: request.Actor})
+	if err != nil {
+		return nil, err
+	}
+
+	return &JwtBearerTokenResponse{BearerToken: signingString}, nil
+}
+
+// ParseAndValidateAccessToken parses and validates a accesstoken string and returns a filled in NutsAccessToken.
+func (v DefaultValidator) ParseAndValidateAccessToken(accessToken string) (*NutsAccessToken, error) {
+	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
+	token, err := parser.ParseWithClaims(accessToken, &NutsAccessToken{}, func(token *jwt.Token) (i interface{}, e error) {
+		legalEntity := token.Claims.(*NutsAccessToken).Issuer
+		if legalEntity == "" {
+			return nil, ErrLegalEntityNotProvided
+		}
+
+		// Check if the care provider which signed the token is managed by this node
+		if !v.Crypto.KeyExistsFor(types.LegalEntity{URI: legalEntity}) {
+			return nil, fmt.Errorf("invalid token: not signed by a care provider of this node")
+		}
+
+		// get public key
+		org, err := v.Registry.OrganizationById(legalEntity)
+		if err != nil {
+			return nil, err
+		}
+
+		pk, err := org.CurrentPublicKey()
+		if err != nil {
+			return nil, err
+		}
+
+		return pk.Materialize()
+	})
+
+	if token != nil && token.Valid {
+		if claims, ok := token.Claims.(*NutsAccessToken); ok {
+			return claims, nil
+		}
+	}
+	return nil, err
 }
