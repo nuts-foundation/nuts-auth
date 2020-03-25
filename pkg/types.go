@@ -11,9 +11,6 @@ import (
 	"github.com/privacybydesign/irmago/server/irmaserver"
 )
 
-// SsoEndpointType defines the string to use in the endpoint for the AuthenticationServer
-//const SsoEndpointType string = "urn:oid:1.3.6.1.4.1.54851.1:nuts-oauth-authentication-server"
-
 // JwtBearerGrantType defines the grant-type to use in the access token request
 const JwtBearerGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
