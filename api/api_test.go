@@ -75,6 +75,39 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.Nil(t, err)
 	})
 
+	t.Run("with malformed time period", func(t *testing.T) {
+		wrapper := Wrapper{}
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		echoMock := coreMock.NewMockContext(ctrl)
+
+		jsonData := `{"language":"NL","legalEntity":"legalEntity","type":"BehandelaarLogin","valid_from":"invalid time in valid_from","valid_to":"2020-03-26T00:16:57+01:00","version":"v1"}`
+
+		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+			_ = json.Unmarshal([]byte(jsonData), f)
+		})
+
+		err := wrapper.CreateSession(echoMock)
+		assert.Error(t, err)
+		assert.IsType(t, &echo.HTTPError{}, err)
+		httpError := err.(*echo.HTTPError)
+		assert.Contains(t, httpError.Message, "Could not parse validFrom")
+		assert.Equal(t, http.StatusBadRequest, httpError.Code)
+
+		jsonData = `{"language":"NL","legalEntity":"legalEntity","type":"BehandelaarLogin","valid_from":"2020-03-26T00:16:57+01:00","valid_to":"invalid time in validTo","version":"v1"}`
+
+		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+			_ = json.Unmarshal([]byte(jsonData), f)
+		})
+
+		err = wrapper.CreateSession(echoMock)
+		assert.Error(t, err)
+		assert.IsType(t, &echo.HTTPError{}, err)
+		httpError = err.(*echo.HTTPError)
+		assert.Contains(t, httpError.Message, "Could not parse validTo")
+		assert.Equal(t, http.StatusBadRequest, httpError.Code)
+	})
+
 	t.Run("with invalid params", func(t *testing.T) {
 		wrapper := Wrapper{}
 		ctrl := gomock.NewController(t)
