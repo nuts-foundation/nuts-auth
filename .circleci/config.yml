@@ -23,7 +23,7 @@ jobs:
           paths:
             - "/go/pkg/mod"
 
-      - run: go test ./... -race
+      - run: go test ./...
       - run: go test ./... -coverprofile=coverage.txt
 
       - codecov/upload:
