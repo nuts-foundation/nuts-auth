@@ -20,7 +20,7 @@ require (
 	github.com/nuts-foundation/nuts-crypto v0.0.0-20200220100700-279fd5def20c
 	github.com/nuts-foundation/nuts-go-core v0.0.0-20200220093939-3a4292f30472
 	github.com/nuts-foundation/nuts-registry v0.0.0-20200212103004-a46569a9bca6
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
 	github.com/privacybydesign/irmago v0.4.1
 	github.com/sirupsen/logrus v1.4.2
