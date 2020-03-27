@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 
 	irma "github.com/privacybydesign/irmago"
 
@@ -29,7 +30,7 @@ var cryptoInstance *crypto.Crypto
 
 func Test_Integration(t *testing.T) {
 	const OrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000003"
-	const OtherOrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000002"
+	const OtherOrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000004"
 
 	type IntegrationTestContext struct {
 		wrapper  Wrapper
@@ -56,7 +57,7 @@ func Test_Integration(t *testing.T) {
 		}
 
 		// Register a vendor
-		event, _ := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{Identifier: "oid:123", Name: "Awesomesoft"})
+		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{Identifier: "oid:123", Name: "Awesomesoft"})
 		if err := r.EventSystem.PublishEvent(event); err != nil {
 			panic(err)
 		}
@@ -77,7 +78,7 @@ func Test_Integration(t *testing.T) {
 		pub, _ := cryptoInstance.PublicKeyInJWK(le)
 
 		// Add Organization to registry
-		event, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+		event = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
 			VendorIdentifier: "oid:123",
 			OrgIdentifier:    OrganizationID,
 			OrgName:          "Zorggroep Nuts",
@@ -93,7 +94,7 @@ func Test_Integration(t *testing.T) {
 		pub, _ = cryptoInstance.PublicKeyInJWK(le)
 
 		// Add Organization to registry
-		event, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
+		event = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
 			VendorIdentifier: "oid:123",
 			OrgIdentifier:    OtherOrganizationID,
 			OrgName:          "verpleeghuis De nootjes",

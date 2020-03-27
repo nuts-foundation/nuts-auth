@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/nuts-foundation/nuts-registry/pkg/events"
+	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 
 	"github.com/google/uuid"
 
@@ -359,6 +360,7 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 	validator := defaultValidator()
+	os.Setenv("NUTS_IDENTITY", "urn:oid:1.3.6.1.4.1.54851.4:1")
 
 	t.Run("valid jwt", func(t *testing.T) {
 
@@ -767,10 +769,11 @@ var testInstance *DefaultValidator
 const OrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"
 const OtherOrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000002"
 
+var mutex = sync.Mutex{}
+
 // defaultValidator sets up a validator with a registry containing a single test organization.
 // The method is a singleton and always returns the same instance
 func defaultValidator() DefaultValidator {
-	mutex := sync.Mutex{}
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -789,7 +792,7 @@ func defaultValidator() DefaultValidator {
 		}
 
 		// Register a vendor
-		event, _ := events.CreateEvent(events.RegisterVendor, events.RegisterVendorEvent{Identifier: "oid:123", Name: "Awesomesoft"})
+		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{Identifier: "oid:1234", Name: "Awesomesoft"})
 		if err := r.EventSystem.PublishEvent(event); err != nil {
 			panic(err)
 		}
@@ -800,8 +803,8 @@ func defaultValidator() DefaultValidator {
 		pub, _ := cryptoInstance.PublicKeyInJWK(le)
 
 		// Add Organization to registry
-		event, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
-			VendorIdentifier: "oid:123",
+		event = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
+			VendorIdentifier: "oid:1234",
 			OrgIdentifier:    OrganizationID,
 			OrgName:          "Zorggroep Nuts",
 			OrgKeys:          []interface{}{pub},
@@ -822,8 +825,8 @@ func defaultValidator() DefaultValidator {
 		}
 
 		// add OtherOrganization to registry
-		event, _ = events.CreateEvent(events.VendorClaim, events.VendorClaimEvent{
-			VendorIdentifier: "oid:123",
+		event = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
+			VendorIdentifier: "oid:1234",
 			OrgIdentifier:    OtherOrganizationID,
 			OrgName:          "verpleeghuis De nootjes",
 			OrgKeys:          []interface{}{pub},
