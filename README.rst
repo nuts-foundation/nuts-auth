@@ -1,6 +1,6 @@
-.. image:: https://travis-ci.com/nuts-foundation/nuts-auth.svg?branch=master
-    :target: https://travis-ci.com/nuts-foundation/nuts-auth
-    :alt: Test status
+.. image:: https://circleci.com/gh/nuts-foundation/nuts-auth.svg?style=svg
+    :target: https://circleci.com/gh/nuts-foundation/nuts-auth
+    :alt: Build Status
 
 .. image:: https://codecov.io/gh/nuts-foundation/nuts-proxy/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/nuts-foundation/nuts-auth
