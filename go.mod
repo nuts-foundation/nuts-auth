@@ -24,7 +24,7 @@ require (
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
 	github.com/privacybydesign/irmago v0.4.1
 	github.com/sirupsen/logrus v1.5.0
-	github.com/spf13/cobra v0.0.6
+	github.com/spf13/cobra v0.0.7
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.5.1
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
