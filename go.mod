@@ -13,7 +13,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.6.2 // indirect
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
-	github.com/labstack/echo/v4 v4.1.13
+	github.com/labstack/echo/v4 v4.1.16
 	github.com/lestrrat-go/jwx v0.9.1
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
