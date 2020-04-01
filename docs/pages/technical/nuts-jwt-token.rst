@@ -20,8 +20,9 @@ This allows the API of the care provider to switch between validation mechanisms
 When the Issuer is *nuts* post the token to the token check endpoint, if not, do your usual checks.
 
 .. note::
-Since the nuts token is signed with the private key of the requester, it is not trivial to verify the signature of the token.
-When recieving a request, any token signature verification steps must be postponed until it is clear a token is not a nuts token.
+
+    Since the nuts token is signed with the private key of the requester, it is not trivial to verify the signature of the token.
+    When recieving a request, any token signature verification steps must be postponed until it is clear a token is not a nuts token.
 
 Sub
 ---
