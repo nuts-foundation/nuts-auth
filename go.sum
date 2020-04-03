@@ -160,12 +160,16 @@ github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443 h1:+2OJrU8cmOs
 github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443/go.mod h1:JbxfV1Iifij2yhRjXai0oFrbpxszXHRx1E5RuM26o4Y=
 github.com/nuts-foundation/nuts-crypto v0.13.0 h1:szSHnYpK+0ORHNpeBdhPocVoukp9oxZWowKF4YCaPlI=
 github.com/nuts-foundation/nuts-crypto v0.13.0/go.mod h1:2JTdNvxWBbqv/VWQw3PazNNjY4FlbDf6LAyv2u2vtGo=
+github.com/nuts-foundation/nuts-crypto v0.13.2 h1:BoQ8qCILtEuC+firfYOIiZocLU5WO7RK5gyYTsZVSF0=
+github.com/nuts-foundation/nuts-crypto v0.13.2/go.mod h1:2JTdNvxWBbqv/VWQw3PazNNjY4FlbDf6LAyv2u2vtGo=
 github.com/nuts-foundation/nuts-go-core v0.13.0 h1:kdmBClufcCZMKjeTyfLhxyLAtPMlk3U2049U1B7p/i4=
 github.com/nuts-foundation/nuts-go-core v0.13.0/go.mod h1:YVG736ZUyC0nHRozNUsbLPRnxQouCzoARpswWgPV55g=
 github.com/nuts-foundation/nuts-registry v0.13.0 h1:PacqLjYbzuA5pTETINqmuwqj3fUMj/nShl9Zrek/EV0=
 github.com/nuts-foundation/nuts-registry v0.13.0/go.mod h1:rqHcXmi4Rj51s7peXot/ZjldQNRvSpWoNS2heJrRAqc=
 github.com/nuts-foundation/nuts-registry v0.13.1 h1:gRWq54cYC/EaniPkbGYEupXcZRbzxjYATZeNgK/sUws=
 github.com/nuts-foundation/nuts-registry v0.13.1/go.mod h1:rqHcXmi4Rj51s7peXot/ZjldQNRvSpWoNS2heJrRAqc=
+github.com/nuts-foundation/nuts-registry v0.13.4 h1:vhOHXKegYuhVfcY9/bUXqowsmwYQr2o5gLH3iO4c5JU=
+github.com/nuts-foundation/nuts-registry v0.13.4/go.mod h1:ktTP8nbHEiE8yOxV5NcyDyZ84IG/RdBbLME0D+EpCcE=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.10.1 h1:q/mM8GF/n0shIN8SaAZ0V+jnLPzen6WIVZdiwrRlMlo=
