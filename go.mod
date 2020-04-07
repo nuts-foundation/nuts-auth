@@ -19,7 +19,7 @@ require (
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/nuts-foundation/nuts-crypto v0.13.0
 	github.com/nuts-foundation/nuts-go-core v0.13.0
-	github.com/nuts-foundation/nuts-registry v0.13.1
+	github.com/nuts-foundation/nuts-registry v0.13.5
 	github.com/pkg/errors v0.9.1
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
 	github.com/privacybydesign/irmago v0.4.1
