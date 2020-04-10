@@ -6,11 +6,11 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"net/http"
-	"strings"
 )
 
 // AccessTokenRequestFailedResponse defines model for AccessTokenRequestFailedResponse.
@@ -735,4 +735,3 @@ func RegisterHandlers(router interface {
 	router.POST("/auth/token_introspection", wrapper.IntrospectAccessToken)
 
 }
-
