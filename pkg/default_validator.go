@@ -122,6 +122,9 @@ func (v DefaultValidator) SessionStatus(id SessionID) (*SessionStatusResult, err
 				return nil, err
 			}
 			legacyToken, err = v.createLegacyIdentityToken(&sic, le)
+			if err != nil {
+				return nil, err
+			}
 		}
 		result := &SessionStatusResult{*result, token, legacyToken}
 		logrus.Info(result.NutsAuthToken)
