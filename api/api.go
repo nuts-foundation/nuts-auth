@@ -121,6 +121,7 @@ func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) err
 	}
 
 	nutsAuthToken := sessionStatus.NutsAuthToken
+	legacyNutsAuthToken := sessionStatus.NutsAuthLegacyToken
 	proofStatus := string(sessionStatus.ProofStatus)
 
 	answer := SessionResult{
@@ -131,6 +132,9 @@ func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) err
 	}
 	if nutsAuthToken != "" {
 		answer.NutsAuthToken = &nutsAuthToken
+	}
+	if legacyNutsAuthToken != "" {
+		answer.NutsAuthLegacyToken = &legacyNutsAuthToken
 	}
 
 	if proofStatus != "" {

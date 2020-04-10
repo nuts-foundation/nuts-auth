@@ -17,7 +17,7 @@ require (
 	github.com/lestrrat-go/jwx v0.9.1
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
-	github.com/nuts-foundation/nuts-crypto v0.13.0
+	github.com/nuts-foundation/nuts-crypto v0.13.2
 	github.com/nuts-foundation/nuts-go-core v0.13.0
 	github.com/nuts-foundation/nuts-registry v0.13.0
 	github.com/pkg/errors v0.9.1
