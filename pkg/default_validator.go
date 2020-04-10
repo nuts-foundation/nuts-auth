@@ -26,6 +26,12 @@ type DefaultValidator struct {
 	Crypto     nutscrypto.Client
 }
 
+// LegacyIdentityToken is the JWT that was used as Identity token in versions prior to < 0.13
+type LegacyIdentityToken struct {
+	jwt.StandardClaims
+	Contract SignedIrmaContract `json:"nuts_signature"`
+}
+
 // IsInitialized is a helper function to determine if the validator has been initialized properly.
 func (v DefaultValidator) IsInitialized() bool {
 	return v.IrmaConfig != nil
@@ -100,7 +106,10 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Cont
 // It returns nil if the session is not found
 func (v DefaultValidator) SessionStatus(id SessionID) (*SessionStatusResult, error) {
 	if result := v.IrmaServer.GetSessionResult(string(id)); result != nil {
-		var token string
+		var (
+			token       string
+			legacyToken string
+		)
 		if result.Signature != nil {
 			sic := SignedIrmaContract{*result.Signature}
 			le, err := v.legalEntityFromContract(sic)
@@ -112,8 +121,9 @@ func (v DefaultValidator) SessionStatus(id SessionID) (*SessionStatusResult, err
 			if err != nil {
 				return nil, err
 			}
+			legacyToken, err = v.createLegacyIdentityToken(&sic, le)
 		}
-		result := &SessionStatusResult{*result, token}
+		result := &SessionStatusResult{*result, token, legacyToken}
 		logrus.Info(result.NutsAuthToken)
 		return result, nil
 	}
@@ -171,6 +181,51 @@ func (v DefaultValidator) CreateIdentityTokenFromIrmaContract(contract *SignedIr
 		return "", fmt.Errorf("could not sign jwt: %w", err)
 	}
 	return tokenString, nil
+}
+
+// func for creating legacy token
+func (v DefaultValidator) createLegacyIdentityToken(contract *SignedIrmaContract, legalEntity string) (string, error) {
+	payload := LegacyIdentityToken{
+		StandardClaims: jwt.StandardClaims{
+			Issuer:  "nuts",
+			Subject: legalEntity,
+		},
+		Contract: *contract,
+	}
+
+	claims, err := convertPayloadToClaimsLegacy(payload)
+	if err != nil {
+		err = fmt.Errorf("could not construct claims: %w", err)
+		logrus.Error(err)
+		return "", err
+	}
+
+	tokenString, err := v.Crypto.SignJwtFor(claims, types.LegalEntity{URI: legalEntity})
+	if err != nil {
+		err = fmt.Errorf("could not sign jwt: %w", err)
+		logrus.Error(err)
+		return "", err
+	}
+	return tokenString, nil
+}
+
+func convertPayloadToClaimsLegacy(payload LegacyIdentityToken) (map[string]interface{}, error) {
+
+	var (
+		jsonString []byte
+		err        error
+		claims     map[string]interface{}
+	)
+
+	if jsonString, err = json.Marshal(payload); err != nil {
+		return nil, fmt.Errorf("could not marshall payload: %w", err)
+	}
+
+	if err := json.Unmarshal(jsonString, &claims); err != nil {
+		return nil, fmt.Errorf("could not unmarshall string: %w", err)
+	}
+
+	return claims, nil
 }
 
 // convertPayloadToClaims converts a nutsJwt struct to a map of strings so it can be signed with the crypto module

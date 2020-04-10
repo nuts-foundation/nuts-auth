@@ -281,6 +281,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 			&SessionStatusResult{
 				server.SessionResult{Token: knownSessionID, Status: server.StatusInitialized, Type: irma2.ActionSigning},
 				"",
+				"",
 			},
 		},
 	}
@@ -348,12 +349,14 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 
 		rMock.EXPECT().ReverseLookup("verpleeghuis De nootjes").Return(&db.Organization{Identifier: "urn:id:1"}, nil)
 		cMock.EXPECT().SignJwtFor(gomock.Any(), types.LegalEntity{URI: "urn:id:1"}).Return("token", nil)
+		cMock.EXPECT().SignJwtFor(gomock.Any(), types.LegalEntity{URI: "urn:id:1"}).Return("legacyToken", nil)
 
 		s, err := v.SessionStatus(SessionID("known"))
 
 		assert.Nil(t, err)
 		assert.NotNil(t, s)
 		assert.Equal(t, "token", s.NutsAuthToken)
+		assert.Equal(t, "legacyToken", s.NutsAuthLegacyToken)
 	})
 }
 

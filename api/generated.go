@@ -4,64 +4,123 @@
 package api
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
+	"io"
+	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 // AccessTokenRequestFailedResponse defines model for AccessTokenRequestFailedResponse.
 type AccessTokenRequestFailedResponse struct {
-	Error            string `json:"error"`
+	Error string `json:"error"`
+
+	// Human-readable ASCII text providing additional information, used to assist the client developer in understanding the error that occurred.
 	ErrorDescription string `json:"error_description"`
 }
 
 // AccessTokenRequestJWT defines model for AccessTokenRequestJWT.
 type AccessTokenRequestJWT struct {
-	Aud string  `json:"aud"`
+
+	// As per rfc7523 https://tools.ietf.org/html/rfc7523>, the aud must be the
+	// token endpoint. This can be taken from the Nuts registry.
+	Aud string `json:"aud"`
+
+	// Additional context
 	Con *string `json:"con,omitempty"`
+
+	// max(time_from_irma_sign, some_limited_time)
 	Exp float32 `json:"exp"`
 	Iat float32 `json:"iat"`
-	Iss string  `json:"iss"`
-	Jti string  `json:"jti"`
+
+	// The issuer in the JWT is always the actor, thus the care organization doing the request.
+	// This is used to find the public key of the issuer from the Nuts registry.
+	Iss string `json:"iss"`
+
+	// unique identifier
+	Jti string `json:"jti"`
+
+	// base64 encoded hardware signature
 	Osi *string `json:"osi,omitempty"`
-	Sid string  `json:"sid"`
-	Sub string  `json:"sub"`
-	Uid string  `json:"uid"`
+
+	// The Nuts subject id, patient identifier in the form of an oid encoded BSN.
+	Sid string `json:"sid"`
+
+	// The subject (not a Nuts subject) contains the urn of the custodian. The
+	// custodian information is used to find the relevant consent (together with actor
+	// and subject).
+	Sub string `json:"sub"`
+
+	// Jwt encoded user identity.
+	Uid string `json:"uid"`
 }
 
 // AccessTokenResponse defines model for AccessTokenResponse.
 type AccessTokenResponse struct {
-	AccessToken string  `json:"access_token"`
-	ExpiresIn   float32 `json:"expires_in"`
-	TokenType   string  `json:"token_type"`
+
+	// The access token issued by the authorization server.
+	// Could be a signed JWT or a random number. It should not have a meaning to the client.
+	AccessToken string `json:"access_token"`
+
+	// The lifetime in seconds of the access token.
+	ExpiresIn float32 `json:"expires_in"`
+
+	// The type of the token issued
+	TokenType string `json:"token_type"`
 }
 
 // Contract defines model for Contract.
 type Contract struct {
+
+	// Language of the contract in all caps
 	Language           Language  `json:"language"`
 	SignerAttributes   *[]string `json:"signer_attributes,omitempty"`
 	Template           *string   `json:"template,omitempty"`
 	TemplateAttributes *[]string `json:"template_attributes,omitempty"`
-	Type               Type      `json:"type"`
-	Version            Version   `json:"version"`
+
+	// Type of which contract to sign
+	Type Type `json:"type"`
+
+	// Version of the contract
+	Version Version `json:"version"`
 }
 
 // ContractSigningRequest defines model for ContractSigningRequest.
 type ContractSigningRequest struct {
-	Language    Language    `json:"language"`
+
+	// Language of the contract in all caps
+	Language Language `json:"language"`
+
+	// Identifier of the legalEntity as registered in the Nuts registry
 	LegalEntity LegalEntity `json:"legalEntity"`
-	Type        Type        `json:"type"`
-	ValidFrom   *string     `json:"valid_from,omitempty"`
-	ValidTo     *string     `json:"valid_to,omitempty"`
-	Version     Version     `json:"version"`
+
+	// Type of which contract to sign
+	Type Type `json:"type"`
+
+	// ValidFrom describes the time from which this contract should be considered valid
+	ValidFrom *string `json:"valid_from,omitempty"`
+
+	// ValidTo describes the time until this contract should be considered valid
+	ValidTo *string `json:"valid_to,omitempty"`
+
+	// Version of the contract
+	Version Version `json:"version"`
 }
 
 // CreateAccessTokenRequest defines model for CreateAccessTokenRequest.
 type CreateAccessTokenRequest struct {
+
+	// Base64 encoded JWT following rfc7523 and the Nuts documentation
 	Assertion string `json:"assertion"`
+
+	// always must contain the value "urn:ietf:params:oauth:grant-type:jwt-bearer"
 	GrantType string `json:"grant_type"`
 }
 
@@ -69,15 +128,23 @@ type CreateAccessTokenRequest struct {
 type CreateJwtBearerTokenRequest struct {
 	Actor     string `json:"actor"`
 	Custodian string `json:"custodian"`
-	Identity  string `json:"identity"`
-	Scope     string `json:"scope"`
-	Subject   string `json:"subject"`
+
+	// Base64 encoded IRMA contract conaining the identity of the performer
+	Identity string `json:"identity"`
+
+	// Space-delimited list of strings. For what kind of operations can the access token be used? Scopes will be specified for each use-case
+	Scope   string `json:"scope"`
+	Subject string `json:"subject"`
 }
 
 // CreateSessionResult defines model for CreateSessionResult.
 type CreateSessionResult struct {
+
+	// Qr contains the data of an IRMA session QR (as generated by irma_js), suitable for NewSession()
 	QrCodeInfo IrmaQR `json:"qr_code_info"`
-	SessionId  string `json:"session_id"`
+
+	// a session identifier
+	SessionId string `json:"session_id"`
 }
 
 // DisclosedAttribute defines model for DisclosedAttribute.
@@ -105,7 +172,9 @@ type ErrorString string
 // IrmaQR defines model for IrmaQR.
 type IrmaQR struct {
 	Irmaqr string `json:"irmaqr"`
-	U      string `json:"u"`
+
+	// Server with which to perform the session (URL)
+	U string `json:"u"`
 }
 
 // JwtBearerTokenResponse defines model for JwtBearerTokenResponse.
@@ -174,14 +243,21 @@ type RemoteError struct {
 
 // SessionResult defines model for SessionResult.
 type SessionResult struct {
-	Disclosed     *[]DisclosedAttribute `json:"disclosed,omitempty"`
-	Error         *RemoteError          `json:"error,omitempty"`
-	NutsAuthToken *string               `json:"nuts_auth_token,omitempty"`
-	ProofStatus   *string               `json:"proofStatus,omitempty"`
-	Signature     *SignedMessage        `json:"signature,omitempty"`
-	Status        string                `json:"status"`
-	Token         string                `json:"token"`
-	Type          string                `json:"type"`
+	Disclosed *[]DisclosedAttribute `json:"disclosed,omitempty"`
+	Error     *RemoteError          `json:"error,omitempty"`
+
+	// JWT that can be used as Bearer Token (deprecated)
+	NutsAuthLegacyToken *string `json:"nuts_auth_legacy_token,omitempty"`
+
+	// Base64 encoded JWT that can be used as Bearer Token
+	NutsAuthToken *string        `json:"nuts_auth_token,omitempty"`
+	ProofStatus   *string        `json:"proofStatus,omitempty"`
+	Signature     *SignedMessage `json:"signature,omitempty"`
+	Status        string         `json:"status"`
+
+	// the token originally given in the request
+	Token string `json:"token"`
+	Type  string `json:"type"`
 }
 
 // SignedMessage defines model for SignedMessage.
@@ -206,20 +282,42 @@ type TokenIntrospectionRequest struct {
 
 // TokenIntrospectionResponse defines model for TokenIntrospectionResponse.
 type TokenIntrospectionResponse struct {
-	Active     bool    `json:"active"`
-	Aud        *string `json:"aud,omitempty"`
+
+	// True if the token is active, false if the token is expired, malformed etc.
+	Active bool `json:"active"`
+
+	// As per rfc7523 https://tools.ietf.org/html/rfc7523>, the aud must be the
+	// token endpoint. This can be taken from the Nuts registry.
+	Aud *string `json:"aud,omitempty"`
+
+	// End-User's preferred e-mail address. Should be a personal email and can be used to uniquely identify a user. Just like the email used for an account.
 	Email      *string `json:"email,omitempty"`
 	Exp        *int    `json:"exp,omitempty"`
 	FamilyName *string `json:"family_name,omitempty"`
-	GivenName  *string `json:"given_name,omitempty"`
-	Iat        *int    `json:"iat,omitempty"`
-	Iss        *string `json:"iss,omitempty"`
-	Name       *string `json:"name,omitempty"`
-	Prefix     *string `json:"prefix,omitempty"`
-	Scope      *string `json:"scope,omitempty"`
-	Sid        *string `json:"sid,omitempty"`
-	Sub        *string `json:"sub,omitempty"`
-	Uid        *string `json:"uid,omitempty"`
+
+	// Given name(s) or first name(s) of the End-User.
+	GivenName *string `json:"given_name,omitempty"`
+	Iat       *int    `json:"iat,omitempty"`
+
+	// The issuer in the JWT is always the acting party, thus the care organization doing the request.
+	// This is used to find the public key of the issuer from the Nuts registry.
+	Iss  *string `json:"iss,omitempty"`
+	Name *string `json:"name,omitempty"`
+
+	// Surname prefix
+	Prefix *string `json:"prefix,omitempty"`
+	Scope  *string `json:"scope,omitempty"`
+
+	// The Nuts subject id, patient identifier in the form of an oid encoded BSN.
+	Sid *string `json:"sid,omitempty"`
+
+	// The subject (not a Nuts subject) contains the urn of the custodian. The
+	// custodian information is used to find the relevant consent (together with actor
+	// and subject).
+	Sub *string `json:"sub,omitempty"`
+
+	// Jwt encoded user identity.
+	Uid *string `json:"uid,omitempty"`
 }
 
 // Type defines model for Type.
@@ -227,8 +325,14 @@ type Type string
 
 // ValidationRequest defines model for ValidationRequest.
 type ValidationRequest struct {
-	ActingPartyCn  string `json:"acting_party_cn"`
+
+	// ActingPartyCN is the common name of the Acting party extracted from the client cert
+	ActingPartyCn string `json:"acting_party_cn"`
+
+	// ContractFormat specifies the type of format used for the contract
 	ContractFormat string `json:"contract_format"`
+
+	// Base64 encoded contracts, either Irma signature or a JWT
 	ContractString string `json:"contract_string"`
 }
 
@@ -247,11 +351,11 @@ type ValidationResult_SignerAttributes struct {
 // Version defines model for Version.
 type Version string
 
-// createSessionJSONBody defines parameters for CreateSession.
-type createSessionJSONBody ContractSigningRequest
+// CreateSessionJSONBody defines parameters for CreateSession.
+type CreateSessionJSONBody ContractSigningRequest
 
-// validateContractJSONBody defines parameters for ValidateContract.
-type validateContractJSONBody ValidationRequest
+// ValidateContractJSONBody defines parameters for ValidateContract.
+type ValidateContractJSONBody ValidationRequest
 
 // GetContractByTypeParams defines parameters for GetContractByType.
 type GetContractByTypeParams struct {
@@ -261,17 +365,17 @@ type GetContractByTypeParams struct {
 	Language *string `json:"language,omitempty"`
 }
 
-// createJwtBearerTokenJSONBody defines parameters for CreateJwtBearerToken.
-type createJwtBearerTokenJSONBody CreateJwtBearerTokenRequest
+// CreateJwtBearerTokenJSONBody defines parameters for CreateJwtBearerToken.
+type CreateJwtBearerTokenJSONBody CreateJwtBearerTokenRequest
 
 // CreateSessionRequestBody defines body for CreateSession for application/json ContentType.
-type CreateSessionJSONRequestBody createSessionJSONBody
+type CreateSessionJSONRequestBody CreateSessionJSONBody
 
 // ValidateContractRequestBody defines body for ValidateContract for application/json ContentType.
-type ValidateContractJSONRequestBody validateContractJSONBody
+type ValidateContractJSONRequestBody ValidateContractJSONBody
 
 // CreateJwtBearerTokenRequestBody defines body for CreateJwtBearerToken for application/json ContentType.
-type CreateJwtBearerTokenJSONRequestBody createJwtBearerTokenJSONBody
+type CreateJwtBearerTokenJSONRequestBody CreateJwtBearerTokenJSONBody
 
 // Getter for additional properties for DisclosedAttribute_Value. Returns the specified
 // element and whether it was found
@@ -485,21 +589,1013 @@ func (a ValidationResult_SignerAttributes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// RequestEditorFn  is the function signature for the RequestEditor callback function
+type RequestEditorFn func(req *http.Request, ctx context.Context) error
+
+// Doer performs HTTP requests.
+//
+// The standard http.Client implements this interface.
+type HttpRequestDoer interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+// Client which conforms to the OpenAPI3 specification for this service.
+type Client struct {
+	// The endpoint of the server conforming to this interface, with scheme,
+	// https://api.deepmap.com for example.
+	Server string
+
+	// Doer for performing requests, typically a *http.Client with any
+	// customized settings, such as certificate chains.
+	Client HttpRequestDoer
+
+	// A callback for modifying requests which are generated before sending over
+	// the network.
+	RequestEditor RequestEditorFn
+}
+
+// ClientOption allows setting custom parameters during construction
+type ClientOption func(*Client) error
+
+// Creates a new Client, with reasonable defaults
+func NewClient(server string, opts ...ClientOption) (*Client, error) {
+	// create a client with sane default values
+	client := Client{
+		Server: server,
+	}
+	// mutate client and add all optional params
+	for _, o := range opts {
+		if err := o(&client); err != nil {
+			return nil, err
+		}
+	}
+	// create httpClient, if not already present
+	if client.Client == nil {
+		client.Client = http.DefaultClient
+	}
+	return &client, nil
+}
+
+// WithHTTPClient allows overriding the default Doer, which is
+// automatically created using http.Client. This is useful for tests.
+func WithHTTPClient(doer HttpRequestDoer) ClientOption {
+	return func(c *Client) error {
+		c.Client = doer
+		return nil
+	}
+}
+
+// WithRequestEditorFn allows setting up a callback function, which will be
+// called right before sending the request. This can be used to mutate the request.
+func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
+	return func(c *Client) error {
+		c.RequestEditor = fn
+		return nil
+	}
+}
+
+// The interface specification for the client above.
+type ClientInterface interface {
+	// CreateAccessToken request  with any body
+	CreateAccessTokenWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+
+	// CreateSession request  with any body
+	CreateSessionWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+
+	CreateSession(ctx context.Context, body CreateSessionJSONRequestBody) (*http.Response, error)
+
+	// SessionRequestStatus request
+	SessionRequestStatus(ctx context.Context, id string) (*http.Response, error)
+
+	// ValidateContract request  with any body
+	ValidateContractWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+
+	ValidateContract(ctx context.Context, body ValidateContractJSONRequestBody) (*http.Response, error)
+
+	// GetContractByType request
+	GetContractByType(ctx context.Context, contractType string, params *GetContractByTypeParams) (*http.Response, error)
+
+	// CreateJwtBearerToken request  with any body
+	CreateJwtBearerTokenWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+
+	CreateJwtBearerToken(ctx context.Context, body CreateJwtBearerTokenJSONRequestBody) (*http.Response, error)
+
+	// IntrospectAccessToken request  with any body
+	IntrospectAccessTokenWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error)
+}
+
+func (c *Client) CreateAccessTokenWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewCreateAccessTokenRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateSessionWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewCreateSessionRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateSession(ctx context.Context, body CreateSessionJSONRequestBody) (*http.Response, error) {
+	req, err := NewCreateSessionRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SessionRequestStatus(ctx context.Context, id string) (*http.Response, error) {
+	req, err := NewSessionRequestStatusRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ValidateContractWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewValidateContractRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ValidateContract(ctx context.Context, body ValidateContractJSONRequestBody) (*http.Response, error) {
+	req, err := NewValidateContractRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetContractByType(ctx context.Context, contractType string, params *GetContractByTypeParams) (*http.Response, error) {
+	req, err := NewGetContractByTypeRequest(c.Server, contractType, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateJwtBearerTokenWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewCreateJwtBearerTokenRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateJwtBearerToken(ctx context.Context, body CreateJwtBearerTokenJSONRequestBody) (*http.Response, error) {
+	req, err := NewCreateJwtBearerTokenRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) IntrospectAccessTokenWithBody(ctx context.Context, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := NewIntrospectAccessTokenRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if c.RequestEditor != nil {
+		err = c.RequestEditor(req, ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return c.Client.Do(req)
+}
+
+// NewCreateAccessTokenRequestWithBody generates requests for CreateAccessToken with any type of body
+func NewCreateAccessTokenRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/auth/accesstoken")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
+// NewCreateSessionRequest calls the generic CreateSession builder with application/json body
+func NewCreateSessionRequest(server string, body CreateSessionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateSessionRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateSessionRequestWithBody generates requests for CreateSession with any type of body
+func NewCreateSessionRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/auth/contract/session")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
+// NewSessionRequestStatusRequest generates requests for SessionRequestStatus
+func NewSessionRequestStatusRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "id", id)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/auth/contract/session/%s", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewValidateContractRequest calls the generic ValidateContract builder with application/json body
+func NewValidateContractRequest(server string, body ValidateContractJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewValidateContractRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewValidateContractRequestWithBody generates requests for ValidateContract with any type of body
+func NewValidateContractRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/auth/contract/validate")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
+// NewGetContractByTypeRequest generates requests for GetContractByType
+func NewGetContractByTypeRequest(server string, contractType string, params *GetContractByTypeParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParam("simple", false, "contractType", contractType)
+	if err != nil {
+		return nil, err
+	}
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/auth/contract/%s", pathParam0)
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	queryValues := queryUrl.Query()
+
+	if params.Version != nil {
+
+		if queryFrag, err := runtime.StyleParam("form", true, "version", *params.Version); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.Language != nil {
+
+		if queryFrag, err := runtime.StyleParam("form", true, "language", *params.Language); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryUrl.RawQuery = queryValues.Encode()
+
+	req, err := http.NewRequest("GET", queryUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateJwtBearerTokenRequest calls the generic CreateJwtBearerToken builder with application/json body
+func NewCreateJwtBearerTokenRequest(server string, body CreateJwtBearerTokenJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateJwtBearerTokenRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateJwtBearerTokenRequestWithBody generates requests for CreateJwtBearerToken with any type of body
+func NewCreateJwtBearerTokenRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/auth/jwtbearertoken")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
+// NewIntrospectAccessTokenRequestWithBody generates requests for IntrospectAccessToken with any type of body
+func NewIntrospectAccessTokenRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	queryUrl, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	basePath := fmt.Sprintf("/auth/token_introspection")
+	if basePath[0] == '/' {
+		basePath = basePath[1:]
+	}
+
+	queryUrl, err = queryUrl.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+	return req, nil
+}
+
+// ClientWithResponses builds on ClientInterface to offer response payloads
+type ClientWithResponses struct {
+	ClientInterface
+}
+
+// NewClientWithResponses creates a new ClientWithResponses, which wraps
+// Client with return type handling
+func NewClientWithResponses(server string, opts ...ClientOption) (*ClientWithResponses, error) {
+	client, err := NewClient(server, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &ClientWithResponses{client}, nil
+}
+
+// WithBaseURL overrides the baseURL.
+func WithBaseURL(baseURL string) ClientOption {
+	return func(c *Client) error {
+		if !strings.HasSuffix(baseURL, "/") {
+			baseURL += "/"
+		}
+		newBaseURL, err := url.Parse(baseURL)
+		if err != nil {
+			return err
+		}
+		c.Server = newBaseURL.String()
+		return nil
+	}
+}
+
+type createAccessTokenResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AccessTokenResponse
+	JSON400      *AccessTokenRequestFailedResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r createAccessTokenResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r createAccessTokenResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type createSessionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *CreateSessionResult
+}
+
+// Status returns HTTPResponse.Status
+func (r createSessionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r createSessionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type sessionRequestStatusResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *SessionResult
+}
+
+// Status returns HTTPResponse.Status
+func (r sessionRequestStatusResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r sessionRequestStatusResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type validateContractResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ValidationResult
+}
+
+// Status returns HTTPResponse.Status
+func (r validateContractResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r validateContractResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type getContractByTypeResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Contract
+}
+
+// Status returns HTTPResponse.Status
+func (r getContractByTypeResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r getContractByTypeResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type createJwtBearerTokenResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *JwtBearerTokenResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r createJwtBearerTokenResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r createJwtBearerTokenResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type introspectAccessTokenResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *TokenIntrospectionResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r introspectAccessTokenResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r introspectAccessTokenResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// CreateAccessTokenWithBodyWithResponse request with arbitrary body returning *CreateAccessTokenResponse
+func (c *ClientWithResponses) CreateAccessTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*createAccessTokenResponse, error) {
+	rsp, err := c.CreateAccessTokenWithBody(ctx, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateAccessTokenResponse(rsp)
+}
+
+// CreateSessionWithBodyWithResponse request with arbitrary body returning *CreateSessionResponse
+func (c *ClientWithResponses) CreateSessionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*createSessionResponse, error) {
+	rsp, err := c.CreateSessionWithBody(ctx, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSessionResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateSessionWithResponse(ctx context.Context, body CreateSessionJSONRequestBody) (*createSessionResponse, error) {
+	rsp, err := c.CreateSession(ctx, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSessionResponse(rsp)
+}
+
+// SessionRequestStatusWithResponse request returning *SessionRequestStatusResponse
+func (c *ClientWithResponses) SessionRequestStatusWithResponse(ctx context.Context, id string) (*sessionRequestStatusResponse, error) {
+	rsp, err := c.SessionRequestStatus(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSessionRequestStatusResponse(rsp)
+}
+
+// ValidateContractWithBodyWithResponse request with arbitrary body returning *ValidateContractResponse
+func (c *ClientWithResponses) ValidateContractWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*validateContractResponse, error) {
+	rsp, err := c.ValidateContractWithBody(ctx, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseValidateContractResponse(rsp)
+}
+
+func (c *ClientWithResponses) ValidateContractWithResponse(ctx context.Context, body ValidateContractJSONRequestBody) (*validateContractResponse, error) {
+	rsp, err := c.ValidateContract(ctx, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseValidateContractResponse(rsp)
+}
+
+// GetContractByTypeWithResponse request returning *GetContractByTypeResponse
+func (c *ClientWithResponses) GetContractByTypeWithResponse(ctx context.Context, contractType string, params *GetContractByTypeParams) (*getContractByTypeResponse, error) {
+	rsp, err := c.GetContractByType(ctx, contractType, params)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetContractByTypeResponse(rsp)
+}
+
+// CreateJwtBearerTokenWithBodyWithResponse request with arbitrary body returning *CreateJwtBearerTokenResponse
+func (c *ClientWithResponses) CreateJwtBearerTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*createJwtBearerTokenResponse, error) {
+	rsp, err := c.CreateJwtBearerTokenWithBody(ctx, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateJwtBearerTokenResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateJwtBearerTokenWithResponse(ctx context.Context, body CreateJwtBearerTokenJSONRequestBody) (*createJwtBearerTokenResponse, error) {
+	rsp, err := c.CreateJwtBearerToken(ctx, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateJwtBearerTokenResponse(rsp)
+}
+
+// IntrospectAccessTokenWithBodyWithResponse request with arbitrary body returning *IntrospectAccessTokenResponse
+func (c *ClientWithResponses) IntrospectAccessTokenWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader) (*introspectAccessTokenResponse, error) {
+	rsp, err := c.IntrospectAccessTokenWithBody(ctx, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	return ParseIntrospectAccessTokenResponse(rsp)
+}
+
+// ParseCreateAccessTokenResponse parses an HTTP response from a CreateAccessTokenWithResponse call
+func ParseCreateAccessTokenResponse(rsp *http.Response) (*createAccessTokenResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &createAccessTokenResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AccessTokenResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest AccessTokenRequestFailedResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateSessionResponse parses an HTTP response from a CreateSessionWithResponse call
+func ParseCreateSessionResponse(rsp *http.Response) (*createSessionResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &createSessionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest CreateSessionResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSessionRequestStatusResponse parses an HTTP response from a SessionRequestStatusWithResponse call
+func ParseSessionRequestStatusResponse(rsp *http.Response) (*sessionRequestStatusResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &sessionRequestStatusResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SessionResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseValidateContractResponse parses an HTTP response from a ValidateContractWithResponse call
+func ParseValidateContractResponse(rsp *http.Response) (*validateContractResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &validateContractResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ValidationResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetContractByTypeResponse parses an HTTP response from a GetContractByTypeWithResponse call
+func ParseGetContractByTypeResponse(rsp *http.Response) (*getContractByTypeResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &getContractByTypeResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Contract
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateJwtBearerTokenResponse parses an HTTP response from a CreateJwtBearerTokenWithResponse call
+func ParseCreateJwtBearerTokenResponse(rsp *http.Response) (*createJwtBearerTokenResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &createJwtBearerTokenResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest JwtBearerTokenResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseIntrospectAccessTokenResponse parses an HTTP response from a IntrospectAccessTokenWithResponse call
+func ParseIntrospectAccessTokenResponse(rsp *http.Response) (*introspectAccessTokenResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer rsp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &introspectAccessTokenResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest TokenIntrospectionResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Create an access token based on the OAuth JWT Bearer flow.// (POST /auth/accesstoken)
+	// Create an access token based on the OAuth JWT Bearer flow.
+	// This endpoint must be available to the outside world for other applications to request access tokens.
+	// It requires a X-Nuts-LegalEntity header which should contain the vendor name and must be the same as used in the signed login contract.
+	// (POST /auth/accesstoken)
 	CreateAccessToken(ctx echo.Context) error
-	// CreateSessionHandler Initiates an IRMA signing session with the correct contract.// (POST /auth/contract/session)
+	// CreateSessionHandler Initiates an IRMA signing session with the correct contract.
+	// (POST /auth/contract/session)
 	CreateSession(ctx echo.Context) error
-	// returns the result of the contract request// (GET /auth/contract/session/{id})
+	// returns the result of the contract request
+	// (GET /auth/contract/session/{id})
 	SessionRequestStatus(ctx echo.Context, id string) error
-	// Validate a Nuts Security Contract// (POST /auth/contract/validate)
+	// Validate a Nuts Security Contract
+	// (POST /auth/contract/validate)
 	ValidateContract(ctx echo.Context) error
-	// Get a contract by type and version// (GET /auth/contract/{contractType})
+	// Get a contract by type and version
+	// (GET /auth/contract/{contractType})
 	GetContractByType(ctx echo.Context, contractType string, params GetContractByTypeParams) error
-	// Create a JWT Bearer Token which can be used in the createAccessToken request in the assertion field// (POST /auth/jwtbearertoken)
+	// Create a JWT Bearer Token which can be used in the createAccessToken request in the assertion field
+	// (POST /auth/jwtbearertoken)
 	CreateJwtBearerToken(ctx echo.Context) error
-	// Introspection endpoint to retrieve information from an Access Token as described by RFC7662// (POST /auth/token_introspection)
+	// Introspection endpoint to retrieve information from an Access Token as described by RFC7662
+	// (POST /auth/token_introspection)
 	IntrospectAccessToken(ctx echo.Context) error
 }
 
@@ -565,9 +1661,6 @@ func (w *ServerInterfaceWrapper) GetContractByType(ctx echo.Context) error {
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetContractByTypeParams
 	// ------------- Optional query parameter "version" -------------
-	if paramValue := ctx.QueryParam("version"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "version", ctx.QueryParams(), &params.Version)
 	if err != nil {
@@ -575,9 +1668,6 @@ func (w *ServerInterfaceWrapper) GetContractByType(ctx echo.Context) error {
 	}
 
 	// ------------- Optional query parameter "language" -------------
-	if paramValue := ctx.QueryParam("language"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "language", ctx.QueryParams(), &params.Language)
 	if err != nil {
