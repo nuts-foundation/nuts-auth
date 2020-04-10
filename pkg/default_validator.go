@@ -57,6 +57,12 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 
 // ValidateJwt validates a JWT formatted identity token
 func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*ContractValidationResult, error) {
+	// try legacy first
+	legacyResult, err := v.validateLegacyJwt(token, actingPartyCN)
+	if err == nil {
+		return legacyResult, nil
+	}
+
 	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
 	parsedToken, err := parser.ParseWithClaims(token, &NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		//parsedToken, err := parser.Parse(token, func(token *jwt.Token) (i interface{}, e error) {
@@ -100,6 +106,62 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Cont
 		return nil, err
 	}
 	return irmaContract.Validate(actingPartyCN, v.IrmaConfig)
+}
+
+var ErrNotLegacyContract = errors.New("not a legacy contract")
+
+// validateLegacyJwt validates the old style tokens
+func (v DefaultValidator) validateLegacyJwt(token string, actingPartyCN string) (*ContractValidationResult, error) {
+	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (i interface{}, e error) {
+		if token.Claims.(jwt.MapClaims)["iss"] != "nuts" {
+			return nil, ErrNotLegacyContract
+		}
+		legalEntity := token.Claims.(jwt.MapClaims)["sub"]
+
+		if legalEntity == nil || legalEntity == "" {
+			return nil, ErrLegalEntityNotFound
+		}
+
+		// get public key
+		org, err := v.Registry.OrganizationById(legalEntity.(string))
+		if err != nil {
+			return nil, err
+		}
+
+		pk, err := org.CurrentPublicKey()
+		if err != nil {
+			return nil, err
+		}
+		return pk.Materialize()
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("could not parse jwt: %w", err)
+	}
+
+	payload, err := convertClaimsToPayload(parsedToken.Claims.(jwt.MapClaims))
+	if err != nil {
+		return nil, err
+	}
+	return payload.Contract.Validate(actingPartyCN, v.IrmaConfig)
+}
+
+func convertClaimsToPayload(claims map[string]interface{}) (*LegacyIdentityToken, error) {
+	var (
+		jsonString []byte
+		err        error
+		payload    LegacyIdentityToken
+	)
+
+	if jsonString, err = json.Marshal(claims); err != nil {
+		return nil, fmt.Errorf("could not marshall payload: %w", err)
+	}
+
+	if err := json.Unmarshal(jsonString, &payload); err != nil {
+		return nil, fmt.Errorf("could not unmarshall string: %w", err)
+	}
+
+	return &payload, nil
 }
 
 // SessionStatus returns the current status of a certain session.
