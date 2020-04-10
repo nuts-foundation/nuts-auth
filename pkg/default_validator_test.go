@@ -281,6 +281,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 			&SessionStatusResult{
 				server.SessionResult{Token: knownSessionID, Status: server.StatusInitialized, Type: irma2.ActionSigning},
 				"",
+				"",
 			},
 		},
 	}
@@ -348,12 +349,14 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 
 		rMock.EXPECT().ReverseLookup("verpleeghuis De nootjes").Return(&db.Organization{Identifier: "urn:id:1"}, nil)
 		cMock.EXPECT().SignJwtFor(gomock.Any(), types.LegalEntity{URI: "urn:id:1"}).Return("token", nil)
+		cMock.EXPECT().SignJwtFor(gomock.Any(), types.LegalEntity{URI: "urn:id:1"}).Return("legacyToken", nil)
 
 		s, err := v.SessionStatus(SessionID("known"))
 
 		assert.Nil(t, err)
 		assert.NotNil(t, s)
 		assert.Equal(t, "token", s.NutsAuthToken)
+		assert.Equal(t, "legacyToken", s.NutsAuthLegacyToken)
 	})
 }
 
@@ -495,6 +498,31 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		}
 		os.Unsetenv("NUTS_STRICTMODE")
 
+	})
+
+	t.Run("legacy style JWT", func(t *testing.T) {
+		oldFunc := NowFunc
+
+		NowFunc = func() time.Time {
+			now, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
+			if err != nil {
+				panic(err)
+			}
+			return now
+		}
+		defer func() {
+			NowFunc = oldFunc
+		}()
+
+		token := createLegacyJwt("nuts", OrganizationID, testdata.ValidIrmaContract)
+		actingParty := "Demo EHR"
+
+		result, err := validator.ValidateJwt(string(token), actingParty)
+		if assert.Nil(t, err) && assert.NotNil(t, result) {
+			assert.Equal(t, ValidationState("VALID"), result.ValidationResult)
+			assert.Equal(t, ContractFormat("irma"), result.ContractFormat)
+			assert.Equal(t, map[string]string{"nuts.agb.agbcode": "00000007"}, result.DisclosedAttributes)
+		}
 	})
 
 }
@@ -732,6 +760,23 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotEmpty(t, response)
 	})
+}
+
+func createLegacyJwt(iss string, sub string, irmaContract string) []byte {
+	var payload LegacyIdentityToken
+	payload.Issuer = iss
+	payload.Subject = sub
+	payload.Contract = SignedIrmaContract{}
+
+	_ = json.Unmarshal([]byte(irmaContract), &payload.Contract.IrmaContract)
+	var claims map[string]interface{}
+	jsonString, _ := json.Marshal(payload)
+
+	_ = json.Unmarshal(jsonString, &claims)
+
+	tokenString, _ := cryptoInstance.SignJwtFor(claims, types.LegalEntity{URI: sub})
+
+	return []byte(tokenString)
 }
 
 func createJwt(iss string, sub string, contractStr string) []byte {

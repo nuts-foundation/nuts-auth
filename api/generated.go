@@ -6,62 +6,116 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
-	"net/http"
 )
 
 // AccessTokenRequestFailedResponse defines model for AccessTokenRequestFailedResponse.
 type AccessTokenRequestFailedResponse struct {
-	Error            string `json:"error"`
+	Error string `json:"error"`
+
+	// Human-readable ASCII text providing additional information, used to assist the client developer in understanding the error that occurred.
 	ErrorDescription string `json:"error_description"`
 }
 
 // AccessTokenRequestJWT defines model for AccessTokenRequestJWT.
 type AccessTokenRequestJWT struct {
-	Aud string  `json:"aud"`
+
+	// As per rfc7523 https://tools.ietf.org/html/rfc7523>, the aud must be the
+	// token endpoint. This can be taken from the Nuts registry.
+	Aud string `json:"aud"`
+
+	// Additional context
 	Con *string `json:"con,omitempty"`
+
+	// max(time_from_irma_sign, some_limited_time)
 	Exp float32 `json:"exp"`
 	Iat float32 `json:"iat"`
-	Iss string  `json:"iss"`
-	Jti string  `json:"jti"`
+
+	// The issuer in the JWT is always the actor, thus the care organization doing the request.
+	// This is used to find the public key of the issuer from the Nuts registry.
+	Iss string `json:"iss"`
+
+	// unique identifier
+	Jti string `json:"jti"`
+
+	// base64 encoded hardware signature
 	Osi *string `json:"osi,omitempty"`
-	Sid string  `json:"sid"`
-	Sub string  `json:"sub"`
-	Uid string  `json:"uid"`
+
+	// The Nuts subject id, patient identifier in the form of an oid encoded BSN.
+	Sid string `json:"sid"`
+
+	// The subject (not a Nuts subject) contains the urn of the custodian. The
+	// custodian information is used to find the relevant consent (together with actor
+	// and subject).
+	Sub string `json:"sub"`
+
+	// Jwt encoded user identity.
+	Uid string `json:"uid"`
 }
 
 // AccessTokenResponse defines model for AccessTokenResponse.
 type AccessTokenResponse struct {
-	AccessToken string  `json:"access_token"`
-	ExpiresIn   float32 `json:"expires_in"`
-	TokenType   string  `json:"token_type"`
+
+	// The access token issued by the authorization server.
+	// Could be a signed JWT or a random number. It should not have a meaning to the client.
+	AccessToken string `json:"access_token"`
+
+	// The lifetime in seconds of the access token.
+	ExpiresIn float32 `json:"expires_in"`
+
+	// The type of the token issued
+	TokenType string `json:"token_type"`
 }
 
 // Contract defines model for Contract.
 type Contract struct {
+
+	// Language of the contract in all caps
 	Language           Language  `json:"language"`
 	SignerAttributes   *[]string `json:"signer_attributes,omitempty"`
 	Template           *string   `json:"template,omitempty"`
 	TemplateAttributes *[]string `json:"template_attributes,omitempty"`
-	Type               Type      `json:"type"`
-	Version            Version   `json:"version"`
+
+	// Type of which contract to sign
+	Type Type `json:"type"`
+
+	// Version of the contract
+	Version Version `json:"version"`
 }
 
 // ContractSigningRequest defines model for ContractSigningRequest.
 type ContractSigningRequest struct {
-	Language    Language    `json:"language"`
+
+	// Language of the contract in all caps
+	Language Language `json:"language"`
+
+	// Identifier of the legalEntity as registered in the Nuts registry
 	LegalEntity LegalEntity `json:"legalEntity"`
-	Type        Type        `json:"type"`
-	ValidFrom   *string     `json:"valid_from,omitempty"`
-	ValidTo     *string     `json:"valid_to,omitempty"`
-	Version     Version     `json:"version"`
+
+	// Type of which contract to sign
+	Type Type `json:"type"`
+
+	// ValidFrom describes the time from which this contract should be considered valid
+	ValidFrom *string `json:"valid_from,omitempty"`
+
+	// ValidTo describes the time until this contract should be considered valid
+	ValidTo *string `json:"valid_to,omitempty"`
+
+	// Version of the contract
+	Version Version `json:"version"`
 }
 
 // CreateAccessTokenRequest defines model for CreateAccessTokenRequest.
 type CreateAccessTokenRequest struct {
+
+	// Base64 encoded JWT following rfc7523 and the Nuts documentation
 	Assertion string `json:"assertion"`
+
+	// always must contain the value "urn:ietf:params:oauth:grant-type:jwt-bearer"
 	GrantType string `json:"grant_type"`
 }
 
@@ -69,15 +123,23 @@ type CreateAccessTokenRequest struct {
 type CreateJwtBearerTokenRequest struct {
 	Actor     string `json:"actor"`
 	Custodian string `json:"custodian"`
-	Identity  string `json:"identity"`
-	Scope     string `json:"scope"`
-	Subject   string `json:"subject"`
+
+	// Base64 encoded IRMA contract conaining the identity of the performer
+	Identity string `json:"identity"`
+
+	// Space-delimited list of strings. For what kind of operations can the access token be used? Scopes will be specified for each use-case
+	Scope   string `json:"scope"`
+	Subject string `json:"subject"`
 }
 
 // CreateSessionResult defines model for CreateSessionResult.
 type CreateSessionResult struct {
+
+	// Qr contains the data of an IRMA session QR (as generated by irma_js), suitable for NewSession()
 	QrCodeInfo IrmaQR `json:"qr_code_info"`
-	SessionId  string `json:"session_id"`
+
+	// a session identifier
+	SessionId string `json:"session_id"`
 }
 
 // DisclosedAttribute defines model for DisclosedAttribute.
@@ -105,7 +167,9 @@ type ErrorString string
 // IrmaQR defines model for IrmaQR.
 type IrmaQR struct {
 	Irmaqr string `json:"irmaqr"`
-	U      string `json:"u"`
+
+	// Server with which to perform the session (URL)
+	U string `json:"u"`
 }
 
 // JwtBearerTokenResponse defines model for JwtBearerTokenResponse.
@@ -174,14 +238,21 @@ type RemoteError struct {
 
 // SessionResult defines model for SessionResult.
 type SessionResult struct {
-	Disclosed     *[]DisclosedAttribute `json:"disclosed,omitempty"`
-	Error         *RemoteError          `json:"error,omitempty"`
-	NutsAuthToken *string               `json:"nuts_auth_token,omitempty"`
-	ProofStatus   *string               `json:"proofStatus,omitempty"`
-	Signature     *SignedMessage        `json:"signature,omitempty"`
-	Status        string                `json:"status"`
-	Token         string                `json:"token"`
-	Type          string                `json:"type"`
+	Disclosed *[]DisclosedAttribute `json:"disclosed,omitempty"`
+	Error     *RemoteError          `json:"error,omitempty"`
+
+	// JWT that can be used as Bearer Token (deprecated)
+	NutsAuthLegacyToken *string `json:"nuts_auth_legacy_token,omitempty"`
+
+	// Base64 encoded JWT that can be used as Bearer Token
+	NutsAuthToken *string        `json:"nuts_auth_token,omitempty"`
+	ProofStatus   *string        `json:"proofStatus,omitempty"`
+	Signature     *SignedMessage `json:"signature,omitempty"`
+	Status        string         `json:"status"`
+
+	// the token originally given in the request
+	Token string `json:"token"`
+	Type  string `json:"type"`
 }
 
 // SignedMessage defines model for SignedMessage.
@@ -206,20 +277,42 @@ type TokenIntrospectionRequest struct {
 
 // TokenIntrospectionResponse defines model for TokenIntrospectionResponse.
 type TokenIntrospectionResponse struct {
-	Active     bool    `json:"active"`
-	Aud        *string `json:"aud,omitempty"`
+
+	// True if the token is active, false if the token is expired, malformed etc.
+	Active bool `json:"active"`
+
+	// As per rfc7523 https://tools.ietf.org/html/rfc7523>, the aud must be the
+	// token endpoint. This can be taken from the Nuts registry.
+	Aud *string `json:"aud,omitempty"`
+
+	// End-User's preferred e-mail address. Should be a personal email and can be used to uniquely identify a user. Just like the email used for an account.
 	Email      *string `json:"email,omitempty"`
 	Exp        *int    `json:"exp,omitempty"`
 	FamilyName *string `json:"family_name,omitempty"`
-	GivenName  *string `json:"given_name,omitempty"`
-	Iat        *int    `json:"iat,omitempty"`
-	Iss        *string `json:"iss,omitempty"`
-	Name       *string `json:"name,omitempty"`
-	Prefix     *string `json:"prefix,omitempty"`
-	Scope      *string `json:"scope,omitempty"`
-	Sid        *string `json:"sid,omitempty"`
-	Sub        *string `json:"sub,omitempty"`
-	Uid        *string `json:"uid,omitempty"`
+
+	// Given name(s) or first name(s) of the End-User.
+	GivenName *string `json:"given_name,omitempty"`
+	Iat       *int    `json:"iat,omitempty"`
+
+	// The issuer in the JWT is always the acting party, thus the care organization doing the request.
+	// This is used to find the public key of the issuer from the Nuts registry.
+	Iss  *string `json:"iss,omitempty"`
+	Name *string `json:"name,omitempty"`
+
+	// Surname prefix
+	Prefix *string `json:"prefix,omitempty"`
+	Scope  *string `json:"scope,omitempty"`
+
+	// The Nuts subject id, patient identifier in the form of an oid encoded BSN.
+	Sid *string `json:"sid,omitempty"`
+
+	// The subject (not a Nuts subject) contains the urn of the custodian. The
+	// custodian information is used to find the relevant consent (together with actor
+	// and subject).
+	Sub *string `json:"sub,omitempty"`
+
+	// Jwt encoded user identity.
+	Uid *string `json:"uid,omitempty"`
 }
 
 // Type defines model for Type.
@@ -227,8 +320,14 @@ type Type string
 
 // ValidationRequest defines model for ValidationRequest.
 type ValidationRequest struct {
-	ActingPartyCn  string `json:"acting_party_cn"`
+
+	// ActingPartyCN is the common name of the Acting party extracted from the client cert
+	ActingPartyCn string `json:"acting_party_cn"`
+
+	// ContractFormat specifies the type of format used for the contract
 	ContractFormat string `json:"contract_format"`
+
+	// Base64 encoded contracts, either Irma signature or a JWT
 	ContractString string `json:"contract_string"`
 }
 
@@ -247,11 +346,11 @@ type ValidationResult_SignerAttributes struct {
 // Version defines model for Version.
 type Version string
 
-// createSessionJSONBody defines parameters for CreateSession.
-type createSessionJSONBody ContractSigningRequest
+// CreateSessionJSONBody defines parameters for CreateSession.
+type CreateSessionJSONBody ContractSigningRequest
 
-// validateContractJSONBody defines parameters for ValidateContract.
-type validateContractJSONBody ValidationRequest
+// ValidateContractJSONBody defines parameters for ValidateContract.
+type ValidateContractJSONBody ValidationRequest
 
 // GetContractByTypeParams defines parameters for GetContractByType.
 type GetContractByTypeParams struct {
@@ -261,17 +360,17 @@ type GetContractByTypeParams struct {
 	Language *string `json:"language,omitempty"`
 }
 
-// createJwtBearerTokenJSONBody defines parameters for CreateJwtBearerToken.
-type createJwtBearerTokenJSONBody CreateJwtBearerTokenRequest
+// CreateJwtBearerTokenJSONBody defines parameters for CreateJwtBearerToken.
+type CreateJwtBearerTokenJSONBody CreateJwtBearerTokenRequest
 
 // CreateSessionRequestBody defines body for CreateSession for application/json ContentType.
-type CreateSessionJSONRequestBody createSessionJSONBody
+type CreateSessionJSONRequestBody CreateSessionJSONBody
 
 // ValidateContractRequestBody defines body for ValidateContract for application/json ContentType.
-type ValidateContractJSONRequestBody validateContractJSONBody
+type ValidateContractJSONRequestBody ValidateContractJSONBody
 
 // CreateJwtBearerTokenRequestBody defines body for CreateJwtBearerToken for application/json ContentType.
-type CreateJwtBearerTokenJSONRequestBody createJwtBearerTokenJSONBody
+type CreateJwtBearerTokenJSONRequestBody CreateJwtBearerTokenJSONBody
 
 // Getter for additional properties for DisclosedAttribute_Value. Returns the specified
 // element and whether it was found
@@ -487,19 +586,28 @@ func (a ValidationResult_SignerAttributes) MarshalJSON() ([]byte, error) {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Create an access token based on the OAuth JWT Bearer flow.// (POST /auth/accesstoken)
+	// Create an access token based on the OAuth JWT Bearer flow.
+	// This endpoint must be available to the outside world for other applications to request access tokens.
+	// It requires a X-Nuts-LegalEntity header which should contain the vendor name and must be the same as used in the signed login contract.
+	// (POST /auth/accesstoken)
 	CreateAccessToken(ctx echo.Context) error
-	// CreateSessionHandler Initiates an IRMA signing session with the correct contract.// (POST /auth/contract/session)
+	// CreateSessionHandler Initiates an IRMA signing session with the correct contract.
+	// (POST /auth/contract/session)
 	CreateSession(ctx echo.Context) error
-	// returns the result of the contract request// (GET /auth/contract/session/{id})
+	// returns the result of the contract request
+	// (GET /auth/contract/session/{id})
 	SessionRequestStatus(ctx echo.Context, id string) error
-	// Validate a Nuts Security Contract// (POST /auth/contract/validate)
+	// Validate a Nuts Security Contract
+	// (POST /auth/contract/validate)
 	ValidateContract(ctx echo.Context) error
-	// Get a contract by type and version// (GET /auth/contract/{contractType})
+	// Get a contract by type and version
+	// (GET /auth/contract/{contractType})
 	GetContractByType(ctx echo.Context, contractType string, params GetContractByTypeParams) error
-	// Create a JWT Bearer Token which can be used in the createAccessToken request in the assertion field// (POST /auth/jwtbearertoken)
+	// Create a JWT Bearer Token which can be used in the createAccessToken request in the assertion field
+	// (POST /auth/jwtbearertoken)
 	CreateJwtBearerToken(ctx echo.Context) error
-	// Introspection endpoint to retrieve information from an Access Token as described by RFC7662// (POST /auth/token_introspection)
+	// Introspection endpoint to retrieve information from an Access Token as described by RFC7662
+	// (POST /auth/token_introspection)
 	IntrospectAccessToken(ctx echo.Context) error
 }
 
@@ -565,9 +673,6 @@ func (w *ServerInterfaceWrapper) GetContractByType(ctx echo.Context) error {
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetContractByTypeParams
 	// ------------- Optional query parameter "version" -------------
-	if paramValue := ctx.QueryParam("version"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "version", ctx.QueryParams(), &params.Version)
 	if err != nil {
@@ -575,9 +680,6 @@ func (w *ServerInterfaceWrapper) GetContractByType(ctx echo.Context) error {
 	}
 
 	// ------------- Optional query parameter "language" -------------
-	if paramValue := ctx.QueryParam("language"); paramValue != "" {
-
-	}
 
 	err = runtime.BindQueryParameter("form", true, false, "language", ctx.QueryParams(), &params.Language)
 	if err != nil {
@@ -633,4 +735,3 @@ func RegisterHandlers(router interface {
 	router.POST("/auth/token_introspection", wrapper.IntrospectAccessToken)
 
 }
-
