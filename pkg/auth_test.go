@@ -109,8 +109,9 @@ func TestAuth_ContractByType(t *testing.T) {
 		sut := Auth{}
 		result, err := sut.ContractByType(ContractType("BehandelaarLogin"), Language("NL"), Version("v1"))
 
-		assert.Nil(t, err)
-		assert.NotNil(t, result)
+		if !assert.Nil(t, err) || !assert.NotNil(t, result) {
+			t.FailNow()
+		}
 
 		assert.Equal(t, Version("v1"), result.Version)
 		assert.Equal(t, Language("NL"), result.Language)

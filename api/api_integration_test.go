@@ -71,14 +71,14 @@ func Test_Integration(t *testing.T) {
 		r.Config.Mode = "server"
 		r.Config.Datadir = registryPath
 		r.Config.SyncMode = "fs"
-		if err := r.Configure(); err != nil {
-			panic(err)
+		if err := r.Configure(); !assert.NoError(t, err) {
+			t.FailNow()
 		}
 
 		// Register a vendor
 		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{Identifier: "oid:123", Name: "Awesomesoft"})
-		if err := r.EventSystem.PublishEvent(event); err != nil {
-			panic(err)
+		if err := r.EventSystem.PublishEvent(event); !assert.NoError(t, err) {
+			t.FailNow()
 		}
 
 		cryptoInstance = &crypto.Crypto{
@@ -87,8 +87,8 @@ func Test_Integration(t *testing.T) {
 				Fspath:  "../testdata/tmp",
 			},
 		}
-		if err := cryptoInstance.Configure(); err != nil {
-			panic(err)
+		if err := cryptoInstance.Configure(); !assert.NoError(t, err) {
+			t.FailNow()
 		}
 
 		// Generate keys for Organization
@@ -103,8 +103,8 @@ func Test_Integration(t *testing.T) {
 			OrgName:          "Zorggroep Nuts",
 			OrgKeys:          []interface{}{pub},
 		})
-		if err := r.EventSystem.PublishEvent(event); err != nil {
-			panic(err)
+		if err := r.EventSystem.PublishEvent(event); !assert.NoError(t, err) {
+			t.FailNow()
 		}
 
 		// Generate keys for OtherOrganization
@@ -119,8 +119,8 @@ func Test_Integration(t *testing.T) {
 			OrgName:          "verpleeghuis De nootjes",
 			OrgKeys:          []interface{}{pub},
 		})
-		if err := r.EventSystem.PublishEvent(event); err != nil {
-			panic(err)
+		if err := r.EventSystem.PublishEvent(event); !assert.NoError(t, err) {
+			t.FailNow()
 		}
 
 		vendorIdentifierFromHeader = func(ctx echo.Context) string {
@@ -166,6 +166,7 @@ func Test_Integration(t *testing.T) {
 
 	// Set the pkg.NowFunc to a temporary one to return a fake time. This makes it convenient to use stored test contracts.
 	fakeTime := func(t *testing.T, newTime time.Time, f func(t *testing.T)) {
+		t.Helper()
 		oldFunc := pkg.NowFunc
 
 		pkg.NowFunc = func() time.Time {
@@ -192,9 +193,10 @@ func Test_Integration(t *testing.T) {
 
 		// use a fake time so the identity token is valid
 		testTime, err := time.Parse(time.RFC3339, "2020-02-24T16:38:45+01:00")
-		if err != nil {
-			panic(err)
+		if !assert.NoError(t, err) {
+			t.FailNow()
 		}
+
 		fakeTime(t, testTime, func(t *testing.T) {
 
 			ctx := createContext(t)

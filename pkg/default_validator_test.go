@@ -215,9 +215,7 @@ func TestValidateContract(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			//patch := monkey.Patch(time.Now, func() time.Time { return tt.date })
 			NowFunc = func() time.Time { return tt.date }
-			//defer patch.Unpatch()
 			got, err := validator.ValidateContract(tt.args.contract, tt.args.format, tt.args.actingPartyCN)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateContract() error = %v, wantErr %v", err, tt.wantErr)
