@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -38,7 +40,21 @@ func Test_Integration(t *testing.T) {
 		echoMock *mock.MockContext
 	}
 
+	emptyRegistry := func(t *testing.T, path string) {
+		t.Helper()
+		files, err := filepath.Glob(filepath.Join(path, "*"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, file := range files {
+			if err := os.RemoveAll(file); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
 	createContext := func(t *testing.T) *IntegrationTestContext {
+		t.Helper()
 		ctrl := gomock.NewController(t)
 
 		auth := &pkg.Auth{
@@ -48,9 +64,12 @@ func Test_Integration(t *testing.T) {
 			AccessTokenHandler:     nil,
 		}
 
+		registryPath := "../testdata/registry"
+		emptyRegistry(t, registryPath)
+
 		r := registry.RegistryInstance()
 		r.Config.Mode = "server"
-		r.Config.Datadir = "../testdata/registry"
+		r.Config.Datadir = registryPath
 		r.Config.SyncMode = "fs"
 		if err := r.Configure(); err != nil {
 			panic(err)
