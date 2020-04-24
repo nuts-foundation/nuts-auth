@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -360,7 +361,7 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 
 func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
-	validator := defaultValidator()
+	validator := defaultValidator(t)
 	os.Setenv("NUTS_IDENTITY", "urn:oid:1.3.6.1.4.1.54851.4:1")
 
 	t.Run("valid jwt", func(t *testing.T) {
@@ -540,7 +541,7 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 			NowFunc = oldFunc
 		}()
 
-		validator := defaultValidator()
+		validator := defaultValidator(t)
 
 		var c = SignedIrmaContract{}
 		_ = json.Unmarshal([]byte(testdata.ValidIrmaContract), &c.IrmaContract)
@@ -614,7 +615,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 
 func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 	t.Run("malformed access tokens", func(t *testing.T) {
-		validator := defaultValidator()
+		validator := defaultValidator(t)
 
 		response, err := validator.ParseAndValidateJwtBearerToken("foo")
 		assert.Nil(t, response)
@@ -626,7 +627,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 	})
 
 	t.Run("wrong signing algorithm", func(t *testing.T) {
-		validator := defaultValidator()
+		validator := defaultValidator(t)
 		// alg: HS256
 		const invalidJwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjo0MDcwOTA4ODAwLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.2_4bxKKsVspQ4QxXRG8m2mOnLbl-fFgSkEq_h8N9sNE"
 		response, err := validator.ParseAndValidateJwtBearerToken(invalidJwt)
@@ -635,7 +636,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 	})
 
 	t.Run("missing issuer", func(t *testing.T) {
-		validator := defaultValidator()
+		validator := defaultValidator(t)
 		claims := map[string]interface{}{
 			"iss": "",
 			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
@@ -654,7 +655,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 	})
 
 	t.Run("unknown issuer", func(t *testing.T) {
-		validator := defaultValidator()
+		validator := defaultValidator(t)
 		claims := map[string]interface{}{
 			"iss": "urn:oid:2.16.840.1.113883.2.4.6.1:10000001",
 			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
@@ -673,7 +674,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 	})
 
 	t.Run("token not signed by issuer", func(t *testing.T) {
-		validator := defaultValidator()
+		validator := defaultValidator(t)
 
 		claims := map[string]interface{}{
 			"iss": OtherOrganizationID,
@@ -698,7 +699,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 	})
 
 	t.Run("token expired", func(t *testing.T) {
-		validator := defaultValidator()
+		validator := defaultValidator(t)
 
 		claims := map[string]interface{}{
 			"iss": OrganizationID,
@@ -719,7 +720,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 	})
 
 	t.Run("valid jwt", func(t *testing.T) {
-		validator := defaultValidator()
+		validator := defaultValidator(t)
 
 		//claims := map[string]interface{}{
 		//	"iss": OrganizationID,
@@ -816,9 +817,24 @@ var mutex = sync.Mutex{}
 
 // defaultValidator sets up a validator with a registry containing a single test organization.
 // The method is a singleton and always returns the same instance
-func defaultValidator() DefaultValidator {
+func defaultValidator(t *testing.T) DefaultValidator {
+	t.Helper()
+
 	mutex.Lock()
 	defer mutex.Unlock()
+
+	emptyRegistry := func(t *testing.T, path string) {
+		t.Helper()
+		files, err := filepath.Glob(filepath.Join(path, "*"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, file := range files {
+			if err := os.RemoveAll(file); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 
 	if testInstance == nil {
 
@@ -826,6 +842,8 @@ func defaultValidator() DefaultValidator {
 		r.Config.Mode = core.ServerEngineMode
 		r.Config.Datadir = "../testdata/registry"
 		r.Config.SyncMode = "fs"
+		emptyRegistry(t, r.Config.Datadir)
+
 		if err := r.Configure(); err != nil {
 			panic(err)
 		}
@@ -893,7 +911,7 @@ func defaultValidator() DefaultValidator {
 
 func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 	t.Run("missing subject", func(t *testing.T) {
-		v := defaultValidator()
+		v := defaultValidator(t)
 		claims := &NutsJwtBearerToken{}
 		identityValidationResult := &ContractValidationResult{ValidationResult: Valid}
 		token, err := v.BuildAccessToken(claims, identityValidationResult)
@@ -902,7 +920,7 @@ func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 	})
 
 	t.Run("build an access token", func(t *testing.T) {
-		v := defaultValidator()
+		v := defaultValidator(t)
 		claims := &NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: OrganizationID}}
 		identityValidationResult := &ContractValidationResult{ValidationResult: Valid}
 		token, err := v.BuildAccessToken(claims, identityValidationResult)
@@ -930,7 +948,7 @@ func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 
 func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 	t.Run("create a JwtBearerToken", func(t *testing.T) {
-		v := defaultValidator()
+		v := defaultValidator(t)
 		request := CreateJwtBearerTokenRequest{
 			Custodian:     OtherOrganizationID,
 			Actor:         OrganizationID,
@@ -961,7 +979,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 
 	t.Run("invalid custodian", func(t *testing.T) {
 		t.Skip("Disabled for now since the relation between scope, custodians and endpoints is not yet clear.")
-		v := defaultValidator()
+		v := defaultValidator(t)
 
 		request := CreateJwtBearerTokenRequest{
 			Custodian:     "123",
@@ -979,7 +997,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 	})
 
 	t.Run("invalid actor", func(t *testing.T) {
-		v := defaultValidator()
+		v := defaultValidator(t)
 
 		request := CreateJwtBearerTokenRequest{
 			Custodian:     OtherOrganizationID,
@@ -998,7 +1016,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 	})
 	t.Run("custodian without endpoint", func(t *testing.T) {
 		t.Skip("Disabled for now since the relation between scope, custodians and endpoints is not yet clear.")
-		v := defaultValidator()
+		v := defaultValidator(t)
 
 		request := CreateJwtBearerTokenRequest{
 			Custodian:     OrganizationID,
@@ -1042,7 +1060,7 @@ func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 
 	t.Run("token not issued by care provider of this node", func(t *testing.T) {
 
-		v := defaultValidator()
+		v := defaultValidator(t)
 
 		// Use this code to regenerate the token if needed. Don't forget to delete the private keys from the testdata afterwards
 		//localBuildClaims := buildClaims
@@ -1064,7 +1082,7 @@ func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 	// Validate the Access Token
 	// Everything should be fine
 	t.Run("validate access token", func(t *testing.T) {
-		v := defaultValidator()
+		v := defaultValidator(t)
 		// First build an access token
 		token, err := v.BuildAccessToken(&buildClaims, &userIdentityValidationResult)
 		if !assert.NoError(t, err) {
