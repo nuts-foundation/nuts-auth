@@ -97,9 +97,9 @@ var contracts = map[Language]map[ContractType]map[Version]*Contract{
 	}},
 }
 
-// ContractFromMessageContents finds the contract for a certain message.
+// NewContractFromMessageContents finds the contract for a certain message.
 // Every message should begin with a special sequence like "NL:ContractName:version".
-func ContractFromMessageContents(contents string) (*Contract, error) {
+func NewContractFromMessageContents(contents string, validContracts map[Language]map[ContractType]map[Version]*Contract) (*Contract, error) {
 	r, _ := regexp.Compile(`^(.{2}):(.+):(v\d+)`)
 
 	matchResult := r.FindSubmatch([]byte(contents))
@@ -111,17 +111,17 @@ func ContractFromMessageContents(contents string) (*Contract, error) {
 	contractType := ContractType(matchResult[2])
 	version := Version(matchResult[3])
 
-	return ContractByType(contractType, language, version)
+	return NewContractByType(contractType, language, version, validContracts)
 
 }
 
-// ContractByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
+// NewContractByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
 // If no contract is found, the error vaule of ErrContractNotFound is returned.
-func ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {
+func NewContractByType(contractType ContractType, language Language, version Version, validContracts map[Language]map[ContractType]map[Version]*Contract) (*Contract, error) {
 	if version == "" {
 		version = "v1"
 	}
-	if contract, ok := contracts[language][contractType][version]; ok {
+	if contract, ok := validContracts[language][contractType][version]; ok {
 		return contract, nil
 	}
 

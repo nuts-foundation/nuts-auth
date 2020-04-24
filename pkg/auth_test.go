@@ -105,8 +105,8 @@ func TestAuth_CreateContractSession(t *testing.T) {
 }
 
 func TestAuth_ContractByType(t *testing.T) {
+	sut := Auth{validContracts: contracts}
 	t.Run("get contract by type", func(t *testing.T) {
-		sut := Auth{}
 		result, err := sut.ContractByType(ContractType("BehandelaarLogin"), Language("NL"), Version("v1"))
 
 		if !assert.Nil(t, err) || !assert.NotNil(t, result) {
@@ -119,7 +119,6 @@ func TestAuth_ContractByType(t *testing.T) {
 	})
 
 	t.Run("an unknown contract returns an error", func(t *testing.T) {
-		sut := Auth{}
 		result, err := sut.ContractByType(ContractType("UnknownContract"), Language("NL"), Version("v1"))
 
 		assert.Nil(t, result)

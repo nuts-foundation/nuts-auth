@@ -67,6 +67,7 @@ type Auth struct {
 	AccessTokenHandler     AccessTokenHandler
 	cryptoClient           crypto.Client
 	registryClient         registry.RegistryClient
+	validContracts         map[Language]map[ContractType]map[Version]*Contract
 }
 
 // AuthConfig holds all the configuration params
@@ -88,7 +89,8 @@ var oneBackend sync.Once
 func AuthInstance() *Auth {
 	oneBackend.Do(func() {
 		instance = &Auth{
-			Config: AuthConfig{},
+			Config:         AuthConfig{},
+			validContracts: contracts,
 		}
 	})
 
@@ -142,7 +144,7 @@ func (auth *Auth) Configure() (err error) {
 func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error) {
 
 	// Step 1: Find the correct contract
-	contract, err := ContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
+	contract, err := NewContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version, contracts)
 	if err != nil {
 		return nil, err
 	}
@@ -206,10 +208,10 @@ func printQrCode(qrcode string) {
 	qrterminal.GenerateWithConfig(qrcode, config)
 }
 
-// ContractByType returns a Contract of a certain type, language and version.
+// NewContractByType returns a Contract of a certain type, language and version.
 // If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
 func (auth *Auth) ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {
-	return ContractByType(contractType, language, version)
+	return NewContractByType(contractType, language, version, auth.validContracts)
 }
 
 // ContractSessionStatus returns the current session status for a given sessionID.

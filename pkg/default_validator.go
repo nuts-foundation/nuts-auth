@@ -199,7 +199,7 @@ func (v DefaultValidator) SessionStatus(id SessionID) (*SessionStatusResult, err
 var ErrLegalEntityNotFound = errors.New("missing legal entity in contract text")
 
 func (v DefaultValidator) legalEntityFromContract(sic SignedIrmaContract) (string, error) {
-	c, err := ContractFromMessageContents(sic.IrmaContract.Message)
+	c, err := NewContractFromMessageContents(sic.IrmaContract.Message, contracts)
 	if err != nil {
 		return "", err
 	}
