@@ -126,8 +126,8 @@ type ValidationRequest struct {
 
 // CreateAccessTokenRequest contains all information to create an access token from a JwtBearerToken
 type CreateAccessTokenRequest struct {
-	JwtBearerToken   string
-	VendorIdentifier string
+	RawJwtBearerToken string
+	VendorIdentifier  string
 }
 
 // CreateJwtBearerTokenRequest contains all information to create a JwtBearerToken
@@ -148,7 +148,7 @@ type NutsIdentityToken struct {
 	Type ContractFormat `json:"type"`
 	// The base64 encoded signature
 	Signature string `json:"sig"`
-	//Contract SignedIrmaContract `json:"nuts_signature"`
+	//ContractTemplate SignedIrmaContract `json:"nuts_signature"`
 }
 
 // NutsJwtBearerToken contains the deserialized Jwt Bearer Token as defined in rfc7523. It contains a NutsIdentity token which can be

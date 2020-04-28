@@ -65,10 +65,10 @@ func (mr *MockAuthClientMockRecorder) ContractSessionStatus(sessionID interface{
 }
 
 // NewContractByType mocks base method
-func (m *MockAuthClient) ContractByType(contractType pkg.ContractType, language pkg.Language, version pkg.Version) (*pkg.Contract, error) {
+func (m *MockAuthClient) ContractByType(contractType pkg.ContractType, language pkg.Language, version pkg.Version) (*pkg.ContractTemplate, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "NewContractByType", contractType, language, version)
-	ret0, _ := ret[0].(*pkg.Contract)
+	ret0, _ := ret[0].(*pkg.ContractTemplate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

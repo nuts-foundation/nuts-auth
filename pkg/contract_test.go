@@ -49,7 +49,7 @@ func TestContractByContents(t *testing.T) {
 	})
 
 	t.Run("an unknown triple returns a nil", func(t *testing.T) {
-		var expected *Contract = nil
+		var expected *ContractTemplate = nil
 
 		got, _ := NewContractFromMessageContents("DE:BehandelaarLogin:v1", contracts)
 		if got != expected {
@@ -58,7 +58,7 @@ func TestContractByContents(t *testing.T) {
 	})
 
 	t.Run("a valid triple other than at the start of the contents returns a nil", func(t *testing.T) {
-		var expected *Contract
+		var expected *ContractTemplate
 
 		got, _ := NewContractFromMessageContents("some other text NL:BehandelaarLogin:v1", contracts)
 		if got != expected {
@@ -69,7 +69,7 @@ func TestContractByContents(t *testing.T) {
 }
 
 func TestContract_RenderTemplate(t *testing.T) {
-	contract := &Contract{Type: "Simple", Template: "ga je akkoord met {{wat}} van {{valid_from}} tot {{valid_to}}?"}
+	contract := &ContractTemplate{Type: "Simple", Template: "ga je akkoord met {{wat}} van {{valid_from}} tot {{valid_to}}?"}
 	result, err := contract.renderTemplate(map[string]string{"wat": "alles"}, 0, 60*time.Minute)
 	if err != nil {
 		t.Error(err)
@@ -86,7 +86,7 @@ func TestContract_RenderTemplate(t *testing.T) {
 }
 
 func TestContract_ExtractParams(t *testing.T) {
-	contract := &Contract{
+	contract := &ContractTemplate{
 		Type:               "Simple",
 		Template:           "ik geef toestemming voor {{voor}} aan {{wie}}.",
 		TemplateAttributes: []string{"voor", "wie"},
@@ -109,7 +109,7 @@ func TestContract_ExtractParams(t *testing.T) {
 	})
 
 	t.Run("an invalid text returns an error", func(t *testing.T) {
-		contract := &Contract{Type: "Simple", Template: "ik geef toestemming voor {{voor}} aan {{wie}}.", Regexp: `^ik geef toestemming voor (.*) aan (.*)\.$`}
+		contract := &ContractTemplate{Type: "Simple", Template: "ik geef toestemming voor {{voor}} aan {{wie}}.", Regexp: `^ik geef toestemming voor (.*) aan (.*)\.$`}
 
 		contractText := "ik ga niet akkoord."
 
@@ -182,7 +182,7 @@ func TestParseTime(t *testing.T) {
 }
 
 func TestContract_ValidateTimeFrame(t *testing.T) {
-	contract := &Contract{
+	contract := &ContractTemplate{
 		Type:               "Simple",
 		Template:           "ik geef toestemming van {{valid_from}} tot {{valid_to}}.",
 		TemplateAttributes: []string{"valid_from", "valid_to"},

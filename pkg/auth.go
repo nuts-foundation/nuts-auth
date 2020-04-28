@@ -48,7 +48,7 @@ const ConfIrmaSchemeManager = "irmaSchemeManager"
 type AuthClient interface {
 	CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error)
 	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
-	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
+	ContractByType(contractType ContractType, language Language, version Version) (*ContractTemplate, error)
 	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
 	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error)
@@ -67,7 +67,7 @@ type Auth struct {
 	AccessTokenHandler     AccessTokenHandler
 	cryptoClient           crypto.Client
 	registryClient         registry.RegistryClient
-	validContracts         map[Language]map[ContractType]map[Version]*Contract
+	validContracts         map[Language]map[ContractType]map[Version]*ContractTemplate
 }
 
 // AuthConfig holds all the configuration params
@@ -208,9 +208,9 @@ func printQrCode(qrcode string) {
 	qrterminal.GenerateWithConfig(qrcode, config)
 }
 
-// NewContractByType returns a Contract of a certain type, language and version.
+// NewContractByType returns a ContractTemplate of a certain type, language and version.
 // If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
-func (auth *Auth) ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {
+func (auth *Auth) ContractByType(contractType ContractType, language Language, version Version) (*ContractTemplate, error) {
 	return NewContractByType(contractType, language, version, auth.validContracts)
 }
 
@@ -243,12 +243,14 @@ func (auth *Auth) ValidateContract(request ValidationRequest) (*ContractValidati
 
 // CreateAccessToken extracts the claims out of the request, checks the validity and builds the access token
 func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error) {
-	claims, err := auth.AccessTokenHandler.ParseAndValidateJwtBearerToken(request.JwtBearerToken)
+	// extract the JwtBearerToken
+	jwtBearerToken, err := auth.AccessTokenHandler.ParseAndValidateJwtBearerToken(request.RawJwtBearerToken)
 	if err != nil {
 		return nil, fmt.Errorf("jwt bearer token validation failed: %w", err)
 	}
 
-	res, err := auth.ContractValidator.ValidateJwt(claims.IdentityToken, request.VendorIdentifier)
+	// Validate the IdentityToken
+	res, err := auth.ContractValidator.ValidateJwt(jwtBearerToken.IdentityToken, request.VendorIdentifier)
 	if err != nil {
 		return nil, fmt.Errorf("identity tokenen validation failed: %w", err)
 	}
@@ -256,7 +258,7 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 		return nil, fmt.Errorf("identity validation failed")
 	}
 
-	accessToken, err := auth.AccessTokenHandler.BuildAccessToken(claims, res)
+	accessToken, err := auth.AccessTokenHandler.BuildAccessToken(jwtBearerToken, res)
 	if err != nil {
 		return nil, err
 	}
