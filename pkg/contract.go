@@ -51,7 +51,7 @@ var StandardSignerAttributes = []string{
 }
 
 // EN:PractitionerLogin:v1 ContractTemplate
-var contracts = map[Language]map[ContractType]map[Version]*ContractTemplate{
+var Contracts = map[Language]map[ContractType]map[Version]*ContractTemplate{
 	"NL": {"BehandelaarLogin": {
 		"v1": &ContractTemplate{
 			Type:               "BehandelaarLogin",

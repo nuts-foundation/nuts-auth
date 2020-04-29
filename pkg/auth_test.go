@@ -105,7 +105,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 }
 
 func TestAuth_ContractByType(t *testing.T) {
-	sut := Auth{validContracts: contracts}
+	sut := Auth{ValidContracts: Contracts}
 	t.Run("get contract by type", func(t *testing.T) {
 		result, err := sut.ContractByType(ContractType("BehandelaarLogin"), Language("NL"), Version("v1"))
 

@@ -212,7 +212,7 @@ func TestValidateContract(t *testing.T) {
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 
-	validator := DefaultValidator{IrmaServer: GetIrmaServer(authConfig), IrmaConfig: GetIrmaConfig(authConfig)}
+	validator := DefaultValidator{IrmaServer: GetIrmaServer(authConfig), IrmaConfig: GetIrmaConfig(authConfig), ValidContracts: Contracts}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -340,10 +340,11 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 		}
 
 		v := DefaultValidator{
-			IrmaServer: &iMock,
-			IrmaConfig: GetIrmaConfig(authConfig),
-			Crypto:     cMock,
-			Registry:   rMock,
+			IrmaServer:     &iMock,
+			IrmaConfig:     GetIrmaConfig(authConfig),
+			Crypto:         cMock,
+			Registry:       rMock,
+			ValidContracts: Contracts,
 		}
 
 		rMock.EXPECT().ReverseLookup("verpleeghuis De nootjes").Return(&db.Organization{Identifier: "urn:id:1"}, nil)
@@ -352,8 +353,9 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 
 		s, err := v.SessionStatus(SessionID("known"))
 
-		assert.Nil(t, err)
-		assert.NotNil(t, s)
+		if !assert.Nil(t, err) || !assert.NotNil(t, s) {
+			t.FailNow()
+		}
 		assert.Equal(t, "token", s.NutsAuthToken)
 		assert.Equal(t, "legacyToken", s.NutsAuthLegacyToken)
 	})
@@ -577,19 +579,21 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	t.Run("Empty message returns error", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		_, err := ctx.v.legalEntityFromContract(SignedIrmaContract{IrmaContract: irma2.SignedMessage{}})
+		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma2.SignedMessage{}, ContractTemplate: &ContractTemplate{}})
 
-		assert.NotNil(t, err)
-		assert.True(t, errors.Is(err, ErrInvalidContractText))
+		if !assert.NotNil(t, err) || !assert.Error(t, ErrInvalidContractText, err) {
+			t.FailNow()
+		}
 	})
 
 	t.Run("Missing legalEntity returns error", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		_, err := ctx.v.legalEntityFromContract(SignedIrmaContract{
+		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{
 			IrmaContract: irma2.SignedMessage{
 				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens  en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
 			},
+			ContractTemplate: Contracts["NL"]["BehandelaarLogin"]["v1"],
 		})
 
 		assert.NotNil(t, err)
@@ -602,10 +606,11 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 
 		ctx.rMock.EXPECT().ReverseLookup("UNKNOWN").Return(nil, db.ErrOrganizationNotFound)
 
-		_, err := ctx.v.legalEntityFromContract(SignedIrmaContract{
+		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{
 			IrmaContract: irma2.SignedMessage{
 				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens UNKNOWN en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
 			},
+			ContractTemplate: Contracts["NL"]["BehandelaarLogin"]["v1"],
 		})
 
 		assert.NotNil(t, err)
@@ -903,6 +908,7 @@ func defaultValidator(t *testing.T) DefaultValidator {
 				IrmaConfigPath:            "../testdata/irma",
 				SkipAutoUpdateIrmaSchemas: true,
 			}),
+			ValidContracts: Contracts,
 		}
 	}
 

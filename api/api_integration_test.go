@@ -53,6 +53,19 @@ func Test_Integration(t *testing.T) {
 		}
 	}
 
+	validContracts := map[pkg.Language]map[pkg.ContractType]map[pkg.Version]*pkg.ContractTemplate{
+		"NL": {"BehandelaarLogin": {
+			"v1": &pkg.ContractTemplate{
+				Type:               "BehandelaarLogin",
+				Version:            "v1",
+				Language:           "NL",
+				SignerAttributes:   []string{"gemeente.personalData.fullname", "gemeente.personalData.firstnames", "gemeente.personalData.prefix", "gemeente.personalData.familyname"},
+				Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om namens {{legal_entity}} en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
+				TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
+				Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
+			},
+		}}}
+
 	createContext := func(t *testing.T) *IntegrationTestContext {
 		t.Helper()
 		ctrl := gomock.NewController(t)
@@ -62,6 +75,7 @@ func Test_Integration(t *testing.T) {
 			ContractSessionHandler: nil,
 			ContractValidator:      nil,
 			AccessTokenHandler:     nil,
+			ValidContracts:         validContracts,
 		}
 
 		registryPath := "../testdata/registry"
@@ -128,14 +142,13 @@ func Test_Integration(t *testing.T) {
 		}
 
 		validator := pkg.DefaultValidator{
-			//IrmaServer: &pkg.DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
-			//irmaConfig: GetIrmaConfig(auth.Config),
 			Registry: r,
 			Crypto:   cryptoInstance,
 			IrmaConfig: pkg.GetIrmaConfig(pkg.AuthConfig{
 				IrmaConfigPath:            "../testdata/irma",
 				SkipAutoUpdateIrmaSchemas: true,
 			}),
+			ValidContracts: validContracts,
 		}
 		auth.ContractSessionHandler = validator
 		auth.ContractValidator = validator

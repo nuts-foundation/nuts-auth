@@ -67,7 +67,7 @@ type Auth struct {
 	AccessTokenHandler     AccessTokenHandler
 	cryptoClient           crypto.Client
 	registryClient         registry.RegistryClient
-	validContracts         map[Language]map[ContractType]map[Version]*ContractTemplate
+	ValidContracts         map[Language]map[ContractType]map[Version]*ContractTemplate
 }
 
 // AuthConfig holds all the configuration params
@@ -90,7 +90,7 @@ func AuthInstance() *Auth {
 	oneBackend.Do(func() {
 		instance = &Auth{
 			Config:         AuthConfig{},
-			validContracts: contracts,
+			ValidContracts: Contracts,
 		}
 	})
 
@@ -121,12 +121,14 @@ func (auth *Auth) Configure() (err error) {
 			// these are initialized before nuts-auth
 			auth.cryptoClient = crypto.NewCryptoClient()
 			auth.registryClient = registry2.NewRegistryClient()
+			auth.ValidContracts = Contracts
 
 			validator := DefaultValidator{
-				IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
-				IrmaConfig: GetIrmaConfig(auth.Config),
-				Registry:   auth.registryClient,
-				Crypto:     auth.cryptoClient,
+				IrmaServer:     &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
+				IrmaConfig:     GetIrmaConfig(auth.Config),
+				Registry:       auth.registryClient,
+				Crypto:         auth.cryptoClient,
+				ValidContracts: auth.ValidContracts,
 			}
 			auth.ContractSessionHandler = validator
 			auth.ContractValidator = validator
@@ -144,7 +146,7 @@ func (auth *Auth) Configure() (err error) {
 func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error) {
 
 	// Step 1: Find the correct contract
-	contract, err := NewContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version, contracts)
+	contract, err := NewContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version, Contracts)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +213,7 @@ func printQrCode(qrcode string) {
 // NewContractByType returns a ContractTemplate of a certain type, language and version.
 // If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
 func (auth *Auth) ContractByType(contractType ContractType, language Language, version Version) (*ContractTemplate, error) {
-	return NewContractByType(contractType, language, version, auth.validContracts)
+	return NewContractByType(contractType, language, version, auth.ValidContracts)
 }
 
 // ContractSessionStatus returns the current session status for a given sessionID.

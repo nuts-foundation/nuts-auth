@@ -20,10 +20,11 @@ import (
 
 // DefaultValidator validates contracts using the irma logic.
 type DefaultValidator struct {
-	IrmaServer IrmaServerClient
-	IrmaConfig *irma.Configuration
-	Registry   registry.RegistryClient
-	Crypto     nutscrypto.Client
+	IrmaServer     IrmaServerClient
+	IrmaConfig     *irma.Configuration
+	Registry       registry.RegistryClient
+	Crypto         nutscrypto.Client
+	ValidContracts map[Language]map[ContractType]map[Version]*ContractTemplate
 }
 
 // LegacyIdentityToken is the JWT that was used as Identity token in versions prior to < 0.13
@@ -37,7 +38,7 @@ func (v DefaultValidator) IsInitialized() bool {
 	return v.IrmaConfig != nil
 }
 
-// ValidateContract is the entrypoint for contract validation.
+// ValidateContract is the entry point for contract validation.
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
 // Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
 func (v DefaultValidator) ValidateContract(b64EncodedContract string, format ContractFormat, actingPartyCN string) (*ContractValidationResult, error) {
@@ -46,11 +47,13 @@ func (v DefaultValidator) ValidateContract(b64EncodedContract string, format Con
 		if err != nil {
 			return nil, fmt.Errorf("could not base64-decode contract: %w", err)
 		}
-		signedContract, err := ParseIrmaContract(string(contract))
+		// Create the irma contract validator
+		contractValidator := IrmaContractVerifier{v.IrmaConfig, v.ValidContracts}
+		signedContract, err := contractValidator.ParseSignedIrmaContract(string(contract))
 		if err != nil {
 			return nil, err
 		}
-		return signedContract.Validate(actingPartyCN, v.IrmaConfig)
+		return contractValidator.VerifyAll(signedContract, actingPartyCN)
 	}
 	return nil, ErrUnknownContractFormat
 }
@@ -100,12 +103,11 @@ func (v DefaultValidator) ValidateJwt(token string, actingPartyCN string) (*Cont
 	if err != nil {
 		return nil, err
 	}
-	irmaContract := SignedIrmaContract{}
 
-	if json.Unmarshal(contractStr, &irmaContract.IrmaContract) != nil {
-		return nil, err
-	}
-	return irmaContract.Validate(actingPartyCN, v.IrmaConfig)
+	// Create the irma contract validator
+	contractValidator := IrmaContractVerifier{v.IrmaConfig, v.ValidContracts}
+	signedContract, err := contractValidator.ParseSignedIrmaContract(string(contractStr))
+	return contractValidator.VerifyAll(signedContract, actingPartyCN)
 }
 
 var ErrNotLegacyContract = errors.New("not a legacy contract")
@@ -143,7 +145,17 @@ func (v DefaultValidator) validateLegacyJwt(token string, actingPartyCN string) 
 	if err != nil {
 		return nil, err
 	}
-	return payload.Contract.Validate(actingPartyCN, v.IrmaConfig)
+
+	signedContract := payload.Contract
+
+	// Create the irma contract validator
+	contractValidator := IrmaContractVerifier{v.IrmaConfig, v.ValidContracts}
+	contractTemplate, err := NewContractFromMessageContents(signedContract.IrmaContract.Message, v.ValidContracts)
+	if err != nil {
+		return nil, err
+	}
+	signedContract.ContractTemplate = contractTemplate
+	return contractValidator.VerifyAll(&signedContract, actingPartyCN)
 }
 
 func convertClaimsToPayload(claims map[string]interface{}) (*LegacyIdentityToken, error) {
@@ -173,17 +185,23 @@ func (v DefaultValidator) SessionStatus(id SessionID) (*SessionStatusResult, err
 			legacyToken string
 		)
 		if result.Signature != nil {
-			sic := SignedIrmaContract{*result.Signature}
+			contractTemplate, err := NewContractFromMessageContents(result.Signature.Message, v.ValidContracts)
+			sic := &SignedIrmaContract{*result.Signature, contractTemplate}
+			if err != nil {
+				return nil, err
+			}
+
 			le, err := v.legalEntityFromContract(sic)
 			if err != nil {
 				return nil, fmt.Errorf("could not create JWT for given session: %w", err)
 			}
 
-			token, err = v.CreateIdentityTokenFromIrmaContract(&sic, le)
+			token, err = v.CreateIdentityTokenFromIrmaContract(sic, le)
 			if err != nil {
 				return nil, err
 			}
-			legacyToken, err = v.createLegacyIdentityToken(&sic, le)
+
+			legacyToken, err = v.createLegacyIdentityToken(sic, le)
 			if err != nil {
 				return nil, err
 			}
@@ -198,13 +216,8 @@ func (v DefaultValidator) SessionStatus(id SessionID) (*SessionStatusResult, err
 // ErrLegalEntityNotFound is returned when the legalEntity can not be found based on the contract text
 var ErrLegalEntityNotFound = errors.New("missing legal entity in contract text")
 
-func (v DefaultValidator) legalEntityFromContract(sic SignedIrmaContract) (string, error) {
-	c, err := NewContractFromMessageContents(sic.IrmaContract.Message, contracts)
-	if err != nil {
-		return "", err
-	}
-
-	params, err := c.extractParams(sic.IrmaContract.Message)
+func (v DefaultValidator) legalEntityFromContract(sic *SignedIrmaContract) (string, error) {
+	params, err := sic.ContractTemplate.extractParams(sic.IrmaContract.Message)
 	if err != nil {
 		return "", err
 	}
