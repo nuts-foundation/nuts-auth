@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nuts-foundation/nuts-auth/api"
@@ -38,7 +37,7 @@ func NewAuthEngine() *nutsGo.Engine {
 		Configure: authBackend.Configure,
 		FlagSet:   flagSet(),
 		Name:      "Auth",
-		Routes: func(router runtime.EchoRouter) {
+		Routes: func(router nutsGo.EchoRouter) {
 			// Mount the irma-app routes
 			routerWithAny := router.(EchoRouter)
 			irmaClientHandler := pkg.GetIrmaServer(authBackend.Config).HandlerFunc()

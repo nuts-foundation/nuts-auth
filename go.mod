@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/bwesterb/go-atum v1.0.1 // indirect
 	github.com/cbroglie/mustache v1.0.1
-	github.com/deepmap/oapi-codegen v1.3.6
+	github.com/deepmap/oapi-codegen v1.3.7
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/golang/mock v1.4.3
@@ -18,7 +18,8 @@ require (
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/nuts-foundation/nuts-crypto v0.13.2
-	github.com/nuts-foundation/nuts-go-core v0.13.0
+	github.com/nuts-foundation/nuts-go-core v0.13.1-0.20200422145233-a9d171e8b054
+	github.com/nuts-foundation/nuts-registry v0.13.6
 	github.com/nuts-foundation/nuts-registry v0.13.7
 	github.com/pkg/errors v0.9.1
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect

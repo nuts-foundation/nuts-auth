@@ -21,42 +21,6 @@ type AccessTokenRequestFailedResponse struct {
 	ErrorDescription string `json:"error_description"`
 }
 
-// AccessTokenRequestJWT defines model for AccessTokenRequestJWT.
-type AccessTokenRequestJWT struct {
-
-	// As per rfc7523 https://tools.ietf.org/html/rfc7523>, the aud must be the
-	// token endpoint. This can be taken from the Nuts registry.
-	Aud string `json:"aud"`
-
-	// Additional context
-	Con *string `json:"con,omitempty"`
-
-	// max(time_from_irma_sign, some_limited_time)
-	Exp float32 `json:"exp"`
-	Iat float32 `json:"iat"`
-
-	// The issuer in the JWT is always the actor, thus the care organization doing the request.
-	// This is used to find the public key of the issuer from the Nuts registry.
-	Iss string `json:"iss"`
-
-	// unique identifier
-	Jti string `json:"jti"`
-
-	// base64 encoded hardware signature
-	Osi *string `json:"osi,omitempty"`
-
-	// The Nuts subject id, patient identifier in the form of an oid encoded BSN.
-	Sid string `json:"sid"`
-
-	// The subject (not a Nuts subject) contains the urn of the custodian. The
-	// custodian information is used to find the relevant consent (together with actor
-	// and subject).
-	Sub string `json:"sub"`
-
-	// Jwt encoded user identity.
-	Uid string `json:"uid"`
-}
-
 // AccessTokenResponse defines model for AccessTokenResponse.
 type AccessTokenResponse struct {
 
@@ -709,8 +673,10 @@ func (w *ServerInterfaceWrapper) IntrospectAccessToken(ctx echo.Context) error {
 	return err
 }
 
-// RegisterHandlers adds each server route to the EchoRouter.
-func RegisterHandlers(router interface {
+// This is a simple interface which specifies echo.Route addition functions which
+// are present on both echo.Echo and echo.Group, since we want to allow using
+// either of them for path registration
+type EchoRouter interface {
 	CONNECT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 	DELETE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 	GET(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
@@ -720,7 +686,10 @@ func RegisterHandlers(router interface {
 	POST(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 	PUT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 	TRACE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
-}, si ServerInterface) {
+}
+
+// RegisterHandlers adds each server route to the EchoRouter.
+func RegisterHandlers(router EchoRouter, si ServerInterface) {
 
 	wrapper := ServerInterfaceWrapper{
 		Handler: si,
