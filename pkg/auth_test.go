@@ -105,12 +105,13 @@ func TestAuth_CreateContractSession(t *testing.T) {
 }
 
 func TestAuth_ContractByType(t *testing.T) {
+	sut := Auth{ValidContracts: Contracts}
 	t.Run("get contract by type", func(t *testing.T) {
-		sut := Auth{}
 		result, err := sut.ContractByType(ContractType("BehandelaarLogin"), Language("NL"), Version("v1"))
 
-		assert.Nil(t, err)
-		assert.NotNil(t, result)
+		if !assert.Nil(t, err) || !assert.NotNil(t, result) {
+			t.FailNow()
+		}
 
 		assert.Equal(t, Version("v1"), result.Version)
 		assert.Equal(t, Language("NL"), result.Language)
@@ -118,7 +119,6 @@ func TestAuth_ContractByType(t *testing.T) {
 	})
 
 	t.Run("an unknown contract returns an error", func(t *testing.T) {
-		sut := Auth{}
 		result, err := sut.ContractByType(ContractType("UnknownContract"), Language("NL"), Version("v1"))
 
 		assert.Nil(t, result)
@@ -272,7 +272,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 
 	t.Run("invalid jwt", func(t *testing.T) {
 		i := &Auth{AccessTokenHandler: MockAccessTokenHandler{claims: nil, parseAndValidateAccessTokenJwtError: fmt.Errorf("validationError")}}
-		response, err := i.CreateAccessToken(CreateAccessTokenRequest{JwtBearerToken: "foo"})
+		response, err := i.CreateAccessToken(CreateAccessTokenRequest{RawJwtBearerToken: "foo"})
 		assert.Nil(t, response)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "jwt bearer token validation failed")
@@ -286,7 +286,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 				jwtResult: ContractValidationResult{ValidationResult: Invalid},
 			},
 		}
-		response, err := i.CreateAccessToken(CreateAccessTokenRequest{JwtBearerToken: "foo"})
+		response, err := i.CreateAccessToken(CreateAccessTokenRequest{RawJwtBearerToken: "foo"})
 		assert.Nil(t, response)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "identity validation failed")
@@ -302,7 +302,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 			AccessTokenHandler: MockAccessTokenHandler{claims: &NutsJwtBearerToken{}, accessToken: expectedAT},
 		}
 
-		response, err := i.CreateAccessToken(CreateAccessTokenRequest{JwtBearerToken: "foo"})
+		response, err := i.CreateAccessToken(CreateAccessTokenRequest{RawJwtBearerToken: "foo"})
 		assert.Nil(t, err)
 		if assert.NotNil(t, response) {
 			assert.Equal(t, expectedAT, response.AccessToken)

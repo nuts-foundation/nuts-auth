@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -38,7 +40,34 @@ func Test_Integration(t *testing.T) {
 		echoMock *mock.MockContext
 	}
 
+	emptyRegistry := func(t *testing.T, path string) {
+		t.Helper()
+		files, err := filepath.Glob(filepath.Join(path, "*"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, file := range files {
+			if err := os.RemoveAll(file); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	validContracts := map[pkg.Language]map[pkg.ContractType]map[pkg.Version]*pkg.ContractTemplate{
+		"NL": {"BehandelaarLogin": {
+			"v1": &pkg.ContractTemplate{
+				Type:               "BehandelaarLogin",
+				Version:            "v1",
+				Language:           "NL",
+				SignerAttributes:   []string{"gemeente.personalData.fullname", "gemeente.personalData.firstnames", "gemeente.personalData.prefix", "gemeente.personalData.familyname"},
+				Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om namens {{legal_entity}} en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
+				TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
+				Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
+			},
+		}}}
+
 	createContext := func(t *testing.T) *IntegrationTestContext {
+		t.Helper()
 		ctrl := gomock.NewController(t)
 
 		auth := &pkg.Auth{
@@ -46,20 +75,24 @@ func Test_Integration(t *testing.T) {
 			ContractSessionHandler: nil,
 			ContractValidator:      nil,
 			AccessTokenHandler:     nil,
+			ValidContracts:         validContracts,
 		}
+
+		registryPath := "../testdata/registry"
+		emptyRegistry(t, registryPath)
 
 		r := registry.RegistryInstance()
 		r.Config.Mode = "server"
-		r.Config.Datadir = "../testdata/registry"
+		r.Config.Datadir = registryPath
 		r.Config.SyncMode = "fs"
-		if err := r.Configure(); err != nil {
-			panic(err)
+		if err := r.Configure(); !assert.NoError(t, err) {
+			t.FailNow()
 		}
 
 		// Register a vendor
 		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{Identifier: "oid:123", Name: "Awesomesoft"})
-		if err := r.EventSystem.PublishEvent(event); err != nil {
-			panic(err)
+		if err := r.EventSystem.PublishEvent(event); !assert.NoError(t, err) {
+			t.FailNow()
 		}
 
 		cryptoInstance = &crypto.Crypto{
@@ -68,8 +101,8 @@ func Test_Integration(t *testing.T) {
 				Fspath:  "../testdata/tmp",
 			},
 		}
-		if err := cryptoInstance.Configure(); err != nil {
-			panic(err)
+		if err := cryptoInstance.Configure(); !assert.NoError(t, err) {
+			t.FailNow()
 		}
 
 		// Generate keys for Organization
@@ -84,8 +117,8 @@ func Test_Integration(t *testing.T) {
 			OrgName:          "Zorggroep Nuts",
 			OrgKeys:          []interface{}{pub},
 		})
-		if err := r.EventSystem.PublishEvent(event); err != nil {
-			panic(err)
+		if err := r.EventSystem.PublishEvent(event); !assert.NoError(t, err) {
+			t.FailNow()
 		}
 
 		// Generate keys for OtherOrganization
@@ -100,8 +133,8 @@ func Test_Integration(t *testing.T) {
 			OrgName:          "verpleeghuis De nootjes",
 			OrgKeys:          []interface{}{pub},
 		})
-		if err := r.EventSystem.PublishEvent(event); err != nil {
-			panic(err)
+		if err := r.EventSystem.PublishEvent(event); !assert.NoError(t, err) {
+			t.FailNow()
 		}
 
 		vendorIdentifierFromHeader = func(ctx echo.Context) string {
@@ -109,14 +142,13 @@ func Test_Integration(t *testing.T) {
 		}
 
 		validator := pkg.DefaultValidator{
-			//IrmaServer: &pkg.DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
-			//irmaConfig: GetIrmaConfig(auth.Config),
 			Registry: r,
 			Crypto:   cryptoInstance,
 			IrmaConfig: pkg.GetIrmaConfig(pkg.AuthConfig{
 				IrmaConfigPath:            "../testdata/irma",
 				SkipAutoUpdateIrmaSchemas: true,
 			}),
+			ValidContracts: validContracts,
 		}
 		auth.ContractSessionHandler = validator
 		auth.ContractValidator = validator
@@ -147,6 +179,7 @@ func Test_Integration(t *testing.T) {
 
 	// Set the pkg.NowFunc to a temporary one to return a fake time. This makes it convenient to use stored test contracts.
 	fakeTime := func(t *testing.T, newTime time.Time, f func(t *testing.T)) {
+		t.Helper()
 		oldFunc := pkg.NowFunc
 
 		pkg.NowFunc = func() time.Time {
@@ -173,9 +206,10 @@ func Test_Integration(t *testing.T) {
 
 		// use a fake time so the identity token is valid
 		testTime, err := time.Parse(time.RFC3339, "2020-02-24T16:38:45+01:00")
-		if err != nil {
-			panic(err)
+		if !assert.NoError(t, err) {
+			t.FailNow()
 		}
+
 		fakeTime(t, testTime, func(t *testing.T) {
 
 			ctx := createContext(t)

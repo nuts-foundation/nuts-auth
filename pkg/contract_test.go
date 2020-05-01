@@ -12,55 +12,55 @@ import (
 func TestContractByType(t *testing.T) {
 	t.Run("It finds a known Dutch template", func(t *testing.T) {
 		want := ContractType("BehandelaarLogin")
-		if got, _ := ContractByType(want, "NL", "v1"); got.Type != want {
-			t.Errorf("ContractByType() = %v, want %v", got, want)
+		if got, _ := NewContractByType(want, "NL", "v1", Contracts); got.Type != want {
+			t.Errorf("NewContractByType() = %v, want %v", got, want)
 		}
 	})
 
 	t.Run("It uses the latest version if no version is provided", func(t *testing.T) {
 		want := Version("v1")
-		if got, _ := ContractByType("BehandelaarLogin", "NL", ""); got.Version != want {
+		if got, _ := NewContractByType("BehandelaarLogin", "NL", "", Contracts); got.Version != want {
 			t.Errorf("Wrong language %v, want %v", got, want)
 		}
 	})
 
 	t.Run("It finds a known English template", func(t *testing.T) {
 		want := ContractType("PractitionerLogin")
-		if got, _ := ContractByType(want, "EN", "v1"); got.Type != want {
-			t.Errorf("ContractByType() = %v, want %v", got, want)
+		if got, _ := NewContractByType(want, "EN", "v1", Contracts); got.Type != want {
+			t.Errorf("NewContractByType() = %v, want %v", got, want)
 		}
 	})
 
 	t.Run("An unknown contract should return a nil", func(t *testing.T) {
 		want := ContractType("UnknownContract")
-		if got, _ := ContractByType(want, "NL", "v1"); got != nil {
-			t.Errorf("ContractByType() = %v, want %v", got, nil)
+		if got, _ := NewContractByType(want, "NL", "v1", Contracts); got != nil {
+			t.Errorf("NewContractByType() = %v, want %v", got, nil)
 		}
 	})
 }
 
 func TestContractByContents(t *testing.T) {
 	t.Run("a correct triple returns the contract", func(t *testing.T) {
-		expected := contracts[Language("NL")][ContractType("BehandelaarLogin")][Version("v1")]
-		got, _ := ContractFromMessageContents("NL:BehandelaarLogin:v1")
+		expected := Contracts[Language("NL")][ContractType("BehandelaarLogin")][Version("v1")]
+		got, _ := NewContractFromMessageContents("NL:BehandelaarLogin:v1", Contracts)
 		if got != expected {
 			t.Errorf("Expected different contract. Expected: %v, got: %v", expected, got)
 		}
 	})
 
 	t.Run("an unknown triple returns a nil", func(t *testing.T) {
-		var expected *Contract = nil
+		var expected *ContractTemplate = nil
 
-		got, _ := ContractFromMessageContents("DE:BehandelaarLogin:v1")
+		got, _ := NewContractFromMessageContents("DE:BehandelaarLogin:v1", Contracts)
 		if got != expected {
 			t.Errorf("Expected different contract. Expected: %v, got: %v", expected, got)
 		}
 	})
 
 	t.Run("a valid triple other than at the start of the contents returns a nil", func(t *testing.T) {
-		var expected *Contract
+		var expected *ContractTemplate
 
-		got, _ := ContractFromMessageContents("some other text NL:BehandelaarLogin:v1")
+		got, _ := NewContractFromMessageContents("some other text NL:BehandelaarLogin:v1", Contracts)
 		if got != expected {
 			t.Errorf("Expected different contract. Expected: %v, got: %v", expected, got)
 		}
@@ -69,7 +69,7 @@ func TestContractByContents(t *testing.T) {
 }
 
 func TestContract_RenderTemplate(t *testing.T) {
-	contract := &Contract{Type: "Simple", Template: "ga je akkoord met {{wat}} van {{valid_from}} tot {{valid_to}}?"}
+	contract := &ContractTemplate{Type: "Simple", Template: "ga je akkoord met {{wat}} van {{valid_from}} tot {{valid_to}}?"}
 	result, err := contract.renderTemplate(map[string]string{"wat": "alles"}, 0, 60*time.Minute)
 	if err != nil {
 		t.Error(err)
@@ -86,7 +86,7 @@ func TestContract_RenderTemplate(t *testing.T) {
 }
 
 func TestContract_ExtractParams(t *testing.T) {
-	contract := &Contract{
+	contract := &ContractTemplate{
 		Type:               "Simple",
 		Template:           "ik geef toestemming voor {{voor}} aan {{wie}}.",
 		TemplateAttributes: []string{"voor", "wie"},
@@ -109,7 +109,7 @@ func TestContract_ExtractParams(t *testing.T) {
 	})
 
 	t.Run("an invalid text returns an error", func(t *testing.T) {
-		contract := &Contract{Type: "Simple", Template: "ik geef toestemming voor {{voor}} aan {{wie}}.", Regexp: `^ik geef toestemming voor (.*) aan (.*)\.$`}
+		contract := &ContractTemplate{Type: "Simple", Template: "ik geef toestemming voor {{voor}} aan {{wie}}.", Regexp: `^ik geef toestemming voor (.*) aan (.*)\.$`}
 
 		contractText := "ik ga niet akkoord."
 
@@ -182,7 +182,7 @@ func TestParseTime(t *testing.T) {
 }
 
 func TestContract_ValidateTimeFrame(t *testing.T) {
-	contract := &Contract{
+	contract := &ContractTemplate{
 		Type:               "Simple",
 		Template:           "ik geef toestemming van {{valid_from}} tot {{valid_to}}.",
 		TemplateAttributes: []string{"valid_from", "valid_to"},

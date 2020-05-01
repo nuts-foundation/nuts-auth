@@ -13,8 +13,8 @@ import (
 
 const timeLayout = "Monday, 2 January 2006 15:04:05"
 
-// Contract stores the properties of a contract
-type Contract struct {
+// ContractTemplate is a template which can result in a signed contract
+type ContractTemplate struct {
 	Type                 ContractType `json:"type"`
 	Version              Version      `json:"version"`
 	Language             Language     `json:"language"`
@@ -46,17 +46,14 @@ var ErrInvalidContractText = errors.New("invalid contract text")
 // StandardSignerAttributes defines the standard list of attributes used for a contract.
 // If SignerAttribute name starts with a dot '.', it uses the configured scheme manager
 var StandardSignerAttributes = []string{
-	".gemeente.personalData.fullname",
 	".gemeente.personalData.firstnames",
-	".gemeente.personalData.prefix",
-	".gemeente.personalData.familyname",
 	"pbdf.pbdf.email.email",
 }
 
-// EN:PractitionerLogin:v1 Contract
-var contracts = map[Language]map[ContractType]map[Version]*Contract{
+// EN:PractitionerLogin:v1 ContractTemplate
+var Contracts = ContractMatrix{
 	"NL": {"BehandelaarLogin": {
-		"v1": &Contract{
+		"v1": &ContractTemplate{
 			Type:               "BehandelaarLogin",
 			Version:            "v1",
 			Language:           "NL",
@@ -65,7 +62,7 @@ var contracts = map[Language]map[ContractType]map[Version]*Contract{
 			TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
 			Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
 		},
-		"v2": &Contract{
+		"v2": &ContractTemplate{
 			Type:               "BehandelaarLogin",
 			Version:            "v2",
 			Language:           "NL",
@@ -76,7 +73,7 @@ var contracts = map[Language]map[ContractType]map[Version]*Contract{
 		},
 	}},
 	"EN": {"PractitionerLogin": {
-		"v1": &Contract{
+		"v1": &ContractTemplate{
 			Type:               "PractitionerLogin",
 			Version:            "v1",
 			Language:           "EN",
@@ -85,7 +82,7 @@ var contracts = map[Language]map[ContractType]map[Version]*Contract{
 			TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
 			Regexp:             `EN:PractitionerLogin:v1 Undersigned gives permission to (.+) to make request to the Nuts network on behalf of (.+) and itself. This permission is valid from (.+) until (.+).`,
 		},
-		"v2": &Contract{
+		"v2": &ContractTemplate{
 			Type:               "PractitionerLogin",
 			Version:            "v2",
 			Language:           "EN",
@@ -97,9 +94,9 @@ var contracts = map[Language]map[ContractType]map[Version]*Contract{
 	}},
 }
 
-// ContractFromMessageContents finds the contract for a certain message.
+// NewContractFromMessageContents finds the contract for a certain message.
 // Every message should begin with a special sequence like "NL:ContractName:version".
-func ContractFromMessageContents(contents string) (*Contract, error) {
+func NewContractFromMessageContents(contents string, validContracts ContractMatrix) (*ContractTemplate, error) {
 	r, _ := regexp.Compile(`^(.{2}):(.+):(v\d+)`)
 
 	matchResult := r.FindSubmatch([]byte(contents))
@@ -111,36 +108,36 @@ func ContractFromMessageContents(contents string) (*Contract, error) {
 	contractType := ContractType(matchResult[2])
 	version := Version(matchResult[3])
 
-	return ContractByType(contractType, language, version)
+	return NewContractByType(contractType, language, version, validContracts)
 
 }
 
-// ContractByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
+// NewContractByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
 // If no contract is found, the error vaule of ErrContractNotFound is returned.
-func ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {
+func NewContractByType(contractType ContractType, language Language, version Version, validContracts ContractMatrix) (*ContractTemplate, error) {
 	if version == "" {
 		version = "v1"
 	}
-	if contract, ok := contracts[language][contractType][version]; ok {
+	if contract, ok := validContracts[language][contractType][version]; ok {
 		return contract, nil
 	}
 
 	return nil, fmt.Errorf("type %s, lang: %s, version: %s: %w", contractType, language, version, ErrContractNotFound)
 }
 
-func (c Contract) timeLocation() *time.Location {
+func (c ContractTemplate) timeLocation() *time.Location {
 	loc, _ := time.LoadLocation("Europe/Amsterdam")
 	return loc
 }
 
-func (c Contract) renderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
+func (c ContractTemplate) renderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
 	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 
 	return mustache.Render(c.Template, vars)
 }
 
-func (c Contract) extractParams(text string) (map[string]string, error) {
+func (c ContractTemplate) extractParams(text string) (map[string]string, error) {
 	r, _ := regexp.Compile(c.Regexp)
 	matchResult := r.FindSubmatch([]byte(text))
 	if len(matchResult) < 1 {
@@ -170,7 +167,7 @@ func parseTime(timeStr string, _ Language) (*time.Time, error) {
 	return &parsedTime, nil
 }
 
-func (c Contract) validateTimeFrame(params map[string]string) (bool, error) {
+func (c ContractTemplate) validateTimeFrame(params map[string]string) (bool, error) {
 	var (
 		err                      error
 		ok                       bool

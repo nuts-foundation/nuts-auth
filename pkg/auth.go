@@ -48,7 +48,7 @@ const ConfIrmaSchemeManager = "irmaSchemeManager"
 type AuthClient interface {
 	CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error)
 	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
-	ContractByType(contractType ContractType, language Language, version Version) (*Contract, error)
+	ContractByType(contractType ContractType, language Language, version Version) (*ContractTemplate, error)
 	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
 	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error)
@@ -56,6 +56,8 @@ type AuthClient interface {
 	KeyExistsFor(legalEntity string) bool
 	OrganizationNameByID(legalEntity string) (string, error)
 }
+
+type ContractMatrix map[Language]map[ContractType]map[Version]*ContractTemplate
 
 // Auth is the main struct of the Auth service
 type Auth struct {
@@ -67,6 +69,7 @@ type Auth struct {
 	AccessTokenHandler     AccessTokenHandler
 	cryptoClient           crypto.Client
 	registryClient         registry.RegistryClient
+	ValidContracts         ContractMatrix
 }
 
 // AuthConfig holds all the configuration params
@@ -88,7 +91,8 @@ var oneBackend sync.Once
 func AuthInstance() *Auth {
 	oneBackend.Do(func() {
 		instance = &Auth{
-			Config: AuthConfig{},
+			Config:         AuthConfig{},
+			ValidContracts: Contracts,
 		}
 	})
 
@@ -119,12 +123,14 @@ func (auth *Auth) Configure() (err error) {
 			// these are initialized before nuts-auth
 			auth.cryptoClient = crypto.NewCryptoClient()
 			auth.registryClient = registry2.NewRegistryClient()
+			auth.ValidContracts = Contracts
 
 			validator := DefaultValidator{
-				IrmaServer: &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
-				IrmaConfig: GetIrmaConfig(auth.Config),
-				Registry:   auth.registryClient,
-				Crypto:     auth.cryptoClient,
+				IrmaServer:     &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
+				IrmaConfig:     GetIrmaConfig(auth.Config),
+				Registry:       auth.registryClient,
+				Crypto:         auth.cryptoClient,
+				ValidContracts: auth.ValidContracts,
 			}
 			auth.ContractSessionHandler = validator
 			auth.ContractValidator = validator
@@ -142,7 +148,7 @@ func (auth *Auth) Configure() (err error) {
 func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error) {
 
 	// Step 1: Find the correct contract
-	contract, err := ContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
+	contract, err := NewContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version, Contracts)
 	if err != nil {
 		return nil, err
 	}
@@ -206,10 +212,10 @@ func printQrCode(qrcode string) {
 	qrterminal.GenerateWithConfig(qrcode, config)
 }
 
-// ContractByType returns a Contract of a certain type, language and version.
+// NewContractByType returns a ContractTemplate of a certain type, language and version.
 // If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
-func (auth *Auth) ContractByType(contractType ContractType, language Language, version Version) (*Contract, error) {
-	return ContractByType(contractType, language, version)
+func (auth *Auth) ContractByType(contractType ContractType, language Language, version Version) (*ContractTemplate, error) {
+	return NewContractByType(contractType, language, version, auth.ValidContracts)
 }
 
 // ContractSessionStatus returns the current session status for a given sessionID.
@@ -241,12 +247,14 @@ func (auth *Auth) ValidateContract(request ValidationRequest) (*ContractValidati
 
 // CreateAccessToken extracts the claims out of the request, checks the validity and builds the access token
 func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error) {
-	claims, err := auth.AccessTokenHandler.ParseAndValidateJwtBearerToken(request.JwtBearerToken)
+	// extract the JwtBearerToken
+	jwtBearerToken, err := auth.AccessTokenHandler.ParseAndValidateJwtBearerToken(request.RawJwtBearerToken)
 	if err != nil {
 		return nil, fmt.Errorf("jwt bearer token validation failed: %w", err)
 	}
 
-	res, err := auth.ContractValidator.ValidateJwt(claims.IdentityToken, request.VendorIdentifier)
+	// Validate the IdentityToken
+	res, err := auth.ContractValidator.ValidateJwt(jwtBearerToken.IdentityToken, request.VendorIdentifier)
 	if err != nil {
 		return nil, fmt.Errorf("identity tokenen validation failed: %w", err)
 	}
@@ -254,7 +262,7 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 		return nil, fmt.Errorf("identity validation failed")
 	}
 
-	accessToken, err := auth.AccessTokenHandler.BuildAccessToken(claims, res)
+	accessToken, err := auth.AccessTokenHandler.BuildAccessToken(jwtBearerToken, res)
 	if err != nil {
 		return nil, err
 	}
