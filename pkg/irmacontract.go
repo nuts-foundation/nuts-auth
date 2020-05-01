@@ -25,7 +25,7 @@ type SignedIrmaContract struct {
 //  the acting party named in the contract is the same as the one making the request
 type IrmaContractVerifier struct {
 	irmaConfig     *irma.Configuration
-	validContracts map[Language]map[ContractType]map[Version]*ContractTemplate
+	validContracts ContractMatrix
 }
 
 // ParseSignedIrmaContract parses a json string containing a signed irma contract.
@@ -49,11 +49,6 @@ func (cv *IrmaContractVerifier) ParseSignedIrmaContract(rawContract string) (*Si
 
 	return signedContract, nil
 }
-
-//type ContractVerifier interface {
-//	VerifySignature(signedContract interface{}) (*ContractValidationResult, error)
-//	ValidateContractContents(signedContract interface{}, validationResults *ContractValidationResult, actingPartyCn string, validContracts map[Language]map[ContractType]map[Version]*ContractTemplate) (*ContractValidationResult, error)
-//}
 
 func (cv *IrmaContractVerifier) VerifyAll(signedContract *SignedIrmaContract, actingPartyCn string) (*ContractValidationResult, error) {
 	res, err := cv.VerifySignature(signedContract)

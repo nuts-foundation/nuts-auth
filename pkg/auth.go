@@ -57,6 +57,8 @@ type AuthClient interface {
 	OrganizationNameByID(legalEntity string) (string, error)
 }
 
+type ContractMatrix map[Language]map[ContractType]map[Version]*ContractTemplate
+
 // Auth is the main struct of the Auth service
 type Auth struct {
 	Config                 AuthConfig
@@ -67,7 +69,7 @@ type Auth struct {
 	AccessTokenHandler     AccessTokenHandler
 	cryptoClient           crypto.Client
 	registryClient         registry.RegistryClient
-	ValidContracts         map[Language]map[ContractType]map[Version]*ContractTemplate
+	ValidContracts         ContractMatrix
 }
 
 // AuthConfig holds all the configuration params

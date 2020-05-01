@@ -581,9 +581,8 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 		defer ctx.ctrl.Finish()
 		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma2.SignedMessage{}, ContractTemplate: &ContractTemplate{}})
 
-		if !assert.NotNil(t, err) || !assert.Error(t, ErrInvalidContractText, err) {
-			t.FailNow()
-		}
+		assert.NotNil(t, err)
+		assert.Error(t, ErrInvalidContractText, err)
 	})
 
 	t.Run("Missing legalEntity returns error", func(t *testing.T) {

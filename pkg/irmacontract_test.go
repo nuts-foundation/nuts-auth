@@ -54,7 +54,7 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 	})
 
 	t.Run("valid contract signed with wrong attributes is Invalid", func(t *testing.T) {
-		validTestContracts := map[Language]map[ContractType]map[Version]*ContractTemplate{
+		validTestContracts := ContractMatrix{
 			"NL": {"BehandelaarLogin": {
 				"v1": &ContractTemplate{
 					Type:               "BehandelaarLogin",

@@ -24,7 +24,7 @@ type DefaultValidator struct {
 	IrmaConfig     *irma.Configuration
 	Registry       registry.RegistryClient
 	Crypto         nutscrypto.Client
-	ValidContracts map[Language]map[ContractType]map[Version]*ContractTemplate
+	ValidContracts ContractMatrix
 }
 
 // LegacyIdentityToken is the JWT that was used as Identity token in versions prior to < 0.13

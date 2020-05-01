@@ -51,7 +51,7 @@ var StandardSignerAttributes = []string{
 }
 
 // EN:PractitionerLogin:v1 ContractTemplate
-var Contracts = map[Language]map[ContractType]map[Version]*ContractTemplate{
+var Contracts = ContractMatrix{
 	"NL": {"BehandelaarLogin": {
 		"v1": &ContractTemplate{
 			Type:               "BehandelaarLogin",
@@ -96,7 +96,7 @@ var Contracts = map[Language]map[ContractType]map[Version]*ContractTemplate{
 
 // NewContractFromMessageContents finds the contract for a certain message.
 // Every message should begin with a special sequence like "NL:ContractName:version".
-func NewContractFromMessageContents(contents string, validContracts map[Language]map[ContractType]map[Version]*ContractTemplate) (*ContractTemplate, error) {
+func NewContractFromMessageContents(contents string, validContracts ContractMatrix) (*ContractTemplate, error) {
 	r, _ := regexp.Compile(`^(.{2}):(.+):(v\d+)`)
 
 	matchResult := r.FindSubmatch([]byte(contents))
@@ -114,7 +114,7 @@ func NewContractFromMessageContents(contents string, validContracts map[Language
 
 // NewContractByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
 // If no contract is found, the error vaule of ErrContractNotFound is returned.
-func NewContractByType(contractType ContractType, language Language, version Version, validContracts map[Language]map[ContractType]map[Version]*ContractTemplate) (*ContractTemplate, error) {
+func NewContractByType(contractType ContractType, language Language, version Version, validContracts ContractMatrix) (*ContractTemplate, error) {
 	if version == "" {
 		version = "v1"
 	}
