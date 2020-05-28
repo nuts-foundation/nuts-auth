@@ -341,9 +341,6 @@ components:
         nuts_auth_token:
           type: string
           description: Base64 encoded JWT that can be used as Bearer Token
-        nuts_auth_legacy_token:
-          type: string
-          description: JWT that can be used as Bearer Token (deprecated)
     DisclosedAttribute:
       required:
         - value

@@ -226,7 +226,6 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 
 		sessionID := "123"
 		nutsAuthToken := "123.456.123"
-		nutsAuthLegacyToken := "456.123.456"
 		proofStatus := "VALID"
 
 		authMock.EXPECT().ContractSessionStatus(sessionID).Return(&pkg.SessionStatusResult{
@@ -239,8 +238,7 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 				},
 				ProofStatus: irma.ProofStatusValid,
 			},
-			NutsAuthToken:       nutsAuthToken,
-			NutsAuthLegacyToken: nutsAuthLegacyToken,
+			NutsAuthToken: nutsAuthToken,
 		}, nil)
 
 		a := []DisclosedAttribute{
@@ -251,13 +249,12 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 			},
 		}
 		echoMock.EXPECT().JSON(http.StatusOK, SessionResult{
-			Status:              "INITIALIZED",
-			Token:               "YRnWbPJ7ffKCnf9cP51e",
-			Type:                "signing",
-			Disclosed:           &a,
-			NutsAuthToken:       &nutsAuthToken,
-			NutsAuthLegacyToken: &nutsAuthLegacyToken,
-			ProofStatus:         &proofStatus,
+			Status:        "INITIALIZED",
+			Token:         "YRnWbPJ7ffKCnf9cP51e",
+			Type:          "signing",
+			Disclosed:     &a,
+			NutsAuthToken: &nutsAuthToken,
+			ProofStatus:   &proofStatus,
 		})
 		wrapper := Wrapper{Auth: authMock}
 		err := wrapper.SessionRequestStatus(echoMock, sessionID)

@@ -108,8 +108,6 @@ type SessionStatusResult struct {
 	server.SessionResult
 	// NutsAuthToken contains the JWT if the sessionStatus is DONE
 	NutsAuthToken string `json:"nuts_auth_token"`
-	// NutsAuthLegacyToken contains the legacy JWT if the sessionStatus is DONE
-	NutsAuthLegacyToken string `json:"nuts_auth_legacy_token"`
 }
 
 // ValidationRequest is used to pass all information to ValidateContract
