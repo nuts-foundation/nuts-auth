@@ -1,3 +1,6 @@
+Nuts Auth Service
+##################
+
 .. image:: https://circleci.com/gh/nuts-foundation/nuts-auth.svg?style=svg
     :target: https://circleci.com/gh/nuts-foundation/nuts-auth
     :alt: Build Status
@@ -14,16 +17,100 @@
     :target: https://www.codacy.com/app/nuts-foundation/nuts-auth?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=nuts-foundation/nuts-auth&amp;utm_campaign=Badge_Grade
     :alt: Codacy Report
 
-Nuts Auth Service
-==================
+The auth module is written in Go and should be part of nuts-go as an engine.
 
-Copy the ``./testdata/testconfig.yaml`` to ``./nuts.yaml`` and change the contents.
+Dependencies
+************
 
-Start the server with ``go run main.go serve``
+This projects is using go modules, so version > 1.12 is recommended. 1.10 would be a minimum.
 
-For more information about how to use the server type ``go run main.go --help``
+Running tests
+*************
+
+Tests can be run by executing
+
+.. code-block:: shell
+
+    go test ./...
+
+Generating code
+***************
+
+.. code-block:: shell
+
+    oapi-codegen -generate server,types -package api docs/_static/nuts-auth.yaml > api/generated.go
+
+Generating Mock
+***************
+
+When making changes to the client interface run the following command to regenerate the mock:
+
+.. code-block:: shell
+
+    mockgen -destination=mock/mock_client.go -package=mock -source=pkg/auth.go
+
+
+Building
+********
+
+This project is part of https://github.com/nuts-foundation/nuts-go. If you do however would like a binary, just use ``go build``.
+
+README
+******
+
+The readme is auto-generated from a template and uses the documentation to fill in the blanks.
+
+.. code-block:: shell
+
+    ./generate_readme.sh
+
+This script uses ``rst_include`` which is installed as part of the dependencies for generating the documentation.
 
 Documentation
-=============
-The spec of this service is provided in the ``docs`` folder. The latest version is hosted on `Read the docs <https://nuts-documentation.readthedocs.io/en/latest/>`_.
+*************
+
+To generate the documentation, you'll need python3, sphinx and a bunch of other stuff. See :ref:`nuts-documentation-development-documentation`
+The documentation can be build by running
+
+.. code-block:: shell
+
+    /docs $ make html
+
+The resulting html will be available from ``docs/_build/html/index.html``
+
+Configuration
+*************
+
+The following configuration parameters are available for the auth service.
+
+===================================     ======================================  ========================================
+Key                                     Default                                 Description
+===================================     ======================================  ========================================
+auth.mode                               server                                  server or client. nuts-auth doesn't support true client mode (yet), but when specified it doesn't start any services (like IRMA) so that CLI commands can be used.
+auth.publicUrl                          ""                                      Public URL which can be reached by a users IRMA client
+auth.irmaConfigPath                     ""                                      path to IRMA config folder. If not set, a tmp folder is created
+auth.actingPartyCn                      ""                                      The acting party Common name used in contracts
+auth.skipAutoUpdateIrmaSchemas          false                                   set if you want to skip the auto download of the irma schemas every 60 minutes
+auth.enableCORS                         false                                   Set if you want to allow CORS requests. This is useful when you want browsers to directly communicate with the nuts node
+auth.irmaSchemeManager                  pbdf                                    Allows selecting an IRMA scheme manager. During development this can ben irma-demo. Should be pdfb in strictMode
+===================================     ======================================  ========================================
+
+As with all other properties for nuts-go, they can be set through yaml:
+
+.. sourcecode:: yaml
+
+    auth:
+       publicUrl: "https://nuts.nl"
+
+as commandline property
+
+.. sourcecode:: shell
+
+    ./nuts --auth.publicUrl https://nuts.nl
+
+Or by using environment variables
+
+.. sourcecode:: shell
+
+    NUTS_AUTH_PUBLIC_URL=https://nuts.nl ./nuts
 
