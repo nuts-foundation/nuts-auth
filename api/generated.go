@@ -205,9 +205,6 @@ type SessionResult struct {
 	Disclosed *[]DisclosedAttribute `json:"disclosed,omitempty"`
 	Error     *RemoteError          `json:"error,omitempty"`
 
-	// JWT that can be used as Bearer Token (deprecated)
-	NutsAuthLegacyToken *string `json:"nuts_auth_legacy_token,omitempty"`
-
 	// Base64 encoded JWT that can be used as Bearer Token
 	NutsAuthToken *string        `json:"nuts_auth_token,omitempty"`
 	ProofStatus   *string        `json:"proofStatus,omitempty"`
@@ -250,8 +247,10 @@ type TokenIntrospectionResponse struct {
 	Aud *string `json:"aud,omitempty"`
 
 	// End-User's preferred e-mail address. Should be a personal email and can be used to uniquely identify a user. Just like the email used for an account.
-	Email      *string `json:"email,omitempty"`
-	Exp        *int    `json:"exp,omitempty"`
+	Email *string `json:"email,omitempty"`
+	Exp   *int    `json:"exp,omitempty"`
+
+	// Surname(s) or last name(s) of the End-User.
 	FamilyName *string `json:"family_name,omitempty"`
 
 	// Given name(s) or first name(s) of the End-User.
@@ -260,7 +259,9 @@ type TokenIntrospectionResponse struct {
 
 	// The issuer in the JWT is always the acting party, thus the care organization doing the request.
 	// This is used to find the public key of the issuer from the Nuts registry.
-	Iss  *string `json:"iss,omitempty"`
+	Iss *string `json:"iss,omitempty"`
+
+	// End-User's full name in displayable form including all name parts, possibly including titles and suffixes, ordered according to the End-User's locale and preferences.
 	Name *string `json:"name,omitempty"`
 
 	// Surname prefix
