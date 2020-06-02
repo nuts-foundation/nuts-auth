@@ -26,7 +26,7 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v0.0.7
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
 	gopkg.in/antage/eventsource.v1 v1.0.0-20150318155416-803f4c5af225 // indirect
 )
