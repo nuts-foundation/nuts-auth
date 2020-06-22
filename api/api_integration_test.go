@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
+	"github.com/spf13/cobra"
 
 	irma "github.com/privacybydesign/irmago"
 
@@ -21,10 +23,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/nuts-foundation/nuts-auth/pkg"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	"github.com/nuts-foundation/nuts-go-core/mock"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
-	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -67,6 +67,8 @@ func Test_Integration(t *testing.T) {
 		}}}
 
 	createContext := func(t *testing.T) *IntegrationTestContext {
+		os.Setenv("NUTS_IDENTITY", "oid:123")
+		core.NutsConfig().Load(&cobra.Command{})
 		t.Helper()
 		ctrl := gomock.NewController(t)
 
@@ -81,60 +83,32 @@ func Test_Integration(t *testing.T) {
 		registryPath := "../testdata/registry"
 		emptyRegistry(t, registryPath)
 
+		cryptoInstance = crypto.CryptoInstance()
+		cryptoInstance.Config.Fspath = "../testdata/tmp"
+		cryptoInstance.Configure()
+
 		r := registry.RegistryInstance()
 		r.Config.Mode = "server"
 		r.Config.Datadir = registryPath
 		r.Config.SyncMode = "fs"
+		r.Config.OrganisationCertificateValidity = 1
+		r.Config.VendorCACertificateValidity = 1
 		if err := r.Configure(); !assert.NoError(t, err) {
 			t.FailNow()
 		}
 
 		// Register a vendor
-		event := events.CreateEvent(domain.RegisterVendor, domain.RegisterVendorEvent{Identifier: "oid:123", Name: "Awesomesoft"})
-		if err := r.EventSystem.PublishEvent(event); !assert.NoError(t, err) {
-			t.FailNow()
-		}
-
-		cryptoInstance = &crypto.Crypto{
-			Config: crypto.CryptoConfig{
-				Keysize: types.ConfigKeySizeDefault,
-				Fspath:  "../testdata/tmp",
-			},
-		}
-		if err := cryptoInstance.Configure(); !assert.NoError(t, err) {
-			t.FailNow()
-		}
-
-		// Generate keys for Organization
-		le := types.LegalEntity{URI: OrganizationID}
-		_ = cryptoInstance.GenerateKeyPairFor(le)
-		pub, _ := cryptoInstance.PublicKeyInJWK(le)
+		_, _ = r.RegisterVendor("Test Vendor", domain.HealthcareDomain)
 
 		// Add Organization to registry
-		event = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
-			VendorIdentifier: "oid:123",
-			OrgIdentifier:    OrganizationID,
-			OrgName:          "Zorggroep Nuts",
-			OrgKeys:          []interface{}{pub},
-		})
-		if err := r.EventSystem.PublishEvent(event); !assert.NoError(t, err) {
-			t.FailNow()
+		orgName := "Zorggroep Nuts"
+		if _, err := r.VendorClaim(OrganizationID, orgName, nil); err != nil {
+			t.Fatal(err)
 		}
 
 		// Generate keys for OtherOrganization
-		le = types.LegalEntity{URI: OtherOrganizationID}
-		_ = cryptoInstance.GenerateKeyPairFor(le)
-		pub, _ = cryptoInstance.PublicKeyInJWK(le)
-
-		// Add Organization to registry
-		event = events.CreateEvent(domain.VendorClaim, domain.VendorClaimEvent{
-			VendorIdentifier: "oid:123",
-			OrgIdentifier:    OtherOrganizationID,
-			OrgName:          "verpleeghuis De nootjes",
-			OrgKeys:          []interface{}{pub},
-		})
-		if err := r.EventSystem.PublishEvent(event); !assert.NoError(t, err) {
-			t.FailNow()
+		if _, err := r.VendorClaim(OtherOrganizationID, "verpleeghuis De nootjes", nil); err != nil {
+			t.Fatal(err)
 		}
 
 		vendorIdentifierFromHeader = func(ctx echo.Context) string {
