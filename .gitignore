@@ -79,4 +79,4 @@ nuts.yaml
 # anything tmp
 tmp
 
-testdata/registry/events
+testdata/registry/**/*

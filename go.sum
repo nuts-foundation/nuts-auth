@@ -245,6 +245,8 @@ github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200619120015-ef5d25a4e6bc h1:
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200619120015-ef5d25a4e6bc/go.mod h1:CmGoK5emSgqp6z7lG3nftMf0B5PcMTuV1IBDN6xwHcE=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200622084212-04c7bc6d6630 h1:dJ9iMLy9N5igUHIVkJzMLKUiUzNSXeLc9ANHg7OPVBg=
 github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200622084212-04c7bc6d6630/go.mod h1:CmGoK5emSgqp6z7lG3nftMf0B5PcMTuV1IBDN6xwHcE=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200622090545-ea95fbdad3ec h1:EL6tI9FX0fseCnWUIPep8zzYzrcKdKvX5kYl4JSi4Qw=
+github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200622090545-ea95fbdad3ec/go.mod h1:jPoZVWZvuVK8hOGq4GciXwALVRGivDJcMWC80sxVP54=
 github.com/nuts-foundation/nuts-crypto v0.13.2 h1:BoQ8qCILtEuC+firfYOIiZocLU5WO7RK5gyYTsZVSF0=
 github.com/nuts-foundation/nuts-crypto v0.13.2/go.mod h1:2JTdNvxWBbqv/VWQw3PazNNjY4FlbDf6LAyv2u2vtGo=
 github.com/nuts-foundation/nuts-crypto v0.14.0 h1:gXgZR0QwyBBdutmTercXiFx3foRuLxfmNickm98JX5U=
@@ -262,6 +264,8 @@ github.com/nuts-foundation/nuts-registry v0.13.3-0.20200430090733-54fcff4de427 h
 github.com/nuts-foundation/nuts-registry v0.13.3-0.20200430090733-54fcff4de427/go.mod h1:CqEFWQwtcRr2Af0mnTsgEbXwn2iZ+OM1NE6WkgqFpXk=
 github.com/nuts-foundation/nuts-registry v0.13.3-0.20200622073642-8760304e7876 h1:3h3ZrF9uQsBKTt/PtLAzxTthtIOyaBSUW01lmip+d8Y=
 github.com/nuts-foundation/nuts-registry v0.13.3-0.20200622073642-8760304e7876/go.mod h1:H4pczNdSeTIZ7ohAscOFCyoddYGyaujOHQ0C6Q73kRM=
+github.com/nuts-foundation/nuts-registry v0.13.3-0.20200623065823-8b2b8a223615 h1:1XH60ujIsEsvvHtXKAmbhvLZbAcJusyIxVrbwPM+mms=
+github.com/nuts-foundation/nuts-registry v0.13.3-0.20200623065823-8b2b8a223615/go.mod h1:H4pczNdSeTIZ7ohAscOFCyoddYGyaujOHQ0C6Q73kRM=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.10.1 h1:q/mM8GF/n0shIN8SaAZ0V+jnLPzen6WIVZdiwrRlMlo=

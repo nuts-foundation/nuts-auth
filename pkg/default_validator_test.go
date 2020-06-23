@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	registry2 "github.com/nuts-foundation/nuts-registry/pkg"
+	"github.com/nuts-foundation/nuts-registry/pkg/events"
 	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 
 	"github.com/google/uuid"
@@ -24,7 +26,6 @@ import (
 	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
-	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -756,7 +757,6 @@ func createJwt(iss string, sub string, contractStr string) []byte {
 }
 
 var cryptoInstance = crypto.CryptoInstance()
-var testInstance *DefaultValidator
 
 const OrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"
 const OtherOrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000002"
@@ -768,12 +768,10 @@ var mutex = sync.Mutex{}
 func defaultValidator(t *testing.T) DefaultValidator {
 	t.Helper()
 
-	mutex.Lock()
-	defer mutex.Unlock()
-
 	emptyRegistry := func(t *testing.T, path string) {
 		t.Helper()
-		files, err := filepath.Glob(filepath.Join(path, "*"))
+
+		files, err := filepath.Glob(filepath.Join(path, t.Name(), "events", "*"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -784,49 +782,48 @@ func defaultValidator(t *testing.T) DefaultValidator {
 		}
 	}
 
-	if testInstance == nil {
+	os.Setenv("NUTS_IDENTITY", "oid:1234")
+	core.NutsConfig().Load(&cobra.Command{})
+	cryptoInstance.Config.Fspath = "../testdata/tmp"
+	if err := cryptoInstance.Configure(); err != nil {
+		t.Fatal(err)
+	}
 
-		os.Setenv("NUTS_IDENTITY", "oid:1234")
-		core.NutsConfig().Load(&cobra.Command{})
-		cryptoInstance = crypto.CryptoInstance()
-		cryptoInstance.Config.Fspath = "../testdata/tmp"
-		if err := cryptoInstance.Configure(); err != nil {
-			t.Fatal(err)
-		}
+	r := &registry2.Registry{
+		Config:      registry2.DefaultRegistryConfig(),
+		EventSystem: events.NewEventSystem(domain.GetEventTypes()...),
+	}
+	r.Config.Mode = core.ServerEngineMode
+	r.Config.Datadir = filepath.Join("../testdata/registry", t.Name())
+	r.Config.SyncMode = "fs"
+	r.Config.OrganisationCertificateValidity = 1
+	r.Config.VendorCACertificateValidity = 1
+	emptyRegistry(t, r.Config.Datadir)
 
-		r := registry.RegistryInstance()
-		r.Config.Mode = core.ServerEngineMode
-		r.Config.Datadir = "../testdata/registry"
-		r.Config.SyncMode = "fs"
-		r.Config.OrganisationCertificateValidity = 1
-		r.Config.VendorCACertificateValidity = 1
-		emptyRegistry(t, r.Config.Datadir)
+	if err := r.Configure(); err != nil {
+		panic(err)
+	}
 
-		if err := r.Configure(); err != nil {
-			panic(err)
-		}
+	// Register a vendor
+	_, _ = r.RegisterVendor("Awesomesoft", domain.HealthcareDomain)
 
-		// Register a vendor
-		_, _ = r.RegisterVendor("Awesomesoft", domain.HealthcareDomain)
+	// Add Organization to registry
+	if _, err := r.VendorClaim(OrganizationID, "Zorggroep Nuts", nil); err != nil {
+		t.Fatal(err)
+	}
 
-		// Add Organization to registry
-		if _, err := r.VendorClaim(OrganizationID, "Zorggroep Nuts", nil); err != nil {
-			t.Fatal(err)
-		}
+	if _, err := r.VendorClaim(OtherOrganizationID, "verpleeghuis De nootjes", nil); err != nil {
+		t.Fatal(err)
+	}
 
-		if _, err := r.VendorClaim(OtherOrganizationID, "verpleeghuis De nootjes", nil); err != nil {
-			t.Fatal(err)
-		}
-
-		testInstance = &DefaultValidator{
-			Registry: r,
-			Crypto:   cryptoInstance,
-			IrmaConfig: GetIrmaConfig(AuthConfig{
-				IrmaConfigPath:            "../testdata/irma",
-				SkipAutoUpdateIrmaSchemas: true,
-			}),
-			ValidContracts: Contracts,
-		}
+	testInstance := &DefaultValidator{
+		Registry: r,
+		Crypto:   cryptoInstance,
+		IrmaConfig: GetIrmaConfig(AuthConfig{
+			IrmaConfigPath:            "../testdata/irma",
+			SkipAutoUpdateIrmaSchemas: true,
+		}),
+		ValidContracts: Contracts,
 	}
 
 	return *testInstance

@@ -10,6 +10,7 @@ import (
 	cryptoMock2 "github.com/nuts-foundation/nuts-crypto/test/mock"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
+	registry2 "github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
@@ -141,6 +142,8 @@ func TestAuthInstance(t *testing.T) {
 func TestAuth_Configure(t *testing.T) {
 	cryptoInstance := crypto.CryptoInstance()
 	cryptoInstance.Config.Fspath = "../testdata/tmp"
+	registryInstance := registry2.RegistryInstance()
+	registryInstance.Config.Datadir = "../testdata/registry"
 
 	t.Run("mode defaults to server", func(t *testing.T) {
 		i := &Auth{
