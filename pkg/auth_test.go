@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	cryptoMock2 "github.com/nuts-foundation/nuts-crypto/mock"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	cryptoMock2 "github.com/nuts-foundation/nuts-crypto/test/mock"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
@@ -138,6 +139,9 @@ func TestAuthInstance(t *testing.T) {
 }
 
 func TestAuth_Configure(t *testing.T) {
+	cryptoInstance := crypto.CryptoInstance()
+	cryptoInstance.Config.Fspath = "../testdata/tmp"
+
 	t.Run("mode defaults to server", func(t *testing.T) {
 		i := &Auth{
 			Config: AuthConfig{},
@@ -319,13 +323,13 @@ func TestAuth_KeyExistsFor(t *testing.T) {
 	}
 
 	t.Run("false when crypto returns false", func(t *testing.T) {
-		cryptoMock.EXPECT().KeyExistsFor(gomock.Any()).Return(false)
+		cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).Return(false)
 
 		assert.False(t, auth.KeyExistsFor(""))
 	})
 
 	t.Run("true when crypto returns false", func(t *testing.T) {
-		cryptoMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
+		cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).Return(true)
 
 		assert.True(t, auth.KeyExistsFor(""))
 	})

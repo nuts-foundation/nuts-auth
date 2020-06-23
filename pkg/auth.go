@@ -283,7 +283,7 @@ func (auth *Auth) IntrospectAccessToken(token string) (*NutsAccessToken, error) 
 
 // KeyExistsFor check if the private key exists on this node by calling the same function on the cryptoClient
 func (auth *Auth) KeyExistsFor(legalEntity string) bool {
-	return auth.cryptoClient.KeyExistsFor(types.LegalEntity{URI: legalEntity})
+	return auth.cryptoClient.PrivateKeyExists(types.KeyForEntity(types.LegalEntity{URI: legalEntity}))
 }
 
 // OrganizationNameByID returns the name of an organisation from the registry

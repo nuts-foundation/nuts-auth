@@ -176,7 +176,7 @@ func (v DefaultValidator) CreateIdentityTokenFromIrmaContract(contract *SignedIr
 		return "", fmt.Errorf("could not construct claims: %w", err)
 	}
 
-	tokenString, err := v.Crypto.SignJwtFor(claims, types.LegalEntity{URI: legalEntity})
+	tokenString, err := v.Crypto.SignJWT(claims, types.KeyForEntity(types.LegalEntity{URI: legalEntity}))
 	if err != nil {
 		return "", fmt.Errorf("could not sign jwt: %w", err)
 	}
@@ -200,7 +200,7 @@ func (v DefaultValidator) createLegacyIdentityToken(contract *SignedIrmaContract
 		return "", err
 	}
 
-	tokenString, err := v.Crypto.SignJwtFor(claims, types.LegalEntity{URI: legalEntity})
+	tokenString, err := v.Crypto.SignJWT(claims, types.KeyForEntity(types.LegalEntity{URI: legalEntity}))
 	if err != nil {
 		err = fmt.Errorf("could not sign jwt: %w", err)
 		logrus.Error(err)
@@ -328,7 +328,7 @@ func (v DefaultValidator) BuildAccessToken(jwtBearerToken *NutsJwtBearerToken, i
 	}
 
 	// Sign with the private key of the issuer
-	token, err := v.Crypto.SignJwtFor(keyVals, types.LegalEntity{URI: issuer})
+	token, err := v.Crypto.SignJWT(keyVals, types.KeyForEntity(types.LegalEntity{URI: issuer}))
 	if err != nil {
 		return token, fmt.Errorf("could not build accessToken: %w", err)
 	}
@@ -364,7 +364,7 @@ func (v DefaultValidator) CreateJwtBearerToken(request *CreateJwtBearerTokenRequ
 		return nil, err
 	}
 
-	signingString, err := v.Crypto.SignJwtFor(keyVals, types.LegalEntity{URI: request.Actor})
+	signingString, err := v.Crypto.SignJWT(keyVals, types.KeyForEntity(types.LegalEntity{URI: request.Actor}))
 	if err != nil {
 		return nil, err
 	}
@@ -382,7 +382,7 @@ func (v DefaultValidator) ParseAndValidateAccessToken(accessToken string) (*Nuts
 		}
 
 		// Check if the care provider which signed the token is managed by this node
-		if !v.Crypto.KeyExistsFor(types.LegalEntity{URI: legalEntity}) {
+		if !v.Crypto.PrivateKeyExists(types.KeyForEntity(types.LegalEntity{URI: legalEntity})) {
 			return nil, fmt.Errorf("invalid token: not signed by a care provider of this node")
 		}
 
