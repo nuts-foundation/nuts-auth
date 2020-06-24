@@ -23,5 +23,25 @@ Nuts Auth Service
 Configuration
 *************
 
-.. include:: docs/pages/configuration/nuts-auth.rst
-    :start-after: .. marker-for-readme
+The following configuration parameters are available:
+
+.. include:: README_options.rst
+
+As with all other properties for nuts-go, they can be set through yaml:
+
+.. sourcecode:: yaml
+
+    auth:
+       publicUrl: "https://nuts.nl"
+
+as commandline property
+
+.. sourcecode:: shell
+
+    ./nuts --auth.publicUrl https://nuts.nl
+
+Or by using environment variables
+
+.. sourcecode:: shell
+
+    NUTS_AUTH_PUBLIC_URL=https://nuts.nl ./nuts

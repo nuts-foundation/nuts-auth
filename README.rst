@@ -81,19 +81,20 @@ The resulting html will be available from ``docs/_build/html/index.html``
 Configuration
 *************
 
-The following configuration parameters are available for the auth service.
+The following configuration parameters are available:
 
-===================================     ======================================  ========================================
-Key                                     Default                                 Description
-===================================     ======================================  ========================================
-auth.mode                               server                                  server or client. nuts-auth doesn't support true client mode (yet), but when specified it doesn't start any services (like IRMA) so that CLI commands can be used.
-auth.publicUrl                          ""                                      Public URL which can be reached by a users IRMA client
-auth.irmaConfigPath                     ""                                      path to IRMA config folder. If not set, a tmp folder is created
-auth.actingPartyCn                      ""                                      The acting party Common name used in contracts
-auth.skipAutoUpdateIrmaSchemas          false                                   set if you want to skip the auto download of the irma schemas every 60 minutes
-auth.enableCORS                         false                                   Set if you want to allow CORS requests. This is useful when you want browsers to directly communicate with the nuts node
-auth.irmaSchemeManager                  pbdf                                    Allows selecting an IRMA scheme manager. During development this can ben irma-demo. Should be pdfb in strictMode
-===================================     ======================================  ========================================
+=========================  ==============  =========================================================================================================================
+Key                        Default         Description
+=========================  ==============  =========================================================================================================================
+actingPartyCn                              The acting party Common name used in contracts
+address                    localhost:1323  Interface and port for http server to bind to
+enableCORS                 false           Set if you want to allow CORS requests. This is useful when you want browsers to directly communicate with the nuts node.
+irmaConfigPath                             path to IRMA config folder. If not set, a tmp folder is created.
+irmaSchemeManager          pbdf            The IRMA schemeManager to use for attributes. Can be either 'pbdf' or 'irma-demo'
+mode                                       server or client, when client it does not start any services so that CLI commands can be used.
+publicUrl                                  Public URL which can be reached by a users IRMA client
+skipAutoUpdateIrmaSchemas  false           set if you want to skip the auto download of the irma schemas every 60 minutes.
+=========================  ==============  =========================================================================================================================
 
 As with all other properties for nuts-go, they can be set through yaml:
 
