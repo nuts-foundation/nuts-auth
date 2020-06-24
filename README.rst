@@ -13,9 +13,9 @@ Nuts Auth Service
     :target: https://godoc.org/github.com/nuts-foundation/nuts-auth
     :alt: GoDoc
 
-.. image:: https://api.codacy.com/project/badge/Grade/e1c0eca9935049d590ab78f8c808cfa0
-    :target: https://www.codacy.com/app/nuts-foundation/nuts-auth?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=nuts-foundation/nuts-auth&amp;utm_campaign=Badge_Grade
-    :alt: Codacy Report
+.. image:: https://api.codeclimate.com/v1/badges/a96e5a12e2fcc618a525/maintainability
+   :target: https://codeclimate.com/github/nuts-foundation/nuts-auth/maintainability
+   :alt: Maintainability
 
 The auth module is written in Go and should be part of nuts-go as an engine.
 
