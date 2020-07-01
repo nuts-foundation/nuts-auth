@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
@@ -11,36 +12,30 @@ import (
 	"sync"
 )
 
-var irmaInstance *irma.Configuration
-var configOnce = new(sync.Once)
-
 // GetIrmaConfig creates and returns an IRMA config.
 // The config sets the given irma path or a temporary folder. Then it downloads the schemas.
-func GetIrmaConfig(config AuthConfig) *irma.Configuration {
-	configOnce.Do(func() {
-		irmaConfigFolder := irmaConfigDir(config)
-		logrus.Infof("using irma config dir: %s", irmaConfigFolder)
-		irmaConfig, err := irma.NewConfiguration(irmaConfigFolder)
-		if err != nil {
-			logrus.WithError(err).Panic("Could not create irma config")
-			return
+func GetIrmaConfig(config AuthConfig) (*irma.Configuration, error) {
+	irmaConfigFolder, err := irmaConfigDir(config)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Infof("Using irma config dir: %s", irmaConfigFolder)
+	irmaConfig, err := irma.NewConfiguration(irmaConfigFolder)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not create irma config")
+	}
+	if !config.SkipAutoUpdateIrmaSchemas {
+		logrus.Infof("Downloading irma schemas. If this annoys you or you want to pin the schemas, set %s", ConfAutoUpdateIrmaSchemas)
+		if err := irmaConfig.DownloadDefaultSchemes(); err != nil {
+			return nil, errors.Wrap(err, "could not download default schemes")
 		}
-		if !config.SkipAutoUpdateIrmaSchemas {
-			logrus.Infof("Downloading irma schemas. If this annoys you or you want to pin the schemas, set %s", ConfAutoUpdateIrmaSchemas)
-			if err := irmaConfig.DownloadDefaultSchemes(); err != nil {
-				logrus.WithError(err).Panic("Could not download default schemes")
-				return
-			}
-		} else {
-			logrus.Info("Loading irma schemas.")
-			if err := irmaConfig.ParseFolder(); err != nil {
-				logrus.WithError(err).Panic("Could not load default schemes from disk")
-				return
-			}
+	} else {
+		logrus.Info("Loading irma schemas.")
+		if err := irmaConfig.ParseFolder(); err != nil {
+			return nil, errors.Wrap(err, "could not load default schemes from disk")
 		}
-		irmaInstance = irmaConfig
-	})
-	return irmaInstance
+	}
+	return irmaConfig, err
 }
 
 var irmaServer *irmaserver.Server
@@ -48,46 +43,52 @@ var serverOnce = new(sync.Once)
 
 // GetIrmaServer creates and starts the irma server instance.
 // The server can be used by a IRMA client like the app to handle IRMA sessions
-func GetIrmaServer(config AuthConfig) *irmaserver.Server {
+func GetIrmaServer(config AuthConfig) (*irmaserver.Server, error) {
+	var err error
 	serverOnce.Do(func() {
 		baseURL := config.PublicUrl
 
+		var configDir string
+		if configDir, err = irmaConfigDir(config); err != nil {
+			return
+		}
 		config := &server.Configuration{
 			URL:                  fmt.Sprintf("%s/auth/irmaclient", baseURL),
 			Logger:               logrus.StandardLogger(),
-			SchemesPath:          irmaConfigDir(config),
+			SchemesPath:          configDir,
 			DisableSchemesUpdate: config.SkipAutoUpdateIrmaSchemas,
 		}
 
 		logrus.Info("Initializing IRMA library...")
 		logrus.Infof("irma baseurl: %s", config.URL)
 
-		srv, err := irmaserver.New(config)
+		var newServer *irmaserver.Server
+		newServer, err = irmaserver.New(config)
 		if err != nil {
-			logrus.WithError(err).Panic("Could not initialize IRMA library:")
+			err = errors.Wrap(err, "could not initialize IRMA library")
 			return
 		}
-		irmaServer = srv
+		irmaServer = newServer
 	})
 
-	return irmaServer
+	return irmaServer, err
 }
 
-func irmaConfigDir(config AuthConfig) (path string) {
-	path = config.IrmaConfigPath
+func irmaConfigDir(config AuthConfig) (string, error) {
+	path := config.IrmaConfigPath
 
 	if path == "" {
 		logrus.Info("irma config dir not set, using tmp dir")
 		var err error
 		path, err = ioutil.TempDir("", "irmaconfig")
 		if err != nil {
-			logrus.Panic("Could not create irma tmp dir")
+			return "", errors.Wrap(err, "Could not create irma tmp dir")
 		}
 	}
 	if err := ensureDirectoryExists(path); err != nil {
-		logrus.WithError(err).Panic("Could not create irma config directory")
+		return "", errors.Wrap(err, "could not create irma config directory")
 	}
-	return
+	return path, nil
 }
 
 // PathExists checks if the specified path exists.
