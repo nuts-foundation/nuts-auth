@@ -145,7 +145,7 @@ func TestAuth_Configure(t *testing.T) {
 	registryInstance := registry2.RegistryInstance()
 	registryInstance.Config.Datadir = "../testdata/registry"
 
-	t.Run("mode defaults to server", func(t *testing.T) {
+	t.Run("ok - mode defaults to server", func(t *testing.T) {
 		i := &Auth{
 			Config: AuthConfig{},
 		}
@@ -153,7 +153,7 @@ func TestAuth_Configure(t *testing.T) {
 		assert.Equal(t, core.ServerEngineMode, i.Config.Mode)
 	})
 
-	t.Run("Configure in client mode", func(t *testing.T) {
+	t.Run("ok - client mode", func(t *testing.T) {
 		i := &Auth{
 			Config: AuthConfig{
 				Mode: core.ClientEngineMode,
@@ -163,7 +163,7 @@ func TestAuth_Configure(t *testing.T) {
 		assert.NoError(t, i.Configure())
 	})
 
-	t.Run("Configure returns error on missing actingPartyCn", func(t *testing.T) {
+	t.Run("error - missing actingPartyCn", func(t *testing.T) {
 		i := &Auth{
 			Config: AuthConfig{
 				Mode:      core.ServerEngineMode,
@@ -174,7 +174,7 @@ func TestAuth_Configure(t *testing.T) {
 		assert.Equal(t, ErrMissingActingParty, i.Configure())
 	})
 
-	t.Run("Configure returns error on missing publicUrl", func(t *testing.T) {
+	t.Run("error - missing publicUrl", func(t *testing.T) {
 		i := &Auth{
 			Config: AuthConfig{
 				Mode:          core.ServerEngineMode,
@@ -185,7 +185,7 @@ func TestAuth_Configure(t *testing.T) {
 		assert.Equal(t, ErrMissingPublicURL, i.Configure())
 	})
 
-	t.Run("Configure returns no error on valid config", func(t *testing.T) {
+	t.Run("ok - config valid", func(t *testing.T) {
 		i := &Auth{
 			Config: AuthConfig{
 				Mode:                      core.ServerEngineMode,
@@ -199,6 +199,23 @@ func TestAuth_Configure(t *testing.T) {
 		if assert.NoError(t, i.Configure()) {
 			// BUG: nuts-auth#23
 			assert.True(t, i.ContractValidator.IsInitialized())
+		}
+	})
+
+	t.Run("error - IRMA config failure", func(t *testing.T) {
+		i := &Auth{
+			Config: AuthConfig{
+				Mode:                      core.ServerEngineMode,
+				PublicUrl:                 "url",
+				ActingPartyCn:             "url",
+				IrmaSchemeManager:         "asdasdsad",
+				SkipAutoUpdateIrmaSchemas: true,
+			},
+		}
+		irma.DefaultSchemeManagers[0].Url = "foobar"
+		err := i.Configure()
+		if !assert.NoError(t, err) {
+			return
 		}
 	})
 }

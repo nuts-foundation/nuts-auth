@@ -208,7 +208,9 @@ func TestValidateContract(t *testing.T) {
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 
-	validator := DefaultValidator{IrmaServer: GetIrmaServer(authConfig), IrmaConfig: GetIrmaConfig(authConfig), ValidContracts: Contracts}
+	irmaConfig, _ := GetIrmaConfig(authConfig)
+	irmaServer, _ := GetIrmaServer(authConfig)
+	validator := DefaultValidator{IrmaServer: irmaServer, IrmaConfig: irmaConfig, ValidContracts: Contracts}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -247,7 +249,8 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 		},
 	}
 
-	_, knownSessionID, _ := GetIrmaServer(authConfig).StartSession(signatureRequest, func(result *server.SessionResult) {
+	irmaServer, _ := GetIrmaServer(authConfig)
+	_, knownSessionID, _ := irmaServer.StartSession(signatureRequest, func(result *server.SessionResult) {
 		logrus.Infof("session done, result: %s", server.ToJson(result))
 	})
 
@@ -257,6 +260,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 	type args struct {
 		id SessionID
 	}
+	irmaServer, _ = GetIrmaServer(authConfig)
 	tests := []struct {
 		name   string
 		fields fields
@@ -265,13 +269,13 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 	}{
 		{
 			"for an unknown session, it returns nil",
-			fields{GetIrmaServer(authConfig)},
+			fields{irmaServer},
 			args{"unknown sessionId"},
 			nil,
 		},
 		{
 			"for a known session it returns a status",
-			fields{GetIrmaServer(authConfig)},
+			fields{irmaServer},
 			args{SessionID(knownSessionID)},
 			&SessionStatusResult{
 				server.SessionResult{Token: knownSessionID, Status: server.StatusInitialized, Type: irma2.ActionSigning},
@@ -334,9 +338,10 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 			},
 		}
 
+		irmaConfig, _ := GetIrmaConfig(authConfig)
 		v := DefaultValidator{
 			IrmaServer:     &iMock,
-			IrmaConfig:     GetIrmaConfig(authConfig),
+			IrmaConfig:     irmaConfig,
 			Crypto:         cMock,
 			Registry:       rMock,
 			ValidContracts: Contracts,
@@ -816,13 +821,14 @@ func defaultValidator(t *testing.T) DefaultValidator {
 		t.Fatal(err)
 	}
 
+	irmaConfig, _ := GetIrmaConfig(AuthConfig{
+		IrmaConfigPath:            "../testdata/irma",
+		SkipAutoUpdateIrmaSchemas: true,
+	})
 	testInstance := &DefaultValidator{
-		Registry: r,
-		Crypto:   cryptoInstance,
-		IrmaConfig: GetIrmaConfig(AuthConfig{
-			IrmaConfigPath:            "../testdata/irma",
-			SkipAutoUpdateIrmaSchemas: true,
-		}),
+		Registry:       r,
+		Crypto:         cryptoInstance,
+		IrmaConfig:     irmaConfig,
 		ValidContracts: Contracts,
 	}
 

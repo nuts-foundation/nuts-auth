@@ -115,13 +115,17 @@ func Test_Integration(t *testing.T) {
 			return "Demo EHR"
 		}
 
+		irmaConfig, err := pkg.GetIrmaConfig(pkg.AuthConfig{
+			IrmaConfigPath:            "../testdata/irma",
+			SkipAutoUpdateIrmaSchemas: true,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		validator := pkg.DefaultValidator{
-			Registry: r,
-			Crypto:   cryptoInstance,
-			IrmaConfig: pkg.GetIrmaConfig(pkg.AuthConfig{
-				IrmaConfigPath:            "../testdata/irma",
-				SkipAutoUpdateIrmaSchemas: true,
-			}),
+			Registry:       r,
+			Crypto:         cryptoInstance,
+			IrmaConfig:     irmaConfig,
 			ValidContracts: validContracts,
 		}
 		auth.ContractSessionHandler = validator

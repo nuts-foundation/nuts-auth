@@ -40,8 +40,7 @@ func NewAuthEngine() *nutsGo.Engine {
 		Routes: func(router nutsGo.EchoRouter) {
 			// Mount the irma-app routes
 			routerWithAny := router.(EchoRouter)
-			irmaClientHandler := pkg.GetIrmaServer(authBackend.Config).HandlerFunc()
-			irmaEchoHandler := echo.WrapHandler(irmaClientHandler)
+			irmaEchoHandler := echo.WrapHandler(authBackend.IrmaServer.HandlerFunc())
 			routerWithAny.Any("/auth/irmaclient/*", irmaEchoHandler)
 
 			// Mount the Auth-api routes
@@ -69,7 +68,7 @@ func cmd() *cobra.Command {
 	cmd.AddCommand(&cobra.Command{
 		Use:   "server",
 		Short: "Run standalone auth server",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			authEngine := pkg.AuthInstance()
 			echoServer := echo.New()
 			echoServer.HideBanner = true
@@ -82,7 +81,11 @@ func cmd() *cobra.Command {
 			checkConfig(authEngine.Config)
 
 			// Mount the irma-app routes
-			irmaClientHandler := pkg.GetIrmaServer(authEngine.Config).HandlerFunc()
+			irmaServer, err := pkg.GetIrmaServer(authEngine.Config)
+			if err != nil {
+				return err
+			}
+			irmaClientHandler := irmaServer.HandlerFunc()
 			irmaEchoHandler := echo.WrapHandler(irmaClientHandler)
 			echoServer.Any("/auth/irmaclient/*", irmaEchoHandler)
 
@@ -90,7 +93,7 @@ func cmd() *cobra.Command {
 			api.RegisterHandlers(echoServer, &api.Wrapper{Auth: authEngine})
 
 			// Start the server
-			logrus.Fatal(echoServer.Start(authEngine.Config.Address))
+			return echoServer.Start(authEngine.Config.Address)
 		},
 	})
 

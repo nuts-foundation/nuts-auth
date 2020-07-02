@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/privacybydesign/irmago/server/irmaserver"
 	"os"
 	"strings"
 	"sync"
@@ -66,6 +67,7 @@ type Auth struct {
 	configDone             bool
 	ContractSessionHandler ContractSessionHandler
 	ContractValidator      ContractValidator
+	IrmaServer             *irmaserver.Server
 	AccessTokenHandler     AccessTokenHandler
 	cryptoClient           crypto.Client
 	registryClient         registry.RegistryClient
@@ -125,9 +127,18 @@ func (auth *Auth) Configure() (err error) {
 			auth.registryClient = registry2.NewRegistryClient()
 			auth.ValidContracts = Contracts
 
+			var irmaConfig *irma.Configuration
+			if irmaConfig, err = GetIrmaConfig(auth.Config); err != nil {
+				return
+			}
+			var irmaServer *irmaserver.Server
+			if irmaServer, err = GetIrmaServer(auth.Config); err != nil {
+				return
+			}
+			auth.IrmaServer = irmaServer
 			validator := DefaultValidator{
-				IrmaServer:     &DefaultIrmaClient{I: GetIrmaServer(auth.Config)},
-				IrmaConfig:     GetIrmaConfig(auth.Config),
+				IrmaServer:     &DefaultIrmaClient{I: irmaServer},
+				IrmaConfig:     irmaConfig,
 				Registry:       auth.registryClient,
 				Crypto:         auth.cryptoClient,
 				ValidContracts: auth.ValidContracts,
