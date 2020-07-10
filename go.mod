@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/bwesterb/go-atum v1.0.1 // indirect
 	github.com/cbroglie/mustache v1.1.0
-	github.com/deepmap/oapi-codegen v1.3.8
+	github.com/deepmap/oapi-codegen v1.3.9
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/golang/mock v1.4.3
