@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/bwesterb/go-atum v1.0.1 // indirect
-	github.com/cbroglie/mustache v1.1.0
+	github.com/cbroglie/mustache v1.2.0
 	github.com/deepmap/oapi-codegen v1.3.9
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-errors/errors v1.0.1 // indirect
@@ -24,7 +24,7 @@ require (
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
 	github.com/privacybydesign/irmago v0.4.1
 	github.com/sirupsen/logrus v1.6.0
-	github.com/spf13/cobra v0.0.7
+	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
