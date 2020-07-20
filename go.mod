@@ -14,12 +14,12 @@ require (
 	github.com/hashicorp/go-retryablehttp v0.6.2 // indirect
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
 	github.com/labstack/echo/v4 v4.1.16
-	github.com/lestrrat-go/jwx v0.9.2
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
-	github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200622090545-ea95fbdad3ec
+	github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200715061423-5270e931e6e0
 	github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200624131634-75b5f59c0b8e
-	github.com/nuts-foundation/nuts-registry v0.13.3-0.20200623065823-8b2b8a223615
+	github.com/nuts-foundation/nuts-network v0.0.0-20200720113317-1d5ac0efab46
+	github.com/nuts-foundation/nuts-registry v0.13.3-0.20200720115329-5717e6e26ea4
 	github.com/pkg/errors v0.9.1
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
 	github.com/privacybydesign/irmago v0.4.1

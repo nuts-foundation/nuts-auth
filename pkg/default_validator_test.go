@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"github.com/nuts-foundation/nuts-network/pkg"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -762,6 +763,7 @@ func createJwt(iss string, sub string, contractStr string) []byte {
 }
 
 var cryptoInstance = crypto.CryptoInstance()
+var networkInstance *pkg.Network
 
 const OrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000001"
 const OtherOrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000002"
@@ -791,6 +793,11 @@ func defaultValidator(t *testing.T) DefaultValidator {
 	core.NutsConfig().Load(&cobra.Command{})
 	cryptoInstance.Config.Fspath = "../testdata/tmp"
 	if err := cryptoInstance.Configure(); err != nil {
+		t.Fatal(err)
+	}
+	networkInstance = pkg.NetworkInstance()
+	networkInstance.Config.StorageConnectionString = ":memory:"
+	if err := networkInstance.Configure(); err != nil {
 		t.Fatal(err)
 	}
 
