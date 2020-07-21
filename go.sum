@@ -77,6 +77,8 @@ github.com/deepmap/oapi-codegen v1.3.8 h1:ot/iBKB7oCcT61L419fJZFMxLRgCW8fYAYKuPn
 github.com/deepmap/oapi-codegen v1.3.8/go.mod h1:kmvHN8Gd6to5zLS+P8mhUYJI+Lmn4h7NH00s/5erjd8=
 github.com/deepmap/oapi-codegen v1.3.9 h1:8e3ZfNFzwMDJ5kojta1GGS2+RjzWIThwDWgwe9GqQrE=
 github.com/deepmap/oapi-codegen v1.3.9/go.mod h1:suMvK7+rKlx3+tpa8ByptmvoXbAV70wERKTOGH3hLp0=
+github.com/deepmap/oapi-codegen v1.3.11 h1:Nd3tDQfqgquLmCzyRONHzs5SJEwPPoQcFZxT8MKt1Hs=
+github.com/deepmap/oapi-codegen v1.3.11/go.mod h1:suMvK7+rKlx3+tpa8ByptmvoXbAV70wERKTOGH3hLp0=
 github.com/denis-tingajkin/go-header v0.3.1 h1:ymEpSiFjeItCy1FOP+x0M2KdCELdEAHUsNa8F+hHc6w=
 github.com/denis-tingajkin/go-header v0.3.1/go.mod h1:sq/2IxMhaZX+RRcgHfCRx/m0M5na0fBt4/CRe7Lrji0=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
