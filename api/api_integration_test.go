@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
+	pkg2 "github.com/nuts-foundation/nuts-network/pkg"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -86,6 +87,10 @@ func Test_Integration(t *testing.T) {
 		cryptoInstance = crypto.CryptoInstance()
 		cryptoInstance.Config.Fspath = "../testdata/tmp"
 		cryptoInstance.Configure()
+
+		networkInstance := pkg2.NetworkInstance()
+		networkInstance.Config.StorageConnectionString = ":memory:"
+		networkInstance.Configure()
 
 		r := registry.RegistryInstance()
 		r.Config.Mode = "server"

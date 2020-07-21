@@ -13,6 +13,7 @@ import (
 	core "github.com/nuts-foundation/nuts-go-core"
 
 	"github.com/mdp/qrterminal/v3"
+	cryptoClient "github.com/nuts-foundation/nuts-crypto/client"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	registry2 "github.com/nuts-foundation/nuts-registry/client"
@@ -123,7 +124,7 @@ func (auth *Auth) Configure() (err error) {
 			}
 
 			// these are initialized before nuts-auth
-			auth.cryptoClient = crypto.NewCryptoClient()
+			auth.cryptoClient = cryptoClient.NewCryptoClient()
 			auth.registryClient = registry2.NewRegistryClient()
 			auth.ValidContracts = Contracts
 
