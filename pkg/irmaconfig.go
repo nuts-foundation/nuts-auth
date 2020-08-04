@@ -25,7 +25,7 @@ func GetIrmaConfig(config AuthConfig) (*irma.Configuration, error) {
 		return nil, errors.Wrap(err, "could not create irma config")
 	}
 	if !config.SkipAutoUpdateIrmaSchemas {
-		logrus.Infof("Downloading irma schemas. If this annoys you or you want to pin the schemas, set %s", ConfAutoUpdateIrmaSchemas)
+		logrus.Infof("Downloading irma schemas. If this annoys you or you want to pin the schemas, set %s", ConfSkipAutoUpdateIrmaSchemas)
 		if err := irmaConfig.DownloadDefaultSchemes(); err != nil {
 			return nil, errors.Wrap(err, "could not download default schemes")
 		}
