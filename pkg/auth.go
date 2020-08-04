@@ -35,8 +35,8 @@ const ConfMode = "mode"
 // ConfIrmaConfigPath is the config key to provide the irma configuration path
 const ConfIrmaConfigPath = "irmaConfigPath"
 
-// ConfAutoUpdateIrmaSchemas is the config key to provide an option to skip auto updating the irma schemas
-const ConfAutoUpdateIrmaSchemas = "skipAutoUpdateIrmaSchemas"
+// ConfSkipAutoUpdateIrmaSchemas is the config key to provide an option to skip auto updating the irma schemas
+const ConfSkipAutoUpdateIrmaSchemas = "skipAutoUpdateIrmaSchemas"
 
 const ConfEnableCORS = "enableCORS"
 
@@ -85,6 +85,13 @@ type AuthConfig struct {
 	SkipAutoUpdateIrmaSchemas bool
 	ActingPartyCn             string
 	EnableCORS                bool
+}
+
+func DefaultAuthConfig() AuthConfig {
+	return AuthConfig{
+		Address:                   "localhost:1323",
+		IrmaSchemeManager:         "pbdf",
+	}
 }
 
 var instance *Auth

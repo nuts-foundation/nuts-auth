@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nuts-foundation/nuts-auth/api"
@@ -113,14 +114,15 @@ func checkConfig(config pkg.AuthConfig) {
 func flagSet() *pflag.FlagSet {
 	flags := pflag.NewFlagSet("auth", pflag.ContinueOnError)
 
-	flags.String(pkg.ConfIrmaSchemeManager, "pbdf", "The IRMA schemeManager to use for attributes. Can be either 'pbdf' or 'irma-demo'")
-	flags.String(pkg.ConfAddress, "localhost:1323", "Interface and port for http server to bind to")
-	flags.String(pkg.PublicURL, "", "Public URL which can be reached by a users IRMA client")
-	flags.String(pkg.ConfMode, "", "server or client, when client it does not start any services so that CLI commands can be used.")
-	flags.String(pkg.ConfIrmaConfigPath, "", "path to IRMA config folder. If not set, a tmp folder is created.")
-	flags.String(pkg.ConfActingPartyCN, "", "The acting party Common name used in contracts")
-	flags.Bool(pkg.ConfAutoUpdateIrmaSchemas, false, "set if you want to skip the auto download of the irma schemas every 60 minutes.")
-	flags.Bool(pkg.ConfEnableCORS, false, "Set if you want to allow CORS requests. This is useful when you want browsers to directly communicate with the nuts node.")
+	defs := pkg.DefaultAuthConfig()
+	flags.String(pkg.ConfIrmaSchemeManager, defs.IrmaSchemeManager, fmt.Sprintf("The IRMA schemeManager to use for attributes. Can be either 'pbdf' or 'irma-demo', default: %s", defs.IrmaSchemeManager))
+	flags.String(pkg.ConfAddress, defs.Address, fmt.Sprintf("Interface and port for http server to bind to, default: %s", defs.Address))
+	flags.String(pkg.PublicURL, defs.PublicUrl, "Public URL which can be reached by a users IRMA client")
+	flags.String(pkg.ConfMode, defs.Mode, "server or client, when client it does not start any services so that CLI commands can be used.")
+	flags.String(pkg.ConfIrmaConfigPath, defs.IrmaConfigPath, "path to IRMA config folder. If not set, a tmp folder is created.")
+	flags.String(pkg.ConfActingPartyCN, defs.ActingPartyCn, "The acting party Common name used in contracts")
+	flags.Bool(pkg.ConfSkipAutoUpdateIrmaSchemas, defs.SkipAutoUpdateIrmaSchemas, "set if you want to skip the auto download of the irma schemas every 60 minutes.")
+	flags.Bool(pkg.ConfEnableCORS, defs.EnableCORS, "Set if you want to allow CORS requests. This is useful when you want browsers to directly communicate with the nuts node.")
 
 	return flags
 }
