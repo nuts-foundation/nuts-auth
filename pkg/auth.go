@@ -13,10 +13,8 @@ import (
 	core "github.com/nuts-foundation/nuts-go-core"
 
 	"github.com/mdp/qrterminal/v3"
-	cryptoClient "github.com/nuts-foundation/nuts-crypto/client"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
-	registry2 "github.com/nuts-foundation/nuts-registry/client"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
@@ -35,8 +33,8 @@ const ConfMode = "mode"
 // ConfIrmaConfigPath is the config key to provide the irma configuration path
 const ConfIrmaConfigPath = "irmaConfigPath"
 
-// ConfAutoUpdateIrmaSchemas is the config key to provide an option to skip auto updating the irma schemas
-const ConfAutoUpdateIrmaSchemas = "skipAutoUpdateIrmaSchemas"
+// ConfSkipAutoUpdateIrmaSchemas is the config key to provide an option to skip auto updating the irma schemas
+const ConfSkipAutoUpdateIrmaSchemas = "skipAutoUpdateIrmaSchemas"
 
 const ConfEnableCORS = "enableCORS"
 
@@ -55,8 +53,8 @@ type AuthClient interface {
 	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
 	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error)
 	IntrospectAccessToken(token string) (*NutsAccessToken, error)
-	KeyExistsFor(legalEntity string) bool
-	OrganizationNameByID(legalEntity string) (string, error)
+	KeyExistsFor(legalEntity core.PartyID) bool
+	OrganizationNameByID(legalEntity core.PartyID) (string, error)
 }
 
 type ContractMatrix map[Language]map[ContractType]map[Version]*ContractTemplate
@@ -70,8 +68,8 @@ type Auth struct {
 	ContractValidator      ContractValidator
 	IrmaServer             *irmaserver.Server
 	AccessTokenHandler     AccessTokenHandler
-	cryptoClient           crypto.Client
-	registryClient         registry.RegistryClient
+	Crypto                 crypto.Client
+	Registry               registry.RegistryClient
 	ValidContracts         ContractMatrix
 }
 
@@ -87,19 +85,34 @@ type AuthConfig struct {
 	EnableCORS                bool
 }
 
+func DefaultAuthConfig() AuthConfig {
+	return AuthConfig{
+		Address:                   "localhost:1323",
+		IrmaSchemeManager:         "pbdf",
+	}
+}
+
 var instance *Auth
 var oneBackend sync.Once
 
 // AuthInstance create an returns a singleton of the Auth struct
 func AuthInstance() *Auth {
+	if instance != nil {
+		return instance
+	}
 	oneBackend.Do(func() {
-		instance = &Auth{
-			Config:         AuthConfig{},
-			ValidContracts: Contracts,
-		}
+		instance = NewAuthInstance(DefaultAuthConfig(), crypto.CryptoInstance(), registry.RegistryInstance())
 	})
-
 	return instance
+}
+
+func NewAuthInstance(config AuthConfig, cryptoClient crypto.Client, registryClient registry.RegistryClient) *Auth {
+	return &Auth{
+		Config:         config,
+		Crypto:         cryptoClient,
+		Registry:       registryClient,
+		ValidContracts: Contracts,
+	}
 }
 
 // ErrMissingActingParty is returned when the actingPartyCn is missing from the config
@@ -117,15 +130,10 @@ func (auth *Auth) Configure() (err error) {
 				err = ErrMissingActingParty
 				return
 			}
-
 			if auth.Config.PublicUrl == "" {
 				err = ErrMissingPublicURL
 				return
 			}
-
-			// these are initialized before nuts-auth
-			auth.cryptoClient = cryptoClient.NewCryptoClient()
-			auth.registryClient = registry2.NewRegistryClient()
 			auth.ValidContracts = Contracts
 
 			var irmaConfig *irma.Configuration
@@ -140,8 +148,8 @@ func (auth *Auth) Configure() (err error) {
 			validator := DefaultValidator{
 				IrmaServer:     &DefaultIrmaClient{I: irmaServer},
 				IrmaConfig:     irmaConfig,
-				Registry:       auth.registryClient,
-				Crypto:         auth.cryptoClient,
+				Registry:       auth.Registry,
+				Crypto:         auth.Crypto,
 				ValidContracts: auth.ValidContracts,
 			}
 			auth.ContractSessionHandler = validator
@@ -293,14 +301,14 @@ func (auth *Auth) IntrospectAccessToken(token string) (*NutsAccessToken, error) 
 	return acClaims, err
 }
 
-// KeyExistsFor check if the private key exists on this node by calling the same function on the cryptoClient
-func (auth *Auth) KeyExistsFor(legalEntity string) bool {
-	return auth.cryptoClient.PrivateKeyExists(types.KeyForEntity(types.LegalEntity{URI: legalEntity}))
+// KeyExistsFor check if the private key exists on this node by calling the same function on the CryptoClient
+func (auth *Auth) KeyExistsFor(legalEntity core.PartyID) bool {
+	return auth.Crypto.PrivateKeyExists(types.KeyForEntity(types.LegalEntity{URI: legalEntity.String()}))
 }
 
 // OrganizationNameByID returns the name of an organisation from the registry
-func (auth *Auth) OrganizationNameByID(legalEntity string) (string, error) {
-	org, err := auth.registryClient.OrganizationById(legalEntity)
+func (auth *Auth) OrganizationNameByID(legalEntity core.PartyID) (string, error) {
+	org, err := auth.Registry.OrganizationById(legalEntity)
 	if err != nil {
 		return "", err
 	}

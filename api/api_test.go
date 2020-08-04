@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-registry/test"
 	"net/http"
 	"reflect"
 	"testing"
@@ -21,6 +22,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var careOrgID = test.OrganizationID("987")
+var careOrgName = "care organization"
+var otherOrganizationID = test.OrganizationID("123")
+
 func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 	t.Run("with valid params", func(t *testing.T) {
 
@@ -32,7 +37,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		tt := time.Now().Truncate(time.Second)
 
 		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		authMock.EXPECT().OrganizationNameByID("legalEntity").Return("care organization", nil)
+		authMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
 
 		authMock.EXPECT().CreateContractSession(pkg.CreateSessionRequest{
 			Type:        "BehandelaarLogin",
@@ -40,11 +45,11 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			Language:    "NL",
 			ValidFrom:   tt,
 			ValidTo:     tt.Add(time.Hour * 13),
-			LegalEntity: "care organization",
+			LegalEntity: careOrgName,
 		}).Return(&pkg.CreateSessionResult{
 			QrCodeInfo: irma.Qr{
 				URL:  "http://example.com/auth/irmaclient/123",
-				Type: irma.Action("signing")},
+				Type: "signing"},
 			SessionID: "abc-sessionid",
 		}, nil)
 
@@ -57,7 +62,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			Version:     "v1",
 			ValidFrom:   &vf,
 			ValidTo:     &vt,
-			LegalEntity: "legalEntity",
+			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
 		jsonData, _ := json.Marshal(params)
@@ -132,17 +137,17 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			Type:        "UnknownContract",
 			Language:    "NL",
 			Version:     "v1",
-			LegalEntity: "legalEntity",
+			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
 		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		authMock.EXPECT().OrganizationNameByID("legalEntity").Return("care organization", nil)
+		authMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
 
 		authMock.EXPECT().CreateContractSession(pkg.CreateSessionRequest{
 			Type:        pkg.ContractType(params.Type),
 			Version:     "v1",
 			Language:    "NL",
-			LegalEntity: "care organization",
+			LegalEntity: careOrgName,
 		}).Return(
 			nil, pkg.ErrContractNotFound)
 
@@ -169,7 +174,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			Type:        "UnknownContract",
 			Language:    "NL",
 			Version:     "v1",
-			LegalEntity: "legalEntity",
+			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
 		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(false)
@@ -197,11 +202,11 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			Type:        "UnknownContract",
 			Language:    "NL",
 			Version:     "v1",
-			LegalEntity: "legalEntity",
+			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
 		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		authMock.EXPECT().OrganizationNameByID("legalEntity").Return("", errors.New("error"))
+		authMock.EXPECT().OrganizationNameByID(careOrgID).Return("", errors.New("error"))
 
 		wrapper := Wrapper{Auth: authMock}
 
@@ -234,7 +239,7 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 				Token:  "YRnWbPJ7ffKCnf9cP51e",
 				Type:   "signing",
 				Disclosed: [][]*irma.DisclosedAttribute{
-					{{Value: irma.TranslatedString(map[string]string{"nl": "00000001"})}},
+					{{Value: map[string]string{"nl": "00000001"}}},
 				},
 				ProofStatus: irma.ProofStatusValid,
 			},

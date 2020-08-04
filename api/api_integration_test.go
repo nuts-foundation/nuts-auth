@@ -3,10 +3,11 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
-	pkg2 "github.com/nuts-foundation/nuts-network/pkg"
+	test2 "github.com/nuts-foundation/nuts-auth/test"
+	"github.com/nuts-foundation/nuts-go-test/io"
+	"github.com/nuts-foundation/nuts-registry/test"
 	"net/http"
 	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-registry/pkg/events/domain"
 	"github.com/spf13/cobra"
 
 	irma "github.com/privacybydesign/irmago"
@@ -23,38 +23,22 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/nuts-foundation/nuts-auth/pkg"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-go-core/mock"
-	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/stretchr/testify/assert"
 )
 
-var cryptoInstance *crypto.Crypto
-
 func Test_Integration(t *testing.T) {
-	const OrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000003"
-	const OtherOrganizationID = "urn:oid:2.16.840.1.113883.2.4.6.1:00000004"
+	var organizationID = test.OrganizationID("00000003")
+	var otherOrganizationID = test.OrganizationID("00000004")
 
 	type IntegrationTestContext struct {
+		auth     *pkg.Auth
 		wrapper  Wrapper
 		ctrl     *gomock.Controller
 		echoMock *mock.MockContext
 	}
 
-	emptyRegistry := func(t *testing.T, path string) {
-		t.Helper()
-		files, err := filepath.Glob(filepath.Join(path, "*"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, file := range files {
-			if err := os.RemoveAll(file); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-
-	validContracts := map[pkg.Language]map[pkg.ContractType]map[pkg.Version]*pkg.ContractTemplate{
+	pkg.Contracts = map[pkg.Language]map[pkg.ContractType]map[pkg.Version]*pkg.ContractTemplate{
 		"NL": {"BehandelaarLogin": {
 			"v1": &pkg.ContractTemplate{
 				Type:               "BehandelaarLogin",
@@ -68,51 +52,25 @@ func Test_Integration(t *testing.T) {
 		}}}
 
 	createContext := func(t *testing.T) *IntegrationTestContext {
-		os.Setenv("NUTS_IDENTITY", "oid:123")
+		os.Setenv("NUTS_IDENTITY", test.VendorID("123").String())
 		core.NutsConfig().Load(&cobra.Command{})
 		t.Helper()
 		ctrl := gomock.NewController(t)
 
-		auth := &pkg.Auth{
-			Config:                 pkg.AuthConfig{},
-			ContractSessionHandler: nil,
-			ContractValidator:      nil,
-			AccessTokenHandler:     nil,
-			ValidContracts:         validContracts,
-		}
-
-		registryPath := "../testdata/registry"
-		emptyRegistry(t, registryPath)
-
-		cryptoInstance = crypto.CryptoInstance()
-		cryptoInstance.Config.Fspath = "../testdata/tmp"
-		cryptoInstance.Configure()
-
-		networkInstance := pkg2.NetworkInstance()
-		networkInstance.Config.StorageConnectionString = ":memory:"
-		networkInstance.Configure()
-
-		r := registry.RegistryInstance()
-		r.Config.Mode = "server"
-		r.Config.Datadir = registryPath
-		r.Config.SyncMode = "fs"
-		r.Config.OrganisationCertificateValidity = 1
-		r.Config.VendorCACertificateValidity = 1
-		if err := r.Configure(); !assert.NoError(t, err) {
-			t.FailNow()
-		}
+		testDirectory := io.TestDirectory(t)
+		auth := pkg.NewTestAuthInstance(testDirectory)
 
 		// Register a vendor
-		_, _ = r.RegisterVendor("Test Vendor", domain.HealthcareDomain)
+		test2.RegisterVendor(t, "Awesomesoft", auth.Crypto, auth.Registry)
 
 		// Add Organization to registry
 		orgName := "Zorggroep Nuts"
-		if _, err := r.VendorClaim(OrganizationID, orgName, nil); err != nil {
+		if _, err := auth.Registry.VendorClaim(organizationID, orgName, nil); err != nil {
 			t.Fatal(err)
 		}
 
 		// Generate keys for OtherOrganization
-		if _, err := r.VendorClaim(OtherOrganizationID, "verpleeghuis De nootjes", nil); err != nil {
+		if _, err := auth.Registry.VendorClaim(otherOrganizationID, "verpleeghuis De nootjes", nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -120,24 +78,8 @@ func Test_Integration(t *testing.T) {
 			return "Demo EHR"
 		}
 
-		irmaConfig, err := pkg.GetIrmaConfig(pkg.AuthConfig{
-			IrmaConfigPath:            "../testdata/irma",
-			SkipAutoUpdateIrmaSchemas: true,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		validator := pkg.DefaultValidator{
-			Registry:       r,
-			Crypto:         cryptoInstance,
-			IrmaConfig:     irmaConfig,
-			ValidContracts: validContracts,
-		}
-		auth.ContractSessionHandler = validator
-		auth.ContractValidator = validator
-		auth.AccessTokenHandler = validator
-
 		return &IntegrationTestContext{
+			auth:     auth,
 			ctrl:     ctrl,
 			wrapper:  Wrapper{Auth: auth},
 			echoMock: mock.NewMockContext(ctrl),
@@ -198,11 +140,11 @@ func Test_Integration(t *testing.T) {
 			ctx := createContext(t)
 
 			// create an id token from a valid irma contract
-			defaultValidator := pkg.DefaultValidator{Crypto: cryptoInstance}
+			defaultValidator := pkg.DefaultValidator{Crypto: ctx.auth.Crypto}
 			signedIrmaContract := irma.SignedMessage{}
 			_ = json.Unmarshal([]byte(testdata.ValidIrmaContract2), &signedIrmaContract)
 			contract := pkg.SignedIrmaContract{IrmaContract: signedIrmaContract}
-			idToken, err := defaultValidator.CreateIdentityTokenFromIrmaContract(&contract, OrganizationID)
+			idToken, err := defaultValidator.CreateIdentityTokenFromIrmaContract(&contract, organizationID)
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}
@@ -210,8 +152,8 @@ func Test_Integration(t *testing.T) {
 
 			// build a request to create the jwt bearer token
 			jwtBearerTokenRequest := CreateJwtBearerTokenRequest{
-				Actor:     OrganizationID,
-				Custodian: OtherOrganizationID,
+				Actor:     organizationID.String(),
+				Custodian: otherOrganizationID.String(),
 				Identity:  idToken,
 				Scope:     "nuts-sso",
 				Subject:   subjectBsn,
@@ -261,8 +203,8 @@ func Test_Integration(t *testing.T) {
 
 			// check the results
 			assert.True(t, keyVals["active"].(bool))
-			assert.Equal(t, OtherOrganizationID, keyVals["iss"].(string))
-			assert.Equal(t, OrganizationID, keyVals["sub"].(string))
+			assert.Equal(t, otherOrganizationID.String(), keyVals["iss"].(string))
+			assert.Equal(t, organizationID.String(), keyVals["sub"].(string))
 			assert.Equal(t, subjectBsn, keyVals["sid"].(string))
 			assert.Equal(t, "nuts-sso", keyVals["scope"].(string))
 			assert.Equal(t, "Bruijn", keyVals["family_name"].(string))

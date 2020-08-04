@@ -9,5 +9,6 @@ checks:
 exclude_patterns:
   - "docs/"
   - "**/*_test.go"
+  - "**/test.go"
   - "**/mock.go"
   - "**/generated.go"
