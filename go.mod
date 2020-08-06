@@ -16,10 +16,11 @@ require (
 	github.com/labstack/echo/v4 v4.1.16
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
-	github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200715061423-5270e931e6e0
-	github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200624131634-75b5f59c0b8e
-	github.com/nuts-foundation/nuts-network v0.0.0-20200720113317-1d5ac0efab46
-	github.com/nuts-foundation/nuts-registry v0.13.3-0.20200720115329-5717e6e26ea4
+	github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200806064724-32ed0e791e6a
+	github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200803140648-33ac5360e61d
+	github.com/nuts-foundation/nuts-go-test v0.0.0-20200804135944-9e05711330e7
+	github.com/nuts-foundation/nuts-network v0.0.0-20200806071245-5b12ac465a57
+	github.com/nuts-foundation/nuts-registry v0.13.3-0.20200806072520-025dfb06aa9c
 	github.com/pkg/errors v0.9.1
 	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
 	github.com/privacybydesign/irmago v0.4.1

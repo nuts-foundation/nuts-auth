@@ -5,10 +5,10 @@
 package mock
 
 import (
-	reflect "reflect"
-
 	gomock "github.com/golang/mock/gomock"
 	pkg "github.com/nuts-foundation/nuts-auth/pkg"
+	core "github.com/nuts-foundation/nuts-go-core"
+	reflect "reflect"
 )
 
 // MockAuthClient is a mock of AuthClient interface
@@ -64,19 +64,19 @@ func (mr *MockAuthClientMockRecorder) ContractSessionStatus(sessionID interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContractSessionStatus", reflect.TypeOf((*MockAuthClient)(nil).ContractSessionStatus), sessionID)
 }
 
-// NewContractByType mocks base method
+// ContractByType mocks base method
 func (m *MockAuthClient) ContractByType(contractType pkg.ContractType, language pkg.Language, version pkg.Version) (*pkg.ContractTemplate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewContractByType", contractType, language, version)
+	ret := m.ctrl.Call(m, "ContractByType", contractType, language, version)
 	ret0, _ := ret[0].(*pkg.ContractTemplate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// NewContractByType indicates an expected call of NewContractByType
+// ContractByType indicates an expected call of ContractByType
 func (mr *MockAuthClientMockRecorder) ContractByType(contractType, language, version interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewContractByType", reflect.TypeOf((*MockAuthClient)(nil).ContractByType), contractType, language, version)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContractByType", reflect.TypeOf((*MockAuthClient)(nil).ContractByType), contractType, language, version)
 }
 
 // ValidateContract mocks base method
@@ -140,7 +140,7 @@ func (mr *MockAuthClientMockRecorder) IntrospectAccessToken(token interface{}) *
 }
 
 // KeyExistsFor mocks base method
-func (m *MockAuthClient) KeyExistsFor(legalEntity string) bool {
+func (m *MockAuthClient) KeyExistsFor(legalEntity core.PartyID) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "KeyExistsFor", legalEntity)
 	ret0, _ := ret[0].(bool)
@@ -154,7 +154,7 @@ func (mr *MockAuthClientMockRecorder) KeyExistsFor(legalEntity interface{}) *gom
 }
 
 // OrganizationNameByID mocks base method
-func (m *MockAuthClient) OrganizationNameByID(legalEntity string) (string, error) {
+func (m *MockAuthClient) OrganizationNameByID(legalEntity core.PartyID) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "OrganizationNameByID", legalEntity)
 	ret0, _ := ret[0].(string)

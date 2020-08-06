@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	core "github.com/nuts-foundation/nuts-go-core"
 	"net/http"
 	"regexp"
 	"time"
@@ -51,12 +52,16 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	}
 
 	// find legal entity in crypto
-	if !api.Auth.KeyExistsFor(string(params.LegalEntity)) {
+	orgID, err := core.ParsePartyID(string(params.LegalEntity))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("invalid legalEntity '%s': %v", params.LegalEntity, err))
+	}
+	if !api.Auth.KeyExistsFor(orgID) {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity"))
 	}
 
 	// translate legal entity to its name
-	orgName, err := api.Auth.OrganizationNameByID(string(params.LegalEntity))
+	orgName, err := api.Auth.OrganizationNameByID(orgID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No organization registered for legalEntity: %v", err))
 	}
