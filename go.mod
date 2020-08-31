@@ -10,7 +10,7 @@ require (
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/golang/mock v1.4.4
 	github.com/goodsign/monday v0.0.0-20190708072354-9bcb46af8546
-	github.com/google/uuid v1.1.1
+	github.com/google/uuid v1.1.2
 	github.com/hashicorp/go-retryablehttp v0.6.2 // indirect
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
 	github.com/labstack/echo/v4 v4.1.16
