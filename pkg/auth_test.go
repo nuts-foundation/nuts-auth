@@ -3,10 +3,11 @@ package pkg
 import (
 	"errors"
 	"fmt"
+	"testing"
+
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-go-test/io"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
-	"testing"
 
 	"github.com/golang/mock/gomock"
 	cryptoMock2 "github.com/nuts-foundation/nuts-crypto/test/mock"
@@ -14,7 +15,7 @@ import (
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server/irmaserver"
+	irmaservercore "github.com/privacybydesign/irmago/server"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -74,7 +75,7 @@ func (m MockAccessTokenHandler) ParseAndValidateAccessToken(accessToken string) 
 	panic("implement me")
 }
 
-func (v MockContractSessionHandler) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
+func (v MockContractSessionHandler) StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma.Qr, string, error) {
 	return &irma.Qr{URL: qrURL, Type: irma.ActionSigning}, "abc-sessionid-abc", nil
 }
 
@@ -212,7 +213,6 @@ func TestAuth_Configure(t *testing.T) {
 				SkipAutoUpdateIrmaSchemas: true,
 			},
 		}
-		irma.DefaultSchemeManagers[0].Url = "foobar"
 		err := i.Configure()
 		if !assert.NoError(t, err) {
 			return

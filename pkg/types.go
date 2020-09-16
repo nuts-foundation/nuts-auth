@@ -7,8 +7,8 @@ import (
 	"github.com/dgrijalva/jwt-go"
 
 	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/irmaserver"
+	irmaservercore "github.com/privacybydesign/irmago/server"
+	irmaserver "github.com/privacybydesign/irmago/server/irmaserver"
 )
 
 // JwtBearerGrantType defines the grant-type to use in the access token request
@@ -45,7 +45,7 @@ type ContractValidator interface {
 // ContractSessionHandler interface must be implemented by ContractSessionHandlers
 type ContractSessionHandler interface {
 	SessionStatus(session SessionID) (*SessionStatusResult, error)
-	StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error)
+	StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma.Qr, string, error)
 }
 
 // AccessTokenHandler interface must be implemented by Access token handlers. Ir defines the interface to handle all
@@ -105,7 +105,7 @@ type CreateSessionResult struct {
 
 // SessionStatusResult contains the current state of a session. If the session is DONE it also contains a JWT in the NutsAuthToken
 type SessionStatusResult struct {
-	server.SessionResult
+	irmaservercore.SessionResult
 	// NutsAuthToken contains the JWT if the sessionStatus is DONE
 	NutsAuthToken string `json:"nuts_auth_token"`
 }
@@ -192,8 +192,8 @@ type ContractValidationResult struct {
 
 // IrmaServerClient is an abstraction for the Irma Server, mainly for enabling better testing
 type IrmaServerClient interface {
-	GetSessionResult(token string) *server.SessionResult
-	StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error)
+	GetSessionResult(token string) *irmaservercore.SessionResult
+	StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma.Qr, string, error)
 }
 
 // DefaultIrmaClient is a wrapper for the Irma Server
@@ -202,11 +202,11 @@ type DefaultIrmaClient struct {
 }
 
 // GetSessionResult forwards to Irma Server instance
-func (d *DefaultIrmaClient) GetSessionResult(token string) *server.SessionResult {
+func (d *DefaultIrmaClient) GetSessionResult(token string) *irmaservercore.SessionResult {
 	return d.I.GetSessionResult(token)
 }
 
 // StartSession forwards to Irma Server instance
-func (d *DefaultIrmaClient) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
+func (d *DefaultIrmaClient) StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma.Qr, string, error) {
 	return d.I.StartSession(request, handler)
 }

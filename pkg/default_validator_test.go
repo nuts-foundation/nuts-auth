@@ -4,14 +4,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"github.com/nuts-foundation/nuts-auth/test"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	"github.com/nuts-foundation/nuts-go-test/io"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/nuts-foundation/nuts-auth/test"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-go-test/io"
 
 	"github.com/google/uuid"
 	registryTest "github.com/nuts-foundation/nuts-registry/test"
@@ -29,8 +30,8 @@ import (
 
 	"github.com/nuts-foundation/nuts-auth/testdata"
 	irma2 "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server"
-	"github.com/privacybydesign/irmago/server/irmaserver"
+	irmaservercore "github.com/privacybydesign/irmago/server"
+	irmaserver "github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
 )
 
@@ -247,8 +248,8 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 	}
 
 	irmaServer, _ := GetIrmaServer(authConfig)
-	_, knownSessionID, _ := irmaServer.StartSession(signatureRequest, func(result *server.SessionResult) {
-		logrus.Infof("session done, result: %s", server.ToJson(result))
+	_, knownSessionID, _ := irmaServer.StartSession(signatureRequest, func(result *irmaservercore.SessionResult) {
+		logrus.Infof("session done, result: %s", irmaservercore.ToJson(result))
 	})
 
 	type fields struct {
@@ -275,7 +276,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 			fields{irmaServer},
 			args{SessionID(knownSessionID)},
 			&SessionStatusResult{
-				server.SessionResult{Token: knownSessionID, Status: server.StatusInitialized, Type: irma2.ActionSigning},
+				irmaservercore.SessionResult{Token: knownSessionID, Status: irmaservercore.StatusInitialized, Type: irma2.ActionSigning},
 				"",
 			},
 		},
@@ -297,17 +298,17 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 
 type mockIrmaClient struct {
 	err           error
-	sessionResult server.SessionResult
+	sessionResult irmaservercore.SessionResult
 }
 
-func (m *mockIrmaClient) GetSessionResult(token string) *server.SessionResult {
+func (m *mockIrmaClient) GetSessionResult(token string) *irmaservercore.SessionResult {
 	if m.err != nil {
 		return nil
 	}
 	return &m.sessionResult
 }
 
-func (m *mockIrmaClient) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma2.Qr, string, error) {
+func (m *mockIrmaClient) StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma2.Qr, string, error) {
 	if m.err != nil {
 		return nil, "", m.err
 	}
@@ -327,7 +328,7 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 		rMock := registryMock.NewMockRegistryClient(ctrl)
 		cMock := cryptoMock.NewMockClient(ctrl)
 		iMock := mockIrmaClient{
-			sessionResult: server.SessionResult{
+			sessionResult: irmaservercore.SessionResult{
 				Token: "token",
 				Signature: &irma2.SignedMessage{
 					Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens verpleeghuis De nootjes en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
@@ -755,7 +756,6 @@ func createJwt(cryptoInstance crypto.Client, iss core.PartyID, sub core.PartyID,
 
 	return []byte(tokenString)
 }
-
 
 var organizationID = registryTest.OrganizationID("00000001")
 var otherOrganizationID = registryTest.OrganizationID("00000002")

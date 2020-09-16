@@ -22,8 +22,7 @@ require (
 	github.com/nuts-foundation/nuts-network v0.0.0-20200806071245-5b12ac465a57
 	github.com/nuts-foundation/nuts-registry v0.13.3-0.20200806072520-025dfb06aa9c
 	github.com/pkg/errors v0.9.1
-	github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 // indirect
-	github.com/privacybydesign/irmago v0.4.1
+	github.com/privacybydesign/irmago v0.5.1-0.20200912080950-86e5e646e81b
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5

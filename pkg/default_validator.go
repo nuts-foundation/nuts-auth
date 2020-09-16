@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	core "github.com/nuts-foundation/nuts-go-core"
 	"time"
+
+	core "github.com/nuts-foundation/nuts-go-core"
 
 	"github.com/google/uuid"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/nuts-foundation/nuts-crypto/pkg/types"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server/irmaserver"
+	irmaserver "github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
 )
 
