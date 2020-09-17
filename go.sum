@@ -592,12 +592,15 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/posener/complete v1.1.1/go.mod h1:em0nMJCgc9GFtwrmVmEMR/ZL6WyhyjMBndrE9hABlRI=
 github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9 h1:oAuMlkE0npptr2iDtt8S7StydQBXmi0m2Jw2rlyiNPk=
 github.com/privacybydesign/gabi v0.0.0-20190503104928-ce779395f4c9/go.mod h1:hyxnm8M7jWk3P54LDik5aJD69BLhVRjo/ajrjQBng8k=
+github.com/privacybydesign/gabi v0.0.0-20200729124802-5828bcd24dfd/go.mod h1:XJRlG8/PARHx6Fbv0nVIIhmLFCXwp2gG2h8ZqqeW8x0=
 github.com/privacybydesign/gabi v0.0.0-20200805114803-588904629b25 h1:x2D/AmZi2OAgHttqC3GCNyaOOzhE7yWUZVug8sgBiRw=
 github.com/privacybydesign/gabi v0.0.0-20200805114803-588904629b25/go.mod h1:XJRlG8/PARHx6Fbv0nVIIhmLFCXwp2gG2h8ZqqeW8x0=
 github.com/privacybydesign/irmago v0.4.1 h1:IsTiTUAWwrQwqI2QF3mxtqGW4QD87yUWOLONFGyE8Go=
 github.com/privacybydesign/irmago v0.4.1/go.mod h1:hzlZrdhrquTapBHXYU9vmXzRSsKM/Nhtqt1J9ALh59A=
 github.com/privacybydesign/irmago v0.5.1-0.20200912080950-86e5e646e81b h1:lWjhBseArj5pRftwrLvmXHwLfrLubC+/Tx6mSm66G80=
 github.com/privacybydesign/irmago v0.5.1-0.20200912080950-86e5e646e81b/go.mod h1:GmAg+2oqf7NFsNRvMqrmCcVTE9nnEoa7dIXt5TlfT4o=
+github.com/privacybydesign/irmago v0.5.1 h1:v6A08EEId3HVwvxZzJKDxKJ0lLUeNb6/581icChV2xg=
+github.com/privacybydesign/irmago v0.5.1/go.mod h1:ESsOWiBetZKX52J3bKlr1Zf+sqZut8QEsXL6UIJ2TCQ=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829/go.mod h1:p2iRAGwDERtqlqzRXnrOVns+ignqQo//hLXqYxZYVNs=
 github.com/prometheus/client_golang v0.9.3/go.mod h1:/TN21ttK/J9q6uSwhBd54HahCDft0ttaMvbicHlPoso=
