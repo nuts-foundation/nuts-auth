@@ -2,14 +2,15 @@ package pkg
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"sync"
+
 	"github.com/pkg/errors"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
-	"os"
-	"sync"
 )
 
 // GetIrmaConfig creates and returns an IRMA config.
@@ -20,7 +21,8 @@ func GetIrmaConfig(config AuthConfig) (*irma.Configuration, error) {
 		return nil, err
 	}
 	logrus.Infof("Using irma config dir: %s", irmaConfigFolder)
-	irmaConfig, err := irma.NewConfiguration(irmaConfigFolder)
+	options := irma.ConfigurationOptions{}
+	irmaConfig, err := irma.NewConfiguration(irmaConfigFolder, options)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create irma config")
 	}
