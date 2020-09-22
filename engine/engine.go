@@ -2,6 +2,9 @@ package engine
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nuts-foundation/nuts-auth/api"
@@ -41,7 +44,18 @@ func NewAuthEngine() *nutsGo.Engine {
 		Routes: func(router nutsGo.EchoRouter) {
 			// Mount the irma-app routes
 			routerWithAny := router.(EchoRouter)
-			irmaEchoHandler := echo.WrapHandler(authBackend.IrmaServer.HandlerFunc())
+
+			// The Irma router operates on the mount path and does not know about the prefix.
+			prefix := "/auth/irmaclient"
+			rewriteFunc := func(w http.ResponseWriter, r *http.Request) {
+				if strings.HasPrefix(r.URL.Path, prefix) {
+					// strip the prefix
+					r.URL.Path = strings.Split(r.URL.Path, prefix)[1]
+				}
+				authBackend.IrmaServer.HandlerFunc()(w, r)
+			}
+			// wrap the http handler in a echo handler
+			irmaEchoHandler := echo.WrapHandler(http.HandlerFunc(rewriteFunc))
 			routerWithAny.Any("/auth/irmaclient/*", irmaEchoHandler)
 
 			// Mount the Auth-api routes
@@ -57,6 +71,10 @@ func NewAuthEngine() *nutsGo.Engine {
 			}
 		},
 	}
+}
+
+func rewriteIrmaRoute() echo.MiddlewareFunc {
+	return middleware.Rewrite(map[string]string{"/auth/irmaclient/*": "/$1"})
 }
 
 func cmd() *cobra.Command {
@@ -78,6 +96,7 @@ func cmd() *cobra.Command {
 			if authEngine.Config.EnableCORS {
 				echoServer.Use(middleware.CORS())
 			}
+			echoServer.Use(rewriteIrmaRoute())
 
 			checkConfig(authEngine.Config)
 
