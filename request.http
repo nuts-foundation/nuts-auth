@@ -20,7 +20,7 @@ Content-Type: application/json
 
 ###
 
-GET https://ec9d2e63ae7b.ngrok.io/auth/irmaclient/session/123
+GET http://localhost:1323/auth/irmaclient/session/123
 
 ###
 
