@@ -80,3 +80,5 @@ nuts.yaml
 tmp
 
 testdata/registry/**/*
+network.db
+truststore.pem
