@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-registry/test"
 	"net/http"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/nuts-foundation/nuts-registry/test"
 
 	"github.com/dgrijalva/jwt-go"
 
@@ -48,7 +49,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: careOrgName,
 		}).Return(&pkg.CreateSessionResult{
 			QrCodeInfo: irma.Qr{
-				URL:  "http://example.com/auth/irmaclient/123",
+				URL:  "http://example.com" + pkg.IrmaMountPath + "/123",
 				Type: "signing"},
 			SessionID: "abc-sessionid",
 		}, nil)
@@ -71,7 +72,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 		echoMock.EXPECT().JSON(http.StatusCreated, CreateSessionResult{
-			QrCodeInfo: IrmaQR{U: "http://example.com/auth/irmaclient/123",
+			QrCodeInfo: IrmaQR{U: "http://example.com" + pkg.IrmaMountPath + "/123",
 				Irmaqr: "signing",
 			}, SessionId: "abc-sessionid"})
 

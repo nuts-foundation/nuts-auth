@@ -13,6 +13,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// The location the irma webserver will mount
+const IrmaMountPath = "/auth/irmaclient"
+
 // GetIrmaConfig creates and returns an IRMA config.
 // The config sets the given irma path or a temporary folder. Then it downloads the schemas.
 func GetIrmaConfig(config AuthConfig) (*irma.Configuration, error) {
@@ -55,7 +58,7 @@ func GetIrmaServer(config AuthConfig) (*irmaserver.Server, error) {
 			return
 		}
 		config := &server.Configuration{
-			URL:                  fmt.Sprintf("%s/auth/irmaclient", baseURL),
+			URL:                  fmt.Sprintf("%s"+IrmaMountPath, baseURL),
 			Logger:               logrus.StandardLogger(),
 			SchemesPath:          configDir,
 			DisableSchemesUpdate: config.SkipAutoUpdateIrmaSchemas,
