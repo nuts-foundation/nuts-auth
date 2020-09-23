@@ -65,7 +65,7 @@ func (m MockContractValidator) ValidateJwt(contract string, actingPartyCN string
 	return &m.jwtResult, nil
 }
 
-const qrURL = "https://api.helder.health/auth/irmaclient/123-session-ref-123"
+const qrURL = "https://api.nuts-test.example" + IrmaMountPath + "/123-session-ref-123"
 
 func (v MockContractSessionHandler) SessionStatus(SessionID) (*SessionStatusResult, error) {
 	return v.SessionStatusResult, nil

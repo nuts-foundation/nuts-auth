@@ -46,17 +46,16 @@ func NewAuthEngine() *nutsGo.Engine {
 			routerWithAny := router.(EchoRouter)
 
 			// The Irma router operates on the mount path and does not know about the prefix.
-			prefix := "/auth/irmaclient"
 			rewriteFunc := func(w http.ResponseWriter, r *http.Request) {
-				if strings.HasPrefix(r.URL.Path, prefix) {
+				if strings.HasPrefix(r.URL.Path, pkg.IrmaMountPath) {
 					// strip the prefix
-					r.URL.Path = strings.Split(r.URL.Path, prefix)[1]
+					r.URL.Path = strings.Split(r.URL.Path, pkg.IrmaMountPath)[1]
 				}
 				authBackend.IrmaServer.HandlerFunc()(w, r)
 			}
 			// wrap the http handler in a echo handler
 			irmaEchoHandler := echo.WrapHandler(http.HandlerFunc(rewriteFunc))
-			routerWithAny.Any("/auth/irmaclient/*", irmaEchoHandler)
+			routerWithAny.Any(pkg.IrmaMountPath+"/*", irmaEchoHandler)
 
 			// Mount the Auth-api routes
 			api.RegisterHandlers(router, &api.Wrapper{Auth: authBackend})
@@ -74,7 +73,7 @@ func NewAuthEngine() *nutsGo.Engine {
 }
 
 func rewriteIrmaRoute() echo.MiddlewareFunc {
-	return middleware.Rewrite(map[string]string{"/auth/irmaclient/*": "/$1"})
+	return middleware.Rewrite(map[string]string{pkg.IrmaMountPath + "/*": "/$1"})
 }
 
 func cmd() *cobra.Command {
@@ -107,7 +106,7 @@ func cmd() *cobra.Command {
 			}
 			irmaClientHandler := irmaServer.HandlerFunc()
 			irmaEchoHandler := echo.WrapHandler(irmaClientHandler)
-			echoServer.Any("/auth/irmaclient/*", irmaEchoHandler)
+			echoServer.Any(pkg.IrmaMountPath+"/*", irmaEchoHandler)
 
 			// Mount the Nuts-Auth routes
 			api.RegisterHandlers(echoServer, &api.Wrapper{Auth: authEngine})
