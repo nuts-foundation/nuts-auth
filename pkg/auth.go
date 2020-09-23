@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/privacybydesign/irmago/server/irmaserver"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/privacybydesign/irmago/server/irmaserver"
 
 	core "github.com/nuts-foundation/nuts-go-core"
 
@@ -75,7 +76,8 @@ type Auth struct {
 
 // AuthConfig holds all the configuration params
 type AuthConfig struct {
-	Mode                      string
+	Mode string
+	// Address to bind the http server to. Default localhost:1323
 	Address                   string
 	PublicUrl                 string
 	IrmaConfigPath            string
@@ -87,8 +89,8 @@ type AuthConfig struct {
 
 func DefaultAuthConfig() AuthConfig {
 	return AuthConfig{
-		Address:                   "localhost:1323",
-		IrmaSchemeManager:         "pbdf",
+		Address:           "localhost:1323",
+		IrmaSchemeManager: "pbdf",
 	}
 }
 

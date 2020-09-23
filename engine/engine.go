@@ -76,6 +76,33 @@ func rewriteIrmaRoute() echo.MiddlewareFunc {
 	return middleware.Rewrite(map[string]string{pkg.IrmaMountPath + "/*": "/$1"})
 }
 
+func initEcho(auth *pkg.Auth) (*echo.Echo, error) {
+	echoServer := echo.New()
+	echoServer.HideBanner = true
+	echoServer.Use(middleware.Logger())
+
+	if auth.Config.EnableCORS {
+		echoServer.Use(middleware.CORS())
+	}
+	echoServer.Use(rewriteIrmaRoute())
+
+	// Mount the irma-app routes
+	irmaServer, err := pkg.GetIrmaServer(auth.Config)
+	if err != nil {
+		return nil, err
+	}
+	irmaClientHandler := irmaServer.HandlerFunc()
+	irmaEchoHandler := echo.WrapHandler(irmaClientHandler)
+	echoServer.Any(pkg.IrmaMountPath+"/*", irmaEchoHandler)
+
+	// Mount the Nuts-Auth routes
+	api.RegisterHandlers(echoServer, &api.Wrapper{Auth: auth})
+
+	// Start the server
+	return echoServer, nil
+
+}
+
 func cmd() *cobra.Command {
 
 	cmd := &cobra.Command{
@@ -88,31 +115,12 @@ func cmd() *cobra.Command {
 		Short: "Run standalone auth server",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			authEngine := pkg.AuthInstance()
-			echoServer := echo.New()
-			echoServer.HideBanner = true
-			echoServer.Use(middleware.Logger())
-
-			if authEngine.Config.EnableCORS {
-				echoServer.Use(middleware.CORS())
-			}
-			echoServer.Use(rewriteIrmaRoute())
-
 			checkConfig(authEngine.Config)
-
-			// Mount the irma-app routes
-			irmaServer, err := pkg.GetIrmaServer(authEngine.Config)
+			echo, err := initEcho(authEngine)
 			if err != nil {
 				return err
 			}
-			irmaClientHandler := irmaServer.HandlerFunc()
-			irmaEchoHandler := echo.WrapHandler(irmaClientHandler)
-			echoServer.Any(pkg.IrmaMountPath+"/*", irmaEchoHandler)
-
-			// Mount the Nuts-Auth routes
-			api.RegisterHandlers(echoServer, &api.Wrapper{Auth: authEngine})
-
-			// Start the server
-			return echoServer.Start(authEngine.Config.Address)
+			return echo.Start(authEngine.Config.Address)
 		},
 	})
 
