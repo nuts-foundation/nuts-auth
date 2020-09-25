@@ -90,8 +90,7 @@ func GetIrmaServer(config AuthConfig) (irmaServer *irmaserver.Server, err error)
 
 		irmaServer, err = irmaserver.New(config)
 		if err != nil {
-			err = errors.Wrap(err, "could not initialize IRMA library")
-			panic(err)
+			return
 		}
 		_irmaServer = irmaServer
 	})
