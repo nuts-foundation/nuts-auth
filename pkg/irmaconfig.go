@@ -15,6 +15,7 @@ import (
 
 // The location the irma webserver will mount
 const IrmaMountPath = "/auth/irmaclient"
+
 // create a singleton irma config
 var _irmaConfig *irma.Configuration
 var configOnce = new(sync.Once)
@@ -25,52 +26,56 @@ var serverOnce = new(sync.Once)
 
 // GetIrmaConfig creates and returns an IRMA config.
 // The config sets the given irma path or a temporary folder. Then it downloads the schemas.
-func GetIrmaConfig(config AuthConfig) (*irma.Configuration, error) {
-	// considering the sync.Once#Do method cannot return anything
-	// and this is an initialization function, panic instead of return an error
+func GetIrmaConfig(config AuthConfig) (irmaConfig *irma.Configuration, err error) {
+	irmaConfig = _irmaConfig
+
 	configOnce.Do(func() {
-		irmaConfigFolder, err := irmaConfigDir(config)
+		var configDir string
+		configDir, err = irmaConfigDir(config)
 		if err != nil {
-			panic(err)
+			return
 		}
-		logrus.Infof("Using irma config dir: %s", irmaConfigFolder)
+		logrus.Infof("Using irma config dir: %s", configDir)
 
 		options := irma.ConfigurationOptions{}
-		newConfig, err := irma.NewConfiguration(irmaConfigFolder, options)
+		irmaConfig, err = irma.NewConfiguration(configDir, options)
 		if err != nil {
-			panic(errors.Wrap(err, "could not create irma config"))
+			return
 		}
 
 		if !config.SkipAutoUpdateIrmaSchemas {
 			logrus.Infof("Downloading irma schemas. If this annoys you or you want to pin the schemas, set %s", ConfSkipAutoUpdateIrmaSchemas)
-			if err := newConfig.DownloadDefaultSchemes(); err != nil {
-				panic(errors.Wrap(err, "could not download default schemes"))
+			if err = irmaConfig.DownloadDefaultSchemes(); err != nil {
+				return
 			}
 		} else {
 			logrus.Info("Loading irma schemas.")
-			if err := newConfig.ParseFolder(); err != nil {
-				panic(errors.Wrap(err, "could not load default schemes from disk"))
+			if err = irmaConfig.ParseFolder(); err != nil {
+				return
 			}
 		}
-		_irmaConfig = newConfig
+		_irmaConfig = irmaConfig
 	})
-	return _irmaConfig, nil
+	return
 }
 
 // GetIrmaServer creates and starts the irma server instance.
 // The server can be used by a IRMA client like the app to handle IRMA sessions
-func GetIrmaServer(config AuthConfig) (*irmaserver.Server, error) {
+func GetIrmaServer(config AuthConfig) (irmaServer *irmaserver.Server, err error) {
+	irmaServer = _irmaServer
+
 	serverOnce.Do(func() {
 		baseURL := config.PublicUrl
 
-		configDir, err := irmaConfigDir(config)
+		var configDir string
+		configDir, err = irmaConfigDir(config)
 		if err != nil {
-			panic(err)
+			return
 		}
 
 		irmaConfig, err := GetIrmaConfig(config)
 		if err != nil {
-			panic(err)
+			return
 		}
 		config := &server.Configuration{
 			IrmaConfiguration:    irmaConfig,
@@ -83,14 +88,15 @@ func GetIrmaServer(config AuthConfig) (*irmaserver.Server, error) {
 		logrus.Info("Initializing IRMA library...")
 		logrus.Infof("irma baseurl: %s", config.URL)
 
-		newServer, err := irmaserver.New(config)
+		irmaServer, err = irmaserver.New(config)
 		if err != nil {
 			err = errors.Wrap(err, "could not initialize IRMA library")
 			panic(err)
 		}
-		_irmaServer = newServer
+		_irmaServer = irmaServer
 	})
-	return _irmaServer, nil
+
+	return
 }
 
 func irmaConfigDir(config AuthConfig) (string, error) {
