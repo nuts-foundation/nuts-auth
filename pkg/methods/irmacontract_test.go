@@ -17,7 +17,7 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 
 	irmaConfig := func(t *testing.T) *irma.Configuration {
 		t.Helper()
-		irmaConfig, err := irma.NewConfiguration("../testdata/irma", irma.ConfigurationOptions{})
+		irmaConfig, err := irma.NewConfiguration("../../testdata/irma", irma.ConfigurationOptions{})
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
