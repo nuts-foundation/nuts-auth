@@ -5,6 +5,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/nuts-foundation/nuts-auth/pkg/methods"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/types"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nuts-foundation/nuts-auth/api"
@@ -47,15 +51,15 @@ func NewAuthEngine() *nutsGo.Engine {
 
 			// The Irma router operates on the mount path and does not know about the prefix.
 			rewriteFunc := func(w http.ResponseWriter, r *http.Request) {
-				if strings.HasPrefix(r.URL.Path, pkg.IrmaMountPath) {
+				if strings.HasPrefix(r.URL.Path, methods.IrmaMountPath) {
 					// strip the prefix
-					r.URL.Path = strings.Split(r.URL.Path, pkg.IrmaMountPath)[1]
+					r.URL.Path = strings.Split(r.URL.Path, methods.IrmaMountPath)[1]
 				}
 				authBackend.IrmaServer.HandlerFunc()(w, r)
 			}
 			// wrap the http handler in a echo handler
 			irmaEchoHandler := echo.WrapHandler(http.HandlerFunc(rewriteFunc))
-			routerWithAny.Any(pkg.IrmaMountPath+"/*", irmaEchoHandler)
+			routerWithAny.Any(methods.IrmaMountPath+"/*", irmaEchoHandler)
 
 			// Mount the Auth-api routes
 			api.RegisterHandlers(router, &api.Wrapper{Auth: authBackend})
@@ -73,7 +77,7 @@ func NewAuthEngine() *nutsGo.Engine {
 }
 
 func rewriteIrmaRoute() echo.MiddlewareFunc {
-	return middleware.Rewrite(map[string]string{pkg.IrmaMountPath + "/*": "/$1"})
+	return middleware.Rewrite(map[string]string{methods.IrmaMountPath + "/*": "/$1"})
 }
 
 func initEcho(auth *pkg.Auth) (*echo.Echo, error) {
@@ -87,13 +91,13 @@ func initEcho(auth *pkg.Auth) (*echo.Echo, error) {
 	echoServer.Use(rewriteIrmaRoute())
 
 	// Mount the irma-app routes
-	irmaServer, err := pkg.GetIrmaServer(auth.Config)
+	irmaServer, err := methods.GetIrmaServer(auth.Config)
 	if err != nil {
 		return nil, err
 	}
 	irmaClientHandler := irmaServer.HandlerFunc()
 	irmaEchoHandler := echo.WrapHandler(irmaClientHandler)
-	echoServer.Any(pkg.IrmaMountPath+"/*", irmaEchoHandler)
+	echoServer.Any(methods.IrmaMountPath+"/*", irmaEchoHandler)
 
 	// Mount the Nuts-Auth routes
 	api.RegisterHandlers(echoServer, &api.Wrapper{Auth: auth})
@@ -127,7 +131,7 @@ func cmd() *cobra.Command {
 	return cmd
 }
 
-func checkConfig(config pkg.AuthConfig) {
+func checkConfig(config types.AuthConfig) {
 	if config.IrmaSchemeManager == "" {
 		logrus.Fatal("IrmaSchemeManager must be set. Valid options are: [pbdf|irma-demo]")
 	}
@@ -147,7 +151,7 @@ func flagSet() *pflag.FlagSet {
 	flags.String(pkg.ConfMode, defs.Mode, "server or client, when client it does not start any services so that CLI commands can be used.")
 	flags.String(pkg.ConfIrmaConfigPath, defs.IrmaConfigPath, "path to IRMA config folder. If not set, a tmp folder is created.")
 	flags.String(pkg.ConfActingPartyCN, defs.ActingPartyCn, "The acting party Common name used in contracts")
-	flags.Bool(pkg.ConfSkipAutoUpdateIrmaSchemas, defs.SkipAutoUpdateIrmaSchemas, "set if you want to skip the auto download of the irma schemas every 60 minutes.")
+	flags.Bool(methods.ConfSkipAutoUpdateIrmaSchemas, defs.SkipAutoUpdateIrmaSchemas, "set if you want to skip the auto download of the irma schemas every 60 minutes.")
 	flags.Bool(pkg.ConfEnableCORS, defs.EnableCORS, "Set if you want to allow CORS requests. This is useful when you want browsers to directly communicate with the nuts node.")
 
 	return flags

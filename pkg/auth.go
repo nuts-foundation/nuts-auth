@@ -9,6 +9,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+
+	types2 "github.com/nuts-foundation/nuts-auth/pkg/types"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/methods"
+
 	"github.com/privacybydesign/irmago/server/irmaserver"
 
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -34,9 +40,6 @@ const ConfMode = "mode"
 // ConfIrmaConfigPath is the config key to provide the irma configuration path
 const ConfIrmaConfigPath = "irmaConfigPath"
 
-// ConfSkipAutoUpdateIrmaSchemas is the config key to provide an option to skip auto updating the irma schemas
-const ConfSkipAutoUpdateIrmaSchemas = "skipAutoUpdateIrmaSchemas"
-
 const ConfEnableCORS = "enableCORS"
 
 // ConfActingPartyCN is the config key to provide the Acting party common name
@@ -47,48 +50,33 @@ const ConfIrmaSchemeManager = "irmaSchemeManager"
 
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
-	CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error)
-	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
-	ContractByType(contractType ContractType, language Language, version Version) (*ContractTemplate, error)
-	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
-	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error)
-	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error)
-	IntrospectAccessToken(token string) (*NutsAccessToken, error)
+	CreateContractSession(sessionRequest types2.CreateSessionRequest) (*types2.CreateSessionResult, error)
+	ContractSessionStatus(sessionID string) (*types2.SessionStatusResult, error)
+	ContractByType(contractType contract.ContractType, language contract.Language, version contract.Version) (*contract.ContractTemplate, error)
+	ValidateContract(request types2.ValidationRequest) (*types2.ContractValidationResult, error)
+	CreateAccessToken(request types2.CreateAccessTokenRequest) (*types2.AccessTokenResponse, error)
+	CreateJwtBearerToken(request types2.CreateJwtBearerTokenRequest) (*types2.JwtBearerTokenResponse, error)
+	IntrospectAccessToken(token string) (*types2.NutsAccessToken, error)
 	KeyExistsFor(legalEntity core.PartyID) bool
 	OrganizationNameByID(legalEntity core.PartyID) (string, error)
 }
 
-type ContractMatrix map[Language]map[ContractType]map[Version]*ContractTemplate
-
 // Auth is the main struct of the Auth service
 type Auth struct {
-	Config                 AuthConfig
+	Config                 types2.AuthConfig
 	configOnce             sync.Once
 	configDone             bool
-	ContractSessionHandler ContractSessionHandler
-	ContractValidator      ContractValidator
+	ContractSessionHandler types2.ContractSessionHandler
+	ContractValidator      types2.ContractValidator
 	IrmaServer             *irmaserver.Server
-	AccessTokenHandler     AccessTokenHandler
+	AccessTokenHandler     types2.AccessTokenHandler
 	Crypto                 crypto.Client
 	Registry               registry.RegistryClient
-	ValidContracts         ContractMatrix
+	ValidContracts         contract.ContractMatrix
 }
 
-// AuthConfig holds all the configuration params
-type AuthConfig struct {
-	Mode string
-	// Address to bind the http server to. Default localhost:1323
-	Address                   string
-	PublicUrl                 string
-	IrmaConfigPath            string
-	IrmaSchemeManager         string
-	SkipAutoUpdateIrmaSchemas bool
-	ActingPartyCn             string
-	EnableCORS                bool
-}
-
-func DefaultAuthConfig() AuthConfig {
-	return AuthConfig{
+func DefaultAuthConfig() types2.AuthConfig {
+	return types2.AuthConfig{
 		Address:           "localhost:1323",
 		IrmaSchemeManager: "pbdf",
 	}
@@ -108,12 +96,12 @@ func AuthInstance() *Auth {
 	return instance
 }
 
-func NewAuthInstance(config AuthConfig, cryptoClient crypto.Client, registryClient registry.RegistryClient) *Auth {
+func NewAuthInstance(config types2.AuthConfig, cryptoClient crypto.Client, registryClient registry.RegistryClient) *Auth {
 	return &Auth{
 		Config:         config,
 		Crypto:         cryptoClient,
 		Registry:       registryClient,
-		ValidContracts: Contracts,
+		ValidContracts: contract.Contracts,
 	}
 }
 
@@ -136,19 +124,19 @@ func (auth *Auth) Configure() (err error) {
 				err = ErrMissingPublicURL
 				return
 			}
-			auth.ValidContracts = Contracts
+			auth.ValidContracts = contract.Contracts
 
 			var irmaConfig *irma.Configuration
-			if irmaConfig, err = GetIrmaConfig(auth.Config); err != nil {
+			if irmaConfig, err = methods.GetIrmaConfig(auth.Config); err != nil {
 				return
 			}
 			var irmaServer *irmaserver.Server
-			if irmaServer, err = GetIrmaServer(auth.Config); err != nil {
+			if irmaServer, err = methods.GetIrmaServer(auth.Config); err != nil {
 				return
 			}
 			auth.IrmaServer = irmaServer
-			validator := IrmaValidator{
-				IrmaServer:     &DefaultIrmaClient{I: irmaServer},
+			validator := methods.IrmaValidator{
+				IrmaServer:     &types2.DefaultIrmaClient{I: irmaServer},
 				IrmaConfig:     irmaConfig,
 				Registry:       auth.Registry,
 				Crypto:         auth.Crypto,
@@ -167,16 +155,16 @@ func (auth *Auth) Configure() (err error) {
 // CreateContractSession creates a session based on an IRMA contract. This allows the user to permit the application to
 // use the Nuts Network in its name. The user can limit the application in time and scope. By signing it with IRMA other
 // nodes in the network can verify the validity of the contract.
-func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error) {
+func (auth *Auth) CreateContractSession(sessionRequest types2.CreateSessionRequest) (*types2.CreateSessionResult, error) {
 
 	// Step 1: Find the correct contract
-	contract, err := NewContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version, Contracts)
+	contract, err := contract.NewContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version, contract.Contracts)
 	if err != nil {
 		return nil, err
 	}
 
 	// Step 2: Render the contract template with all the correct values
-	message, err := contract.renderTemplate(map[string]string{
+	message, err := contract.RenderTemplate(map[string]string{
 		"acting_party": auth.Config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
 		"legal_entity": sessionRequest.LegalEntity,
 	}, 0, 60*time.Minute)
@@ -213,7 +201,7 @@ func (auth *Auth) CreateContractSession(sessionRequest CreateSessionRequest) (*C
 	logrus.Debugf("session created with token: %s", token)
 
 	// Return the sessionPointer and sessionId
-	createSessionResult := &CreateSessionResult{
+	createSessionResult := &types2.CreateSessionResult{
 		QrCodeInfo: *sessionPointer,
 		SessionID:  token,
 	}
@@ -236,21 +224,21 @@ func printQrCode(qrcode string) {
 
 // NewContractByType returns a ContractTemplate of a certain type, language and version.
 // If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
-func (auth *Auth) ContractByType(contractType ContractType, language Language, version Version) (*ContractTemplate, error) {
-	return NewContractByType(contractType, language, version, auth.ValidContracts)
+func (auth *Auth) ContractByType(contractType contract.ContractType, language contract.Language, version contract.Version) (*contract.ContractTemplate, error) {
+	return contract.NewContractByType(contractType, language, version, auth.ValidContracts)
 }
 
 // ContractSessionStatus returns the current session status for a given sessionID.
 // If the session is not found, the error is an ErrSessionNotFound and SessionStatusResult is nil
-func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult, error) {
-	sessionStatus, err := auth.ContractSessionHandler.SessionStatus(SessionID(sessionID))
+func (auth *Auth) ContractSessionStatus(sessionID string) (*types2.SessionStatusResult, error) {
+	sessionStatus, err := auth.ContractSessionHandler.SessionStatus(types2.SessionID(sessionID))
 
 	if err != nil {
 		return nil, fmt.Errorf("sessionID %s: %w", sessionID, err)
 	}
 
 	if sessionStatus == nil {
-		return nil, fmt.Errorf("sessionID %s: %w", sessionID, ErrSessionNotFound)
+		return nil, fmt.Errorf("sessionID %s: %w", sessionID, types2.ErrSessionNotFound)
 	}
 
 	return sessionStatus, nil
@@ -258,17 +246,17 @@ func (auth *Auth) ContractSessionStatus(sessionID string) (*SessionStatusResult,
 
 // ValidateContract validates a given contract. Currently two ContractType's are accepted: Irma and Jwt.
 // Both types should be passed as a base64 encoded string in the ContractString of the request paramContractString of the request param
-func (auth *Auth) ValidateContract(request ValidationRequest) (*ContractValidationResult, error) {
-	if request.ContractFormat == IrmaFormat {
-		return auth.ContractValidator.ValidateContract(request.ContractString, IrmaFormat, request.ActingPartyCN)
-	} else if request.ContractFormat == JwtFormat {
+func (auth *Auth) ValidateContract(request types2.ValidationRequest) (*types2.ContractValidationResult, error) {
+	if request.ContractFormat == types2.IrmaFormat {
+		return auth.ContractValidator.ValidateContract(request.ContractString, types2.IrmaFormat, request.ActingPartyCN)
+	} else if request.ContractFormat == types2.JwtFormat {
 		return auth.ContractValidator.ValidateJwt(request.ContractString, request.ActingPartyCN)
 	}
-	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, ErrUnknownContractFormat)
+	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, types2.ErrUnknownContractFormat)
 }
 
 // CreateAccessToken extracts the claims out of the request, checks the validity and builds the access token
-func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResponse, error) {
+func (auth *Auth) CreateAccessToken(request types2.CreateAccessTokenRequest) (*types2.AccessTokenResponse, error) {
 	// extract the JwtBearerToken
 	jwtBearerToken, err := auth.AccessTokenHandler.ParseAndValidateJwtBearerToken(request.RawJwtBearerToken)
 	if err != nil {
@@ -280,7 +268,7 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 	if err != nil {
 		return nil, fmt.Errorf("identity tokenen validation failed: %w", err)
 	}
-	if res.ValidationResult == Invalid {
+	if res.ValidationResult == types2.Invalid {
 		return nil, fmt.Errorf("identity validation failed")
 	}
 
@@ -289,16 +277,16 @@ func (auth *Auth) CreateAccessToken(request CreateAccessTokenRequest) (*AccessTo
 		return nil, err
 	}
 
-	return &AccessTokenResponse{AccessToken: accessToken}, nil
+	return &types2.AccessTokenResponse{AccessToken: accessToken}, nil
 }
 
 // CreateJwtBearerToken creates a JwtBearerToken from the given CreateJwtBearerTokenRequest
-func (auth *Auth) CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResponse, error) {
+func (auth *Auth) CreateJwtBearerToken(request types2.CreateJwtBearerTokenRequest) (*types2.JwtBearerTokenResponse, error) {
 	return auth.AccessTokenHandler.CreateJwtBearerToken(&request)
 }
 
 // IntrospectAccessToken fills the fields in NutsAccessToken from the given Jwt Access Token
-func (auth *Auth) IntrospectAccessToken(token string) (*NutsAccessToken, error) {
+func (auth *Auth) IntrospectAccessToken(token string) (*types2.NutsAccessToken, error) {
 	acClaims, err := auth.AccessTokenHandler.ParseAndValidateAccessToken(token)
 	return acClaims, err
 }

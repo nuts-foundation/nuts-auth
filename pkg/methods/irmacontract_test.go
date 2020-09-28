@@ -1,7 +1,11 @@
-package pkg
+package methods
 
 import (
 	"testing"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/types"
 
 	"github.com/nuts-foundation/nuts-auth/testdata"
 
@@ -25,7 +29,7 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 
 	irmaContractVerifier := func(t *testing.T) *IrmaContractVerifier {
 		t.Helper()
-		return &IrmaContractVerifier{irmaConfig(t), Contracts}
+		return &IrmaContractVerifier{irmaConfig(t), contract.Contracts}
 	}
 
 	t.Run("an empty contract is Invalid", func(t *testing.T) {
@@ -36,7 +40,7 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
-		assert.Equal(t, Invalid, res.ValidationResult)
+		assert.Equal(t, types.Invalid, res.ValidationResult)
 	})
 
 	t.Run("a valid contract with a valid IRMA config is Valid", func(t *testing.T) {
@@ -50,13 +54,13 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		res, err := cv.VerifySignature(sic)
 		res, err = cv.verifyRequiredAttributes(sic, res)
 		assert.NoError(t, err)
-		assert.Equal(t, Valid, res.ValidationResult)
+		assert.Equal(t, types.Valid, res.ValidationResult)
 	})
 
 	t.Run("valid contract signed with wrong attributes is Invalid", func(t *testing.T) {
-		validTestContracts := ContractMatrix{
+		validTestContracts := contract.ContractMatrix{
 			"NL": {"BehandelaarLogin": {
-				"v1": &ContractTemplate{
+				"v1": &contract.ContractTemplate{
 					Type:               "BehandelaarLogin",
 					Version:            "v1",
 					Language:           "NL",
@@ -77,6 +81,6 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		res, err := cv.VerifySignature(sic)
 		res, err = cv.verifyRequiredAttributes(sic, res)
 		assert.NoError(t, err)
-		assert.Equal(t, Invalid, res.ValidationResult)
+		assert.Equal(t, types.Invalid, res.ValidationResult)
 	})
 }

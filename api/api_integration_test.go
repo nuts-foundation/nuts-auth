@@ -10,6 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/types"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/methods"
+
 	test2 "github.com/nuts-foundation/nuts-auth/test"
 	"github.com/nuts-foundation/nuts-go-test/io"
 	"github.com/nuts-foundation/nuts-registry/test"
@@ -39,9 +45,9 @@ func Test_Integration(t *testing.T) {
 		echoMock *mock.MockContext
 	}
 
-	pkg.Contracts = map[pkg.Language]map[pkg.ContractType]map[pkg.Version]*pkg.ContractTemplate{
+	contract.Contracts = map[contract.Language]map[contract.ContractType]map[contract.Version]*contract.ContractTemplate{
 		"NL": {"BehandelaarLogin": {
-			"v1": &pkg.ContractTemplate{
+			"v1": &contract.ContractTemplate{
 				Type:               "BehandelaarLogin",
 				Version:            "v1",
 				Language:           "NL",
@@ -106,13 +112,13 @@ func Test_Integration(t *testing.T) {
 	// Set the pkg.NowFunc to a temporary one to return a fake time. This makes it convenient to use stored test contracts.
 	fakeTime := func(t *testing.T, newTime time.Time, f func(t *testing.T)) {
 		t.Helper()
-		oldFunc := pkg.NowFunc
+		oldFunc := contract.NowFunc
 
-		pkg.NowFunc = func() time.Time {
+		contract.NowFunc = func() time.Time {
 			return newTime
 		}
 		defer func() {
-			pkg.NowFunc = oldFunc
+			contract.NowFunc = oldFunc
 		}()
 
 		f(t)
@@ -141,10 +147,10 @@ func Test_Integration(t *testing.T) {
 			ctx := createContext(t)
 
 			// create an id token from a valid irma contract
-			defaultValidator := pkg.IrmaValidator{Crypto: ctx.auth.Crypto}
+			defaultValidator := methods.IrmaValidator{Crypto: ctx.auth.Crypto}
 			signedIrmaContract := irma.SignedMessage{}
 			_ = json.Unmarshal([]byte(testdata.ValidIrmaContract2), &signedIrmaContract)
-			contract := pkg.SignedIrmaContract{IrmaContract: signedIrmaContract}
+			contract := methods.SignedIrmaContract{IrmaContract: signedIrmaContract}
 			idToken, err := defaultValidator.CreateIdentityTokenFromIrmaContract(&contract, organizationID)
 			if !assert.NoError(t, err) {
 				t.FailNow()
@@ -172,7 +178,7 @@ func Test_Integration(t *testing.T) {
 			printTokenConents(t, "jwtBearerToken", jwtBearerTokenResponse.BearerToken)
 
 			// make sure the echo mock returns the correct form values
-			ctx.echoMock.EXPECT().FormValue("grant_type").Return(pkg.JwtBearerGrantType)
+			ctx.echoMock.EXPECT().FormValue("grant_type").Return(types.JwtBearerGrantType)
 			ctx.echoMock.EXPECT().FormValue("assertion").Return(jwtBearerTokenResponse.BearerToken)
 
 			// store the response for later use

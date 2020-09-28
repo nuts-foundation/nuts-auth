@@ -9,6 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuts-foundation/nuts-auth/pkg/methods"
+
+	contract2 "github.com/nuts-foundation/nuts-auth/pkg/contract"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/types"
+
 	"github.com/nuts-foundation/nuts-registry/test"
 
 	"github.com/dgrijalva/jwt-go"
@@ -16,7 +22,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-auth/mock"
-	"github.com/nuts-foundation/nuts-auth/pkg"
 	coreMock "github.com/nuts-foundation/nuts-go-core/mock"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
@@ -40,16 +45,16 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
 		authMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
 
-		authMock.EXPECT().CreateContractSession(pkg.CreateSessionRequest{
+		authMock.EXPECT().CreateContractSession(types.CreateSessionRequest{
 			Type:        "BehandelaarLogin",
 			Version:     "v1",
 			Language:    "NL",
 			ValidFrom:   tt,
 			ValidTo:     tt.Add(time.Hour * 13),
 			LegalEntity: careOrgName,
-		}).Return(&pkg.CreateSessionResult{
+		}).Return(&types.CreateSessionResult{
 			QrCodeInfo: irma.Qr{
-				URL:  "http://example.com" + pkg.IrmaMountPath + "/123",
+				URL:  "http://example.com" + methods.IrmaMountPath + "/123",
 				Type: "signing"},
 			SessionID: "abc-sessionid",
 		}, nil)
@@ -72,7 +77,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 		echoMock.EXPECT().JSON(http.StatusCreated, CreateSessionResult{
-			QrCodeInfo: IrmaQR{U: "http://example.com" + pkg.IrmaMountPath + "/123",
+			QrCodeInfo: IrmaQR{U: "http://example.com" + methods.IrmaMountPath + "/123",
 				Irmaqr: "signing",
 			}, SessionId: "abc-sessionid"})
 
@@ -144,13 +149,13 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
 		authMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
 
-		authMock.EXPECT().CreateContractSession(pkg.CreateSessionRequest{
-			Type:        pkg.ContractType(params.Type),
+		authMock.EXPECT().CreateContractSession(types.CreateSessionRequest{
+			Type:        contract2.ContractType(params.Type),
 			Version:     "v1",
 			Language:    "NL",
 			LegalEntity: careOrgName,
 		}).Return(
-			nil, pkg.ErrContractNotFound)
+			nil, contract2.ErrContractNotFound)
 
 		wrapper := Wrapper{Auth: authMock}
 
@@ -234,7 +239,7 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 		nutsAuthToken := "123.456.123"
 		proofStatus := "VALID"
 
-		authMock.EXPECT().ContractSessionStatus(sessionID).Return(&pkg.SessionStatusResult{
+		authMock.EXPECT().ContractSessionStatus(sessionID).Return(&types.SessionStatusResult{
 			SessionResult: server.SessionResult{
 				Status: "INITIALIZED",
 				Token:  "YRnWbPJ7ffKCnf9cP51e",
@@ -275,7 +280,7 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 
 		sessionID := "123"
 
-		authMock.EXPECT().ContractSessionStatus(sessionID).Return(nil, pkg.ErrSessionNotFound)
+		authMock.EXPECT().ContractSessionStatus(sessionID).Return(nil, types.ErrSessionNotFound)
 		wrapper := Wrapper{Auth: authMock}
 
 		err := wrapper.SessionRequestStatus(echoMock, sessionID)
@@ -305,18 +310,18 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 
 		sa := ValidationResult_SignerAttributes{AdditionalProperties: map[string]string{"nl": "00000007"}}
 		echoMock.EXPECT().JSON(http.StatusOK, ValidationResult{
-			ContractFormat:   string(pkg.JwtFormat),
+			ContractFormat:   string(types.JwtFormat),
 			ValidationResult: "VALID",
 			SignerAttributes: sa,
 		})
 
-		authMock.EXPECT().ValidateContract(pkg.ValidationRequest{
+		authMock.EXPECT().ValidateContract(types.ValidationRequest{
 			ActingPartyCN:  "DemoEHR",
-			ContractFormat: pkg.JwtFormat,
+			ContractFormat: types.JwtFormat,
 			ContractString: "base64encodedContractString",
-		}).Return(&pkg.ContractValidationResult{
+		}).Return(&types.ContractValidationResult{
 			ValidationResult:    "VALID",
-			ContractFormat:      pkg.JwtFormat,
+			ContractFormat:      types.JwtFormat,
 			DisclosedAttributes: map[string]string{"nl": "00000007"},
 		}, nil)
 
@@ -343,10 +348,10 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 			Language: &cLanguage,
 		}
 
-		contract := pkg.ContractTemplate{
-			Type:               pkg.ContractType(cType),
-			Version:            pkg.Version(cVersion),
-			Language:           pkg.Language(cLanguage),
+		contract := contract2.ContractTemplate{
+			Type:               contract2.ContractType(cType),
+			Version:            contract2.Version(cVersion),
+			Language:           contract2.Language(cLanguage),
 			TemplateAttributes: []string{"party"},
 			Template:           "ik geen toestemming aan {{party}}",
 		}
@@ -360,7 +365,7 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 			Language:           Language(cLanguage),
 		}
 
-		authMock.EXPECT().ContractByType(pkg.ContractType(cType), pkg.Language(cLanguage), pkg.Version(cVersion)).Return(&contract, nil)
+		authMock.EXPECT().ContractByType(contract2.ContractType(cType), contract2.Language(cLanguage), contract2.Version(cVersion)).Return(&contract, nil)
 		echoMock.EXPECT().JSON(http.StatusOK, answer)
 
 		wrapper := Wrapper{Auth: authMock}
@@ -378,7 +383,7 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 		cType := "UnknownContract"
 		params := GetContractByTypeParams{}
 
-		authMock.EXPECT().ContractByType(pkg.ContractType(cType), pkg.Language(""), pkg.Version("")).Return(nil, pkg.ErrContractNotFound)
+		authMock.EXPECT().ContractByType(contract2.ContractType(cType), contract2.Language(""), contract2.Version("")).Return(nil, contract2.ErrContractNotFound)
 
 		wrapper := Wrapper{Auth: authMock}
 		err := wrapper.GetContractByType(echoMock, cType, params)
@@ -491,7 +496,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
-		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(nil, fmt.Errorf("oh boy"))
+		ctx.authMock.EXPECT().CreateAccessToken(types.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(nil, fmt.Errorf("oh boy"))
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
 
 		assert.Nil(t, err)
@@ -531,8 +536,8 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
 		bindPostBody(ctx, params)
 
-		pkgResponse := &pkg.AccessTokenResponse{AccessToken: "foo"}
-		ctx.authMock.EXPECT().CreateAccessToken(pkg.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(pkgResponse, nil)
+		pkgResponse := &types.AccessTokenResponse{AccessToken: "foo"}
+		ctx.authMock.EXPECT().CreateAccessToken(types.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(pkgResponse, nil)
 
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
 		expectStatusOK(ctx, apiResponse)
@@ -591,7 +596,7 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 			BearerToken: "123.456.789",
 		}
 
-		expectedRequest := pkg.CreateJwtBearerTokenRequest{
+		expectedRequest := types.CreateJwtBearerTokenRequest{
 			Actor:         body.Actor,
 			Custodian:     body.Custodian,
 			IdentityToken: body.Identity,
@@ -599,7 +604,7 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 			Scope:         body.Scope,
 		}
 
-		ctx.authMock.EXPECT().CreateJwtBearerToken(expectedRequest).Return(&pkg.JwtBearerTokenResponse{BearerToken: response.BearerToken}, nil)
+		ctx.authMock.EXPECT().CreateJwtBearerToken(expectedRequest).Return(&types.JwtBearerTokenResponse{BearerToken: response.BearerToken}, nil)
 		expectStatusOK(ctx, response)
 
 		if !assert.Nil(t, ctx.wrapper.CreateJwtBearerToken(ctx.echoMock)) {
@@ -664,7 +669,7 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 		scope := "nuts-sso"
 
 		ctx.authMock.EXPECT().IntrospectAccessToken(request.Token).Return(
-			&pkg.NutsAccessToken{
+			&types.NutsAccessToken{
 				StandardClaims: jwt.StandardClaims{
 					Audience:  aud,
 					ExpiresAt: int64(exp),

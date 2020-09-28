@@ -1,14 +1,16 @@
-package pkg
+package methods
 
 import (
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetIrmaServer(t *testing.T) {
-	authConfig := AuthConfig{
-		IrmaConfigPath:            "../testdata/irma",
+	authConfig := types.AuthConfig{
+		IrmaConfigPath:            "../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 

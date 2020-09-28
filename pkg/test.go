@@ -1,14 +1,13 @@
 package pkg
 
 import (
+	"os"
+	"path"
+
+	"github.com/nuts-foundation/nuts-auth/test"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/sirupsen/logrus"
-	"io"
-	"io/ioutil"
-	"os"
-	"path"
-	"path/filepath"
 )
 
 func NewTestAuthInstance(testDirectory string) *Auth {
@@ -20,7 +19,7 @@ func NewTestAuthInstance(testDirectory string) *Auth {
 	if err := os.MkdirAll(config.IrmaConfigPath, 0777); err != nil {
 		logrus.Fatal(err)
 	}
-	if err := copyDir("../testdata/irma", config.IrmaConfigPath); err != nil {
+	if err := test.CopyDir("../testdata/irma", config.IrmaConfigPath); err != nil {
 		logrus.Fatal(err)
 	}
 	config.IrmaSchemeManager = "irma-demo"
@@ -30,47 +29,4 @@ func NewTestAuthInstance(testDirectory string) *Auth {
 	}
 	instance = newInstance
 	return newInstance
-}
-
-func copyDir(src string, dst string) error {
-	dir, err := ioutil.ReadDir(src)
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(dst, os.ModePerm); err != nil {
-		return err
-	}
-	for _, entry := range dir {
-		sourceFile := filepath.Join(src, entry.Name())
-		targetFile := filepath.Join(dst, entry.Name())
-		if entry.IsDir() {
-			err := copyDir(sourceFile, targetFile)
-			if err != nil {
-				return err
-			}
-			continue
-		}
-		if err := copyFile(sourceFile, targetFile); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func copyFile(src string, dst string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-
-	_, err = io.Copy(dstFile, srcFile)
-
-	return err
 }

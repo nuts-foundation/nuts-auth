@@ -1,10 +1,12 @@
-package pkg
+package methods
 
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/types"
 
 	"github.com/pkg/errors"
 	irma "github.com/privacybydesign/irmago"
@@ -16,6 +18,9 @@ import (
 // The location the irma webserver will mount
 const IrmaMountPath = "/auth/irmaclient"
 
+// ConfSkipAutoUpdateIrmaSchemas is the config key to provide an option to skip auto updating the irma schemas
+const ConfSkipAutoUpdateIrmaSchemas = "skipAutoUpdateIrmaSchemas"
+
 // create a singleton irma config
 var _irmaConfig *irma.Configuration
 var configOnce = new(sync.Once)
@@ -26,7 +31,7 @@ var serverOnce = new(sync.Once)
 
 // GetIrmaConfig creates and returns an IRMA config.
 // The config sets the given irma path or a temporary folder. Then it downloads the schemas.
-func GetIrmaConfig(config AuthConfig) (irmaConfig *irma.Configuration, err error) {
+func GetIrmaConfig(config types.AuthConfig) (irmaConfig *irma.Configuration, err error) {
 	irmaConfig = _irmaConfig
 
 	configOnce.Do(func() {
@@ -61,7 +66,7 @@ func GetIrmaConfig(config AuthConfig) (irmaConfig *irma.Configuration, err error
 
 // GetIrmaServer creates and starts the irma server instance.
 // The server can be used by a IRMA client like the app to handle IRMA sessions
-func GetIrmaServer(config AuthConfig) (irmaServer *irmaserver.Server, err error) {
+func GetIrmaServer(config types.AuthConfig) (irmaServer *irmaserver.Server, err error) {
 	irmaServer = _irmaServer
 
 	serverOnce.Do(func() {
@@ -98,7 +103,7 @@ func GetIrmaServer(config AuthConfig) (irmaServer *irmaserver.Server, err error)
 	return
 }
 
-func irmaConfigDir(config AuthConfig) (string, error) {
+func irmaConfigDir(config types.AuthConfig) (string, error) {
 	path := config.IrmaConfigPath
 
 	if path == "" {

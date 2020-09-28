@@ -6,6 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/nuts-foundation/nuts-auth/pkg/methods"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/types"
+
 	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/stretchr/testify/assert"
 )
@@ -13,14 +17,14 @@ import (
 func Test_initEcho(t *testing.T) {
 	// This test checks the IRMA mount by requesting a unknown session status.
 	auth := &pkg.Auth{
-		Config: pkg.AuthConfig{IrmaConfigPath: "../testdata/irma",
+		Config: types.AuthConfig{IrmaConfigPath: "../testdata/irma",
 			SkipAutoUpdateIrmaSchemas: true,
 		},
 	}
 	e, err := initEcho(auth)
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodGet, pkg.IrmaMountPath+"/session/123", nil)
+	req := httptest.NewRequest(http.MethodGet, methods.IrmaMountPath+"/session/123", nil)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)

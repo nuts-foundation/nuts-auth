@@ -1,8 +1,10 @@
-package pkg
+package types
 
 import (
 	"errors"
 	"time"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 
 	"github.com/dgrijalva/jwt-go"
 
@@ -82,11 +84,11 @@ const (
 // CreateSessionRequest is used to create a contract signing session.
 type CreateSessionRequest struct {
 	// ContractType such as "BehandelaarLogin"
-	Type ContractType
+	Type contract.ContractType
 	// Version of the contract such as "v1"
-	Version Version
+	Version contract.Version
 	// Language of the contact such as "NL"
-	Language Language
+	Language contract.Language
 	// LegalEntity denotes the organization of the user
 	LegalEntity string
 	// ValidFrom describes the time from which this contract should be considered valid
@@ -209,4 +211,17 @@ func (d *DefaultIrmaClient) GetSessionResult(token string) *irmaservercore.Sessi
 // StartSession forwards to Irma Server instance
 func (d *DefaultIrmaClient) StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma.Qr, string, error) {
 	return d.I.StartSession(request, handler)
+}
+
+// AuthConfig holds all the configuration params
+type AuthConfig struct {
+	Mode string
+	// Address to bind the http server to. Default localhost:1323
+	Address                   string
+	PublicUrl                 string
+	IrmaConfigPath            string
+	IrmaSchemeManager         string
+	SkipAutoUpdateIrmaSchemas bool
+	ActingPartyCn             string
+	EnableCORS                bool
 }

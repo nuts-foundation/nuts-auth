@@ -1,4 +1,4 @@
-package pkg
+package contract
 
 import (
 	"errors"
@@ -130,14 +130,14 @@ func (c ContractTemplate) timeLocation() *time.Location {
 	return loc
 }
 
-func (c ContractTemplate) renderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
+func (c ContractTemplate) RenderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
 	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 
 	return mustache.Render(c.Template, vars)
 }
 
-func (c ContractTemplate) extractParams(text string) (map[string]string, error) {
+func (c ContractTemplate) ExtractParams(text string) (map[string]string, error) {
 	r, _ := regexp.Compile(c.Regexp)
 	matchResult := r.FindSubmatch([]byte(text))
 	if len(matchResult) < 1 {
@@ -167,7 +167,7 @@ func parseTime(timeStr string, _ Language) (*time.Time, error) {
 	return &parsedTime, nil
 }
 
-func (c ContractTemplate) validateTimeFrame(params map[string]string) (bool, error) {
+func (c ContractTemplate) ValidateTimeFrame(params map[string]string) (bool, error) {
 	var (
 		err                      error
 		ok                       bool
@@ -215,3 +215,5 @@ func (c ContractTemplate) validateTimeFrame(params map[string]string) (bool, err
 
 	return true, nil
 }
+
+type ContractMatrix map[Language]map[ContractType]map[Version]*ContractTemplate
