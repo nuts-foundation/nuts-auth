@@ -3,10 +3,11 @@ package api
 import (
 	"errors"
 	"fmt"
-	core "github.com/nuts-foundation/nuts-go-core"
 	"net/http"
 	"regexp"
 	"time"
+
+	core "github.com/nuts-foundation/nuts-go-core"
 
 	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-auth/pkg"
@@ -51,13 +52,13 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		vt = vft
 	}
 
-	// find legal entity in crypto
 	orgID, err := core.ParsePartyID(string(params.LegalEntity))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("invalid legalEntity '%s': %v", params.LegalEntity, err))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid value for param legalEntity: '%s', make sure its in the form 'urn:oid:1.2.3.4:foo'", params.LegalEntity))
 	}
+	// find legal entity in crypto
 	if !api.Auth.KeyExistsFor(orgID) {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity"))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity, this Nuts node does not seem to be managing '%s'", orgID))
 	}
 
 	// translate legal entity to its name
