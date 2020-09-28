@@ -147,7 +147,7 @@ func (auth *Auth) Configure() (err error) {
 				return
 			}
 			auth.IrmaServer = irmaServer
-			validator := DefaultValidator{
+			validator := IrmaValidator{
 				IrmaServer:     &DefaultIrmaClient{I: irmaServer},
 				IrmaConfig:     irmaConfig,
 				Registry:       auth.Registry,

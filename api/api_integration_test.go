@@ -3,15 +3,16 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
-	test2 "github.com/nuts-foundation/nuts-auth/test"
-	"github.com/nuts-foundation/nuts-go-test/io"
-	"github.com/nuts-foundation/nuts-registry/test"
 	"net/http"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	test2 "github.com/nuts-foundation/nuts-auth/test"
+	"github.com/nuts-foundation/nuts-go-test/io"
+	"github.com/nuts-foundation/nuts-registry/test"
 
 	"github.com/labstack/echo/v4"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -140,7 +141,7 @@ func Test_Integration(t *testing.T) {
 			ctx := createContext(t)
 
 			// create an id token from a valid irma contract
-			defaultValidator := pkg.DefaultValidator{Crypto: ctx.auth.Crypto}
+			defaultValidator := pkg.IrmaValidator{Crypto: ctx.auth.Crypto}
 			signedIrmaContract := irma.SignedMessage{}
 			_ = json.Unmarshal([]byte(testdata.ValidIrmaContract2), &signedIrmaContract)
 			contract := pkg.SignedIrmaContract{IrmaContract: signedIrmaContract}

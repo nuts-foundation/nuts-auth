@@ -37,12 +37,12 @@ import (
 
 func TestDefaultValidator_IsInitialized(t *testing.T) {
 	t.Run("No irma config returns false", func(t *testing.T) {
-		v := DefaultValidator{}
+		v := IrmaValidator{}
 		assert.False(t, v.IsInitialized())
 	})
 
 	t.Run("with irma config returns true", func(t *testing.T) {
-		v := DefaultValidator{IrmaConfig: &irma2.Configuration{}}
+		v := IrmaValidator{IrmaConfig: &irma2.Configuration{}}
 		assert.True(t, v.IsInitialized())
 	})
 }
@@ -208,7 +208,7 @@ func TestValidateContract(t *testing.T) {
 
 	irmaConfig, _ := GetIrmaConfig(authConfig)
 	irmaServer, _ := GetIrmaServer(authConfig)
-	validator := DefaultValidator{IrmaServer: irmaServer, IrmaConfig: irmaConfig, ValidContracts: Contracts}
+	validator := IrmaValidator{IrmaServer: irmaServer, IrmaConfig: irmaConfig, ValidContracts: Contracts}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -283,14 +283,14 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := DefaultValidator{
+			v := IrmaValidator{
 				IrmaServer: tt.fields.IrmaServer,
 			}
 
 			got, _ := v.SessionStatus(tt.args.id)
 
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DefaultValidator.SessionStatus() = %v, want %v", got, tt.want)
+				t.Errorf("IrmaValidator.SessionStatus() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -337,7 +337,7 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 		}
 
 		irmaConfig, _ := GetIrmaConfig(authConfig)
-		v := DefaultValidator{
+		v := IrmaValidator{
 			IrmaServer:     &iMock,
 			IrmaConfig:     irmaConfig,
 			Crypto:         cMock,
@@ -532,14 +532,14 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	type TestContext struct {
 		ctrl  *gomock.Controller
-		v     DefaultValidator
+		v     IrmaValidator
 		rMock *registryMock.MockRegistryClient
 	}
 	createContext := func(t *testing.T) TestContext {
 		ctrl := gomock.NewController(t)
 		rMock := registryMock.NewMockRegistryClient(ctrl)
 
-		v := DefaultValidator{
+		v := IrmaValidator{
 			Registry: rMock,
 		}
 
@@ -762,7 +762,7 @@ var otherOrganizationID = registryTest.OrganizationID("00000002")
 
 // defaultValidator sets up a validator with a registry containing a single test organization.
 // The method is a singleton and always returns the same instance
-func defaultValidator(t *testing.T) (DefaultValidator, crypto.Client) {
+func defaultValidator(t *testing.T) (IrmaValidator, crypto.Client) {
 	t.Helper()
 	os.Setenv("NUTS_IDENTITY", registryTest.VendorID("1234").String())
 	core.NutsConfig().Load(&cobra.Command{})
@@ -784,7 +784,7 @@ func defaultValidator(t *testing.T) (DefaultValidator, crypto.Client) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return DefaultValidator{
+	return IrmaValidator{
 		Registry:       auth.Registry,
 		Crypto:         auth.Crypto,
 		IrmaConfig:     irmaConfig,
