@@ -58,7 +58,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	}
 	// find legal entity in crypto
 	if !api.Auth.KeyExistsFor(orgID) {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity, is this nuts node managing %s?", orgID))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity, this Nuts node does not seem to be managing '%s'", orgID))
 	}
 
 	// translate legal entity to its name
