@@ -9,7 +9,7 @@ import (
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 
-	types2 "github.com/nuts-foundation/nuts-auth/pkg/types"
+	types "github.com/nuts-foundation/nuts-auth/pkg/types"
 
 	core "github.com/nuts-foundation/nuts-go-core"
 
@@ -17,7 +17,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	"github.com/nuts-foundation/nuts-crypto/pkg/types"
+	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
 	irmaserver "github.com/privacybydesign/irmago/server"
@@ -26,7 +26,7 @@ import (
 
 // IrmaValidator validates contracts using the irma logic.
 type IrmaValidator struct {
-	IrmaServer     types2.IrmaServerClient
+	IrmaServer     types.IrmaServerClient
 	IrmaConfig     *irma.Configuration
 	Registry       registry.RegistryClient
 	Crypto         nutscrypto.Client
@@ -47,8 +47,8 @@ func (v IrmaValidator) IsInitialized() bool {
 // ValidateContract is the entry point for contract validation.
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
 // Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
-func (v IrmaValidator) ValidateContract(b64EncodedContract string, format types2.ContractFormat, actingPartyCN string) (*types2.ContractValidationResult, error) {
-	if format == types2.IrmaFormat {
+func (v IrmaValidator) ValidateContract(b64EncodedContract string, format types.ContractFormat, actingPartyCN string) (*types.ContractValidationResult, error) {
+	if format == types.IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
 			return nil, fmt.Errorf("could not base64-decode contract: %w", err)
@@ -61,14 +61,14 @@ func (v IrmaValidator) ValidateContract(b64EncodedContract string, format types2
 		}
 		return contractValidator.VerifyAll(signedContract, actingPartyCN)
 	}
-	return nil, types2.ErrUnknownContractFormat
+	return nil, types.ErrUnknownContractFormat
 }
 
 // ValidateJwt validates a JWT formatted identity token
-func (v IrmaValidator) ValidateJwt(token string, actingPartyCN string) (*types2.ContractValidationResult, error) {
+func (v IrmaValidator) ValidateJwt(token string, actingPartyCN string) (*types.ContractValidationResult, error) {
 	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
-	parsedToken, err := parser.ParseWithClaims(token, &types2.NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
-		legalEntity, err := parseTokenIssuer(token.Claims.(*types2.NutsIdentityToken).Issuer)
+	parsedToken, err := parser.ParseWithClaims(token, &types.NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
+		legalEntity, err := parseTokenIssuer(token.Claims.(*types.NutsIdentityToken).Issuer)
 		if err != nil {
 			return nil, err
 		}
@@ -92,10 +92,10 @@ func (v IrmaValidator) ValidateJwt(token string, actingPartyCN string) (*types2.
 		return nil, err
 	}
 
-	claims := parsedToken.Claims.(*types2.NutsIdentityToken)
+	claims := parsedToken.Claims.(*types.NutsIdentityToken)
 
-	if claims.Type != types2.IrmaFormat {
-		return nil, fmt.Errorf("%s: %w", claims.Type, types2.ErrInvalidContractFormat)
+	if claims.Type != types.IrmaFormat {
+		return nil, fmt.Errorf("%s: %w", claims.Type, types.ErrInvalidContractFormat)
 	}
 
 	contractStr, err := base64.StdEncoding.DecodeString(claims.Signature)
@@ -111,7 +111,7 @@ func (v IrmaValidator) ValidateJwt(token string, actingPartyCN string) (*types2.
 
 // SessionStatus returns the current status of a certain session.
 // It returns nil if the session is not found
-func (v IrmaValidator) SessionStatus(id types2.SessionID) (*types2.SessionStatusResult, error) {
+func (v IrmaValidator) SessionStatus(id types.SessionID) (*types.SessionStatusResult, error) {
 	if result := v.IrmaServer.GetSessionResult(string(id)); result != nil {
 		var (
 			token string
@@ -133,11 +133,11 @@ func (v IrmaValidator) SessionStatus(id types2.SessionID) (*types2.SessionStatus
 				return nil, err
 			}
 		}
-		result := &types2.SessionStatusResult{*result, token}
+		result := &types.SessionStatusResult{*result, token}
 		logrus.Info(result.NutsAuthToken)
 		return result, nil
 	}
-	return nil, types2.ErrSessionNotFound
+	return nil, types.ErrSessionNotFound
 }
 
 func (v IrmaValidator) legalEntityFromContract(sic *SignedIrmaContract) (core.PartyID, error) {
@@ -147,7 +147,7 @@ func (v IrmaValidator) legalEntityFromContract(sic *SignedIrmaContract) (core.Pa
 	}
 
 	if _, ok := params["legal_entity"]; !ok {
-		return core.PartyID{}, types2.ErrLegalEntityNotProvided
+		return core.PartyID{}, types.ErrLegalEntityNotProvided
 	}
 
 	le, err := v.Registry.ReverseLookup(params["legal_entity"])
@@ -165,12 +165,12 @@ func (v IrmaValidator) CreateIdentityTokenFromIrmaContract(contract *SignedIrmaC
 	if err != nil {
 		return "", err
 	}
-	payload := types2.NutsIdentityToken{
+	payload := types.NutsIdentityToken{
 		StandardClaims: jwt.StandardClaims{
 			Issuer: legalEntity.String(),
 		},
 		Signature: encodedSignature,
-		Type:      types2.IrmaFormat,
+		Type:      types.IrmaFormat,
 	}
 
 	claims, err := convertPayloadToClaims(payload)
@@ -178,7 +178,7 @@ func (v IrmaValidator) CreateIdentityTokenFromIrmaContract(contract *SignedIrmaC
 		return "", fmt.Errorf("could not construct claims: %w", err)
 	}
 
-	tokenString, err := v.Crypto.SignJWT(claims, types.KeyForEntity(types.LegalEntity{URI: legalEntity.String()}))
+	tokenString, err := v.Crypto.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: legalEntity.String()}))
 	if err != nil {
 		return "", fmt.Errorf("could not sign jwt: %w", err)
 	}
@@ -202,7 +202,7 @@ func (v IrmaValidator) createLegacyIdentityToken(contract *SignedIrmaContract, l
 		return "", err
 	}
 
-	tokenString, err := v.Crypto.SignJWT(claims, types.KeyForEntity(types.LegalEntity{URI: legalEntity}))
+	tokenString, err := v.Crypto.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: legalEntity}))
 	if err != nil {
 		err = fmt.Errorf("could not sign jwt: %w", err)
 		logrus.Error(err)
@@ -231,7 +231,7 @@ func convertPayloadToClaimsLegacy(payload LegacyIdentityToken) (map[string]inter
 }
 
 // convertPayloadToClaims converts a nutsJwt struct to a map of strings so it can be signed with the crypto module
-func convertPayloadToClaims(payload types2.NutsIdentityToken) (map[string]interface{}, error) {
+func convertPayloadToClaims(payload types.NutsIdentityToken) (map[string]interface{}, error) {
 
 	var (
 		jsonString []byte
@@ -257,10 +257,10 @@ func (v IrmaValidator) StartSession(request interface{}, handler irmaserver.Sess
 }
 
 // ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
-func (v IrmaValidator) ParseAndValidateJwtBearerToken(acString string) (*types2.NutsJwtBearerToken, error) {
+func (v IrmaValidator) ParseAndValidateJwtBearerToken(acString string) (*types.NutsJwtBearerToken, error) {
 	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
-	token, err := parser.ParseWithClaims(acString, &types2.NutsJwtBearerToken{}, func(token *jwt.Token) (i interface{}, e error) {
-		legalEntity, err := parseTokenIssuer(token.Claims.(*types2.NutsJwtBearerToken).Issuer)
+	token, err := parser.ParseWithClaims(acString, &types.NutsJwtBearerToken{}, func(token *jwt.Token) (i interface{}, e error) {
+		legalEntity, err := parseTokenIssuer(token.Claims.(*types.NutsJwtBearerToken).Issuer)
 		if err != nil {
 			return nil, err
 		}
@@ -280,7 +280,7 @@ func (v IrmaValidator) ParseAndValidateJwtBearerToken(acString string) (*types2.
 	})
 
 	if token != nil && token.Valid {
-		if claims, ok := token.Claims.(*types2.NutsJwtBearerToken); ok {
+		if claims, ok := token.Claims.(*types.NutsJwtBearerToken); ok {
 			return claims, nil
 		}
 	}
@@ -290,9 +290,9 @@ func (v IrmaValidator) ParseAndValidateJwtBearerToken(acString string) (*types2.
 
 // BuildAccessToken builds an access token based on the oauth claims and the identity of the user provided by the identityValidationResult
 // The token gets signed with the custodians private key and returned as a string.
-func (v IrmaValidator) BuildAccessToken(jwtBearerToken *types2.NutsJwtBearerToken, identityValidationResult *types2.ContractValidationResult) (string, error) {
+func (v IrmaValidator) BuildAccessToken(jwtBearerToken *types.NutsJwtBearerToken, identityValidationResult *types.ContractValidationResult) (string, error) {
 
-	if identityValidationResult.ValidationResult != types2.Valid {
+	if identityValidationResult.ValidationResult != types.Valid {
 		return "", fmt.Errorf("could not build accessToken: %w", errors.New("invalid contract"))
 	}
 
@@ -301,7 +301,7 @@ func (v IrmaValidator) BuildAccessToken(jwtBearerToken *types2.NutsJwtBearerToke
 		return "", fmt.Errorf("could not build accessToken: %w", errors.New("subject is missing"))
 	}
 
-	at := types2.NutsAccessToken{
+	at := types.NutsAccessToken{
 		StandardClaims: jwt.StandardClaims{
 			// Expires in 15 minutes
 			ExpiresAt: time.Now().Add(time.Minute * 15).Unix(),
@@ -330,7 +330,7 @@ func (v IrmaValidator) BuildAccessToken(jwtBearerToken *types2.NutsJwtBearerToke
 	}
 
 	// Sign with the private key of the issuer
-	token, err := v.Crypto.SignJWT(keyVals, types.KeyForEntity(types.LegalEntity{URI: issuer}))
+	token, err := v.Crypto.SignJWT(keyVals, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: issuer}))
 	if err != nil {
 		return token, fmt.Errorf("could not build accessToken: %w", err)
 	}
@@ -339,13 +339,13 @@ func (v IrmaValidator) BuildAccessToken(jwtBearerToken *types2.NutsJwtBearerToke
 }
 
 // CreateJwtBearerToken creates a JwtBearerTokenResponse containing a jwtBearerToken from a CreateJwtBearerTokenRequest.
-func (v IrmaValidator) CreateJwtBearerToken(request *types2.CreateJwtBearerTokenRequest) (*types2.JwtBearerTokenResponse, error) {
+func (v IrmaValidator) CreateJwtBearerToken(request *types.CreateJwtBearerTokenRequest) (*types.JwtBearerTokenResponse, error) {
 	jti, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
 	}
 
-	jwtBearerToken := types2.NutsJwtBearerToken{
+	jwtBearerToken := types.NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
 			//Audience:  endpoint.Identifier.String(),
 			ExpiresAt: time.Now().Add(30 * time.Minute).Unix(),
@@ -366,25 +366,25 @@ func (v IrmaValidator) CreateJwtBearerToken(request *types2.CreateJwtBearerToken
 		return nil, err
 	}
 
-	signingString, err := v.Crypto.SignJWT(keyVals, types.KeyForEntity(types.LegalEntity{URI: request.Actor}))
+	signingString, err := v.Crypto.SignJWT(keyVals, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: request.Actor}))
 	if err != nil {
 		return nil, err
 	}
 
-	return &types2.JwtBearerTokenResponse{BearerToken: signingString}, nil
+	return &types.JwtBearerTokenResponse{BearerToken: signingString}, nil
 }
 
 // ParseAndValidateAccessToken parses and validates a accesstoken string and returns a filled in NutsAccessToken.
-func (v IrmaValidator) ParseAndValidateAccessToken(accessToken string) (*types2.NutsAccessToken, error) {
+func (v IrmaValidator) ParseAndValidateAccessToken(accessToken string) (*types.NutsAccessToken, error) {
 	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
-	token, err := parser.ParseWithClaims(accessToken, &types2.NutsAccessToken{}, func(token *jwt.Token) (i interface{}, e error) {
-		legalEntity, err := parseTokenIssuer(token.Claims.(*types2.NutsAccessToken).Issuer)
+	token, err := parser.ParseWithClaims(accessToken, &types.NutsAccessToken{}, func(token *jwt.Token) (i interface{}, e error) {
+		legalEntity, err := parseTokenIssuer(token.Claims.(*types.NutsAccessToken).Issuer)
 		if err != nil {
 			return nil, err
 		}
 
 		// Check if the care provider which signed the token is managed by this node
-		if !v.Crypto.PrivateKeyExists(types.KeyForEntity(types.LegalEntity{URI: legalEntity.String()})) {
+		if !v.Crypto.PrivateKeyExists(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: legalEntity.String()})) {
 			return nil, fmt.Errorf("invalid token: not signed by a care provider of this node")
 		}
 
@@ -403,7 +403,7 @@ func (v IrmaValidator) ParseAndValidateAccessToken(accessToken string) (*types2.
 	})
 
 	if token != nil && token.Valid {
-		if claims, ok := token.Claims.(*types2.NutsAccessToken); ok {
+		if claims, ok := token.Claims.(*types.NutsAccessToken); ok {
 			return claims, nil
 		}
 	}
@@ -412,7 +412,7 @@ func (v IrmaValidator) ParseAndValidateAccessToken(accessToken string) (*types2.
 
 func parseTokenIssuer(issuer string) (core.PartyID, error) {
 	if issuer == "" {
-		return core.PartyID{}, types2.ErrLegalEntityNotProvided
+		return core.PartyID{}, types.ErrLegalEntityNotProvided
 	}
 	if result, err := core.ParsePartyID(issuer); err != nil {
 		return core.PartyID{}, fmt.Errorf("invalid token issuer: %w", err)

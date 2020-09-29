@@ -15,7 +15,7 @@ import (
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 
-	types2 "github.com/nuts-foundation/nuts-auth/pkg/types"
+	types "github.com/nuts-foundation/nuts-auth/pkg/types"
 
 	"github.com/nuts-foundation/nuts-auth/test"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -27,7 +27,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 
 	"github.com/golang/mock/gomock"
-	"github.com/nuts-foundation/nuts-crypto/pkg/types"
+	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
@@ -57,7 +57,7 @@ func TestDefaultValidator_IsInitialized(t *testing.T) {
 func TestValidateContract(t *testing.T) {
 	type args struct {
 		contract      string
-		format        types2.ContractFormat
+		format        types.ContractFormat
 		actingPartyCN string
 		legalEntity   string
 	}
@@ -66,22 +66,22 @@ func TestValidateContract(t *testing.T) {
 		name    string
 		args    args
 		date    time.Time
-		want    *types2.ContractValidationResult
+		want    *types.ContractValidationResult
 		wantErr bool
 	}{
 		{
 			"a valid contract should be valid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				types2.IrmaFormat,
+				types.IrmaFormat,
 				"Demo EHR",
 				"verpleeghuis De nootjes",
 			},
 			// contract is valid at 1 oct 2019 11:46:00
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
-			&types2.ContractValidationResult{
-				types2.Valid,
-				types2.IrmaFormat,
+			&types.ContractValidationResult{
+				types.Valid,
+				types.IrmaFormat,
 				map[string]string{"nuts.agb.agbcode": "00000007"},
 			},
 			false,
@@ -90,14 +90,14 @@ func TestValidateContract(t *testing.T) {
 			"a valid contract with the wrong actingPartyCn is invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				types2.IrmaFormat,
+				types.IrmaFormat,
 				"Awesome ECD!!",
 				"legalEntity",
 			},
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
-			&types2.ContractValidationResult{
-				types2.Invalid,
-				types2.IrmaFormat,
+			&types.ContractValidationResult{
+				types.Invalid,
+				types.IrmaFormat,
 				map[string]string{"nuts.agb.agbcode": "00000007"},
 			},
 			false,
@@ -106,7 +106,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid contract without a provided actingParty returns an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				types2.IrmaFormat,
+				types.IrmaFormat,
 				"",
 				"legalEntity",
 			},
@@ -118,14 +118,14 @@ func TestValidateContract(t *testing.T) {
 			"an expired contract should be invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				types2.IrmaFormat,
+				types.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
 			time.Date(2019, time.October, 2, 13, 46, 00, 0, location),
-			&types2.ContractValidationResult{
-				types2.Invalid,
-				types2.IrmaFormat,
+			&types.ContractValidationResult{
+				types.Invalid,
+				types.IrmaFormat,
 				map[string]string{"nuts.agb.agbcode": "00000007"},
 			},
 			false,
@@ -134,14 +134,14 @@ func TestValidateContract(t *testing.T) {
 			"a forged contract it should be invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ForgedIrmaContract)),
-				types2.IrmaFormat,
+				types.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
-			&types2.ContractValidationResult{
-				types2.Invalid,
-				types2.IrmaFormat,
+			&types.ContractValidationResult{
+				types.Invalid,
+				types.IrmaFormat,
 				nil,
 			},
 			false,
@@ -150,7 +150,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid but unknown contract should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidUnknownIrmaContract)),
-				types2.IrmaFormat,
+				types.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
@@ -162,7 +162,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid json string which is not a contract should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.InvalidContract)),
-				types2.IrmaFormat,
+				types.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
@@ -174,7 +174,7 @@ func TestValidateContract(t *testing.T) {
 			"a random string should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte("some string which is not json")),
-				types2.IrmaFormat,
+				types.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
@@ -186,7 +186,7 @@ func TestValidateContract(t *testing.T) {
 			"an invalid base64 contract should give an error",
 			args{
 				"invalid base64",
-				types2.IrmaFormat,
+				types.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
@@ -208,7 +208,7 @@ func TestValidateContract(t *testing.T) {
 		},
 	}
 
-	authConfig := types2.AuthConfig{
+	authConfig := types.AuthConfig{
 		IrmaConfigPath:            "../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
@@ -233,7 +233,7 @@ func TestValidateContract(t *testing.T) {
 }
 
 func TestDefaultValidator_SessionStatus(t *testing.T) {
-	authConfig := types2.AuthConfig{
+	authConfig := types.AuthConfig{
 		IrmaConfigPath:            "../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
@@ -263,14 +263,14 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 		IrmaServer *irmaserver.Server
 	}
 	type args struct {
-		id types2.SessionID
+		id types.SessionID
 	}
 	irmaServer, _ = GetIrmaServer(authConfig)
 	tests := []struct {
 		name   string
 		fields fields
 		args   args
-		want   *types2.SessionStatusResult
+		want   *types.SessionStatusResult
 	}{
 		{
 			"for an unknown session, it returns nil",
@@ -281,8 +281,8 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 		{
 			"for a known session it returns a status",
 			fields{irmaServer},
-			args{types2.SessionID(knownSessionID)},
-			&types2.SessionStatusResult{
+			args{types.SessionID(knownSessionID)},
+			&types.SessionStatusResult{
 				irmaservercore.SessionResult{Token: knownSessionID, Status: irmaservercore.StatusInitialized, Type: irma2.ActionSigning},
 				"",
 			},
@@ -325,7 +325,7 @@ func (m *mockIrmaClient) StartSession(request interface{}, handler irmaservercor
 
 // tests using mocks
 func TestDefaultValidator_SessionStatus2(t *testing.T) {
-	authConfig := types2.AuthConfig{
+	authConfig := types.AuthConfig{
 		IrmaConfigPath:            "../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
@@ -354,9 +354,9 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 
 		orgID := registryTest.OrganizationID("1")
 		rMock.EXPECT().ReverseLookup("verpleeghuis De nootjes").Return(&db.Organization{Identifier: orgID}, nil)
-		cMock.EXPECT().SignJWT(gomock.Any(), types.KeyForEntity(types.LegalEntity{URI: orgID.String()})).Return("token", nil)
+		cMock.EXPECT().SignJWT(gomock.Any(), cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: orgID.String()})).Return("token", nil)
 
-		s, err := v.SessionStatus(types2.SessionID("known"))
+		s, err := v.SessionStatus(types.SessionID("known"))
 
 		if !assert.Nil(t, err) || !assert.NotNil(t, s) {
 			t.FailNow()
@@ -390,8 +390,8 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		result, err := validator.ValidateJwt(string(token), actingParty)
 		if assert.NoError(t, err) && assert.NotNil(t, result) {
-			assert.Equal(t, types2.ValidationState("VALID"), result.ValidationResult)
-			assert.Equal(t, types2.ContractFormat("irma"), result.ContractFormat)
+			assert.Equal(t, types.ValidationState("VALID"), result.ValidationResult)
+			assert.Equal(t, types.ContractFormat("irma"), result.ContractFormat)
 			assert.Equal(t, map[string]string{"nuts.agb.agbcode": "00000007"}, result.DisclosedAttributes)
 		}
 	})
@@ -411,13 +411,13 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 			contract.NowFunc = oldFunc
 		}()
 
-		var payload types2.NutsIdentityToken
+		var payload types.NutsIdentityToken
 
 		var claims map[string]interface{}
 		jsonString, _ := json.Marshal(payload)
 		_ = json.Unmarshal(jsonString, &claims)
 
-		token, err := cryptoInstance.SignJWT(claims, types.KeyForEntity(types.LegalEntity{URI: organizationID.String()}))
+		token, err := cryptoInstance.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: organizationID.String()}))
 		if err != nil {
 			t.FailNow()
 		}
@@ -426,7 +426,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		result, err := validator.ValidateJwt(token, actingParty)
 		if assert.Nil(t, result) && assert.NotNil(t, err) {
-			assert.EqualError(t, err, types2.ErrLegalEntityNotProvided.Error())
+			assert.EqualError(t, err, types.ErrLegalEntityNotProvided.Error())
 		}
 	})
 
@@ -459,7 +459,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		result, err := validator.ValidateJwt(string(token), "Demo EHR")
 
 		if assert.NotNil(t, result) && assert.Nil(t, err) {
-			assert.Equal(t, types2.Invalid, result.ValidationResult)
+			assert.Equal(t, types.Invalid, result.ValidationResult)
 		}
 	})
 
@@ -497,7 +497,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 			actingParty := "Demo EHR"
 			result, err := validator.ValidateJwt(string(token), actingParty)
 			if assert.NoError(t, err) && assert.NotNil(t, result) {
-				assert.Equal(t, types2.ValidationState("INVALID"), result.ValidationResult)
+				assert.Equal(t, types.ValidationState("INVALID"), result.ValidationResult)
 			}
 		}
 		os.Unsetenv("NUTS_STRICTMODE")
@@ -530,7 +530,7 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 		if assert.Nil(t, err) && assert.NotEmpty(t, tokenString) {
 			result, err := validator.ValidateJwt(tokenString, "Demo EHR")
 			if assert.NoError(t, err) && assert.NotNil(t, result) {
-				assert.Equal(t, types2.Valid, result.ValidationResult)
+				assert.Equal(t, types.Valid, result.ValidationResult)
 			}
 		}
 	})
@@ -628,7 +628,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 			"iat": 1578910481,
 			"jti": "123-456-789",
 		}
-		validJwt, err := validator.Crypto.SignJWT(claims, types.KeyForEntity(types.LegalEntity{URI: organizationID.String()}))
+		validJwt, err := validator.Crypto.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: organizationID.String()}))
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
@@ -647,7 +647,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 			"iat": 1578910481,
 			"jti": "123-456-789",
 		}
-		validJwt, err := validator.Crypto.SignJWT(claims, types.KeyForEntity(types.LegalEntity{URI: organizationID.String()}))
+		validJwt, err := validator.Crypto.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: organizationID.String()}))
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
@@ -668,7 +668,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 			"jti": "123-456-789",
 		}
 
-		validJwt, err := validator.Crypto.SignJWT(claims, types.KeyForEntity(types.LegalEntity{URI: organizationID.String()}))
+		validJwt, err := validator.Crypto.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: organizationID.String()}))
 		if !assert.Nil(t, err) {
 			t.FailNow()
 		}
@@ -691,7 +691,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 			"jti": "123-456-789",
 		}
 
-		validJwt, err := validator.Crypto.SignJWT(claims, types.KeyForEntity(types.LegalEntity{URI: claims["iss"].(core.PartyID).String()}))
+		validJwt, err := validator.Crypto.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: claims["iss"].(core.PartyID).String()}))
 		assert.Nil(t, err)
 		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
 		assert.Nil(t, response)
@@ -711,7 +711,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 		//	"iat": 1578910481,
 		//	"jti": "123-456-789",
 		//}
-		claims := types2.NutsJwtBearerToken{
+		claims := types.NutsJwtBearerToken{
 			StandardClaims: jwt.StandardClaims{
 				Audience:  "https://target_token_endpoint",
 				ExpiresAt: 4070908800,
@@ -729,8 +729,8 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 		inrec, _ := json.Marshal(claims)
 		_ = json.Unmarshal(inrec, &inInterface)
 
-		//_ = validator.crypto.GenerateKeyPairFor(types.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
-		validAccessToken, err := validator.Crypto.SignJWT(inInterface, types.KeyForEntity(types.LegalEntity{URI: claims.Issuer}))
+		//_ = validator.crypto.GenerateKeyPairFor(cryptoTypes.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
+		validAccessToken, err := validator.Crypto.SignJWT(inInterface, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: claims.Issuer}))
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
@@ -749,9 +749,9 @@ func createJwt(cryptoInstance crypto.Client, iss core.PartyID, sub core.PartyID,
 
 	encodedContract := base64.StdEncoding.EncodeToString([]byte(contractStr))
 
-	var payload types2.NutsIdentityToken
+	var payload types.NutsIdentityToken
 	payload.Issuer = iss.String()
-	payload.Type = types2.IrmaFormat
+	payload.Type = types.IrmaFormat
 	payload.Subject = sub.String()
 	payload.Signature = encodedContract
 
@@ -759,7 +759,7 @@ func createJwt(cryptoInstance crypto.Client, iss core.PartyID, sub core.PartyID,
 	var claims map[string]interface{}
 	_ = json.Unmarshal(jsonString, &claims)
 
-	tokenString, _ := cryptoInstance.SignJWT(claims, types.KeyForEntity(types.LegalEntity{URI: sub.String()}))
+	tokenString, _ := cryptoInstance.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: sub.String()}))
 
 	return []byte(tokenString)
 }
@@ -790,7 +790,7 @@ func defaultValidator(t *testing.T) (IrmaValidator, crypto.Client) {
 		t.Fatal(err)
 	}
 	address := "localhost:1323"
-	config := types2.AuthConfig{
+	config := types.AuthConfig{
 		Address:                   address,
 		IrmaSchemeManager:         "pbdf",
 		SkipAutoUpdateIrmaSchemas: true,
@@ -821,8 +821,8 @@ func defaultValidator(t *testing.T) (IrmaValidator, crypto.Client) {
 func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 	t.Run("missing subject", func(t *testing.T) {
 		v, _ := defaultValidator(t)
-		claims := &types2.NutsJwtBearerToken{}
-		identityValidationResult := &types2.ContractValidationResult{ValidationResult: types2.Valid}
+		claims := &types.NutsJwtBearerToken{}
+		identityValidationResult := &types.ContractValidationResult{ValidationResult: types.Valid}
 		token, err := v.BuildAccessToken(claims, identityValidationResult)
 		assert.Empty(t, token)
 		assert.EqualError(t, err, "could not build accessToken: subject is missing")
@@ -830,8 +830,8 @@ func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 
 	t.Run("build an access token", func(t *testing.T) {
 		v, _ := defaultValidator(t)
-		claims := &types2.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}}
-		identityValidationResult := &types2.ContractValidationResult{ValidationResult: types2.Valid}
+		claims := &types.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}}
+		identityValidationResult := &types.ContractValidationResult{ValidationResult: types.Valid}
 		token, err := v.BuildAccessToken(claims, identityValidationResult)
 		if assert.NotEmpty(t, token) {
 			subject, _ := core.ParsePartyID(claims.Subject)
@@ -859,7 +859,7 @@ func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 	t.Run("create a JwtBearerToken", func(t *testing.T) {
 		v, _ := defaultValidator(t)
-		request := types2.CreateJwtBearerTokenRequest{
+		request := types.CreateJwtBearerTokenRequest{
 			Custodian:     otherOrganizationID.String(),
 			Actor:         organizationID.String(),
 			Subject:       "789",
@@ -891,7 +891,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 		t.Skip("Disabled for now since the relation between scope, custodians and endpoints is not yet clear.")
 		v, _ := defaultValidator(t)
 
-		request := types2.CreateJwtBearerTokenRequest{
+		request := types.CreateJwtBearerTokenRequest{
 			Custodian:     "123",
 			Actor:         organizationID.String(),
 			Subject:       "789",
@@ -909,7 +909,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 	t.Run("invalid actor", func(t *testing.T) {
 		v, _ := defaultValidator(t)
 
-		request := types2.CreateJwtBearerTokenRequest{
+		request := types.CreateJwtBearerTokenRequest{
 			Custodian:     otherOrganizationID.String(),
 			Actor:         "456",
 			Subject:       "789",
@@ -928,7 +928,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 		t.Skip("Disabled for now since the relation between scope, custodians and endpoints is not yet clear.")
 		v, _ := defaultValidator(t)
 
-		request := types2.CreateJwtBearerTokenRequest{
+		request := types.CreateJwtBearerTokenRequest{
 			Custodian:     organizationID.String(),
 			Actor:         "456",
 			Subject:       "789",
@@ -947,7 +947,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 
 func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 	tokenID, _ := uuid.NewRandom()
-	buildClaims := types2.NutsJwtBearerToken{
+	buildClaims := types.NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "",
 			Id:        tokenID.String(),
@@ -962,8 +962,8 @@ func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 		Scope:         "nuts-sso",
 	}
 
-	userIdentityValidationResult := types2.ContractValidationResult{
-		ValidationResult:    types2.Valid,
+	userIdentityValidationResult := types.ContractValidationResult{
+		ValidationResult:    types.Valid,
 		ContractFormat:      "",
 		DisclosedAttributes: map[string]string{"nuts.agb.agbcode": "1234"},
 	}
@@ -975,7 +975,7 @@ func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 		// Use this code to regenerate the token if needed. Don't forget to delete the private keys from the testdata afterwards
 		//localBuildClaims := buildClaims
 		//localBuildClaims.Subject = registryTest.OrganizationID("unknown-party").String()
-		//c.GenerateKeyPair(types.KeyForEntity(types.LegalEntity{URI: localBuildClaims.Subject}))
+		//c.GenerateKeyPair(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: localBuildClaims.Subject}))
 		//token, err := v.BuildAccessToken(&localBuildClaims, &userIdentityValidationResult)
 		//t.Log(token)
 
