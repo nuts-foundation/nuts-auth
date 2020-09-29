@@ -215,7 +215,7 @@ func TestValidateContract(t *testing.T) {
 
 	irmaConfig, _ := GetIrmaConfig(authConfig)
 	irmaServer, _ := GetIrmaServer(authConfig)
-	validator := IrmaValidator{IrmaServer: irmaServer, IrmaConfig: irmaConfig, ValidContracts: contract.Contracts}
+	validator := IrmaValidator{IrmaSessionHandler: irmaServer, IrmaConfig: irmaConfig, ValidContracts: contract.Contracts}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -291,7 +291,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			v := IrmaValidator{
-				IrmaServer: tt.fields.IrmaServer,
+				IrmaSessionHandler: tt.fields.IrmaServer,
 			}
 
 			got, _ := v.SessionStatus(tt.args.id)
@@ -345,11 +345,11 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 
 		irmaConfig, _ := GetIrmaConfig(authConfig)
 		v := IrmaValidator{
-			IrmaServer:     &iMock,
-			IrmaConfig:     irmaConfig,
-			Crypto:         cMock,
-			Registry:       rMock,
-			ValidContracts: contract.Contracts,
+			IrmaSessionHandler: &iMock,
+			IrmaConfig:         irmaConfig,
+			Crypto:             cMock,
+			Registry:           rMock,
+			ValidContracts:     contract.Contracts,
 		}
 
 		orgID := registryTest.OrganizationID("1")

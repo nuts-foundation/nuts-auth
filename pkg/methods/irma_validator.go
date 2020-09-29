@@ -26,11 +26,11 @@ import (
 
 // IrmaValidator validates contracts using the irma logic.
 type IrmaValidator struct {
-	IrmaServer     types.IrmaServerClient
-	IrmaConfig     *irma.Configuration
-	Registry       registry.RegistryClient
-	Crypto         nutscrypto.Client
-	ValidContracts contract.ContractMatrix
+	IrmaSessionHandler types.IrmaSessionHandler
+	IrmaConfig         *irma.Configuration
+	Registry           registry.RegistryClient
+	Crypto             nutscrypto.Client
+	ValidContracts     contract.ContractMatrix
 }
 
 // LegacyIdentityToken is the JWT that was used as Identity token in versions prior to < 0.13
@@ -112,7 +112,7 @@ func (v IrmaValidator) ValidateJwt(token string, actingPartyCN string) (*types.C
 // SessionStatus returns the current status of a certain session.
 // It returns nil if the session is not found
 func (v IrmaValidator) SessionStatus(id types.SessionID) (*types.SessionStatusResult, error) {
-	if result := v.IrmaServer.GetSessionResult(string(id)); result != nil {
+	if result := v.IrmaSessionHandler.GetSessionResult(string(id)); result != nil {
 		var (
 			token string
 		)
@@ -251,9 +251,9 @@ func convertPayloadToClaims(payload types.NutsIdentityToken) (map[string]interfa
 }
 
 // StartSession starts an irma session.
-// This is mainly a wrapper around the irma.IrmaServer.StartSession
+// This is mainly a wrapper around the irma.IrmaSessionHandler.StartSession
 func (v IrmaValidator) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
-	return v.IrmaServer.StartSession(request, handler)
+	return v.IrmaSessionHandler.StartSession(request, handler)
 }
 
 // ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims

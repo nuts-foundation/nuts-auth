@@ -192,13 +192,14 @@ type ContractValidationResult struct {
 	DisclosedAttributes map[string]string `json:"disclosed_attributes"`
 }
 
-// IrmaServerClient is an abstraction for the Irma Server, mainly for enabling better testing
-type IrmaServerClient interface {
+// IrmaSessionHandler is an abstraction for the Irma Server, mainly for enabling better testing
+type IrmaSessionHandler interface {
 	GetSessionResult(token string) *irmaservercore.SessionResult
 	StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma.Qr, string, error)
 }
 
 // DefaultIrmaClient is a wrapper for the Irma Server
+// It implements the IrmaSessionHandler interface
 type DefaultIrmaClient struct {
 	I *irmaserver.Server
 }
