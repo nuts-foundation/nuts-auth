@@ -245,9 +245,7 @@ func (auth *Auth) generateOAuthSigningKey() (bytes []byte, err error) {
 	)
 	ec, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 
-	if der, err = x509.MarshalECPrivateKey(ec); err != nil {
-		return
-	}
+	der, _ = x509.MarshalECPrivateKey(ec)
 	bytes = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der})
 
 	if err = ioutil.WriteFile(auth.Config.OAuthSigningKey, bytes, 0660); err != nil {

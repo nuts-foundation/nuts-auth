@@ -267,6 +267,51 @@ func TestAuth_Configure(t *testing.T) {
 		}
 	})
 
+	t.Run("error - OAuth keys generated in wrong location", func(t *testing.T) {
+		i := &Auth{
+			Config: AuthConfig{
+				Mode:                      core.ServerEngineMode,
+				PublicUrl:                 "url",
+				ActingPartyCn:             "url",
+				IrmaConfigPath:            "../testdata/irma",
+				SkipAutoUpdateIrmaSchemas: true,
+				GenerateOAuthKeys:         true,
+				OAuthSigningKey:           "../testdata/oauth/missing/sk.pem",
+			},
+		}
+		assert.Error(t, i.Configure())
+	})
+
+	t.Run("ok - OAuth EC key loaded", func(t *testing.T) {
+		i := &Auth{
+			Config: AuthConfig{
+				Mode:                      core.ServerEngineMode,
+				PublicUrl:                 "url",
+				ActingPartyCn:             "url",
+				IrmaConfigPath:            "../testdata/irma",
+				SkipAutoUpdateIrmaSchemas: true,
+				GenerateOAuthKeys:         false,
+				OAuthSigningKey:           "../testdata/oauth/ec.sk",
+			},
+		}
+		assert.NoError(t, i.Configure())
+	})
+
+	t.Run("ok - OAuth RSA key loaded", func(t *testing.T) {
+		i := &Auth{
+			Config: AuthConfig{
+				Mode:                      core.ServerEngineMode,
+				PublicUrl:                 "url",
+				ActingPartyCn:             "url",
+				IrmaConfigPath:            "../testdata/irma",
+				SkipAutoUpdateIrmaSchemas: true,
+				GenerateOAuthKeys:         false,
+				OAuthSigningKey:           "../testdata/oauth/rsa.sk",
+			},
+		}
+		assert.NoError(t, i.Configure())
+	})
+
 	t.Run("ok - OAuth key loaded", func(t *testing.T) {
 		i := &Auth{
 			Config: AuthConfig{
