@@ -147,7 +147,7 @@ func Test_Integration(t *testing.T) {
 			ctx := createContext(t)
 
 			// create an id token from a valid irma contract
-			defaultValidator := methods.IrmaValidator{Crypto: ctx.auth.Crypto}
+			defaultValidator := methods.IrmaMethod{Crypto: ctx.auth.Crypto}
 			signedIrmaContract := irma.SignedMessage{}
 			_ = json.Unmarshal([]byte(testdata.ValidIrmaContract2), &signedIrmaContract)
 			contract := methods.SignedIrmaContract{IrmaContract: signedIrmaContract}

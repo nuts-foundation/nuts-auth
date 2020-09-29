@@ -10,7 +10,6 @@ import (
 
 	irma "github.com/privacybydesign/irmago"
 	irmaservercore "github.com/privacybydesign/irmago/server"
-	irmaserver "github.com/privacybydesign/irmago/server/irmaserver"
 )
 
 // JwtBearerGrantType defines the grant-type to use in the access token request
@@ -190,28 +189,6 @@ type ContractValidationResult struct {
 	ContractFormat   ContractFormat  `json:"contract_format"`
 	// DisclosedAttributes contain the attributes used to sign this contract
 	DisclosedAttributes map[string]string `json:"disclosed_attributes"`
-}
-
-// IrmaSessionHandler is an abstraction for the Irma Server, mainly for enabling better testing
-type IrmaSessionHandler interface {
-	GetSessionResult(token string) *irmaservercore.SessionResult
-	StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma.Qr, string, error)
-}
-
-// DefaultIrmaClient is a wrapper for the Irma Server
-// It implements the IrmaSessionHandler interface
-type DefaultIrmaClient struct {
-	I *irmaserver.Server
-}
-
-// GetSessionResult forwards to Irma Server instance
-func (d *DefaultIrmaClient) GetSessionResult(token string) *irmaservercore.SessionResult {
-	return d.I.GetSessionResult(token)
-}
-
-// StartSession forwards to Irma Server instance
-func (d *DefaultIrmaClient) StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma.Qr, string, error) {
-	return d.I.StartSession(request, handler)
 }
 
 // AuthConfig holds all the configuration params

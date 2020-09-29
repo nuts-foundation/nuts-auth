@@ -129,16 +129,16 @@ func (auth *Auth) Configure() (err error) {
 				return
 			}
 			auth.IrmaServer = irmaServer
-			validator := methods.IrmaValidator{
-				IrmaSessionHandler: &types.DefaultIrmaClient{I: irmaServer},
+			irmaMethod := methods.IrmaMethod{
+				IrmaSessionHandler: &methods.DefaultIrmaSessionHandler{I: irmaServer},
 				IrmaConfig:         irmaConfig,
 				Registry:           auth.Registry,
 				Crypto:             auth.Crypto,
 				ValidContracts:     auth.ValidContracts,
 			}
-			auth.ContractSessionHandler = validator
-			auth.ContractValidator = validator
-			auth.AccessTokenHandler = validator
+			auth.ContractSessionHandler = irmaMethod
+			auth.ContractValidator = irmaMethod
+			auth.AccessTokenHandler = irmaMethod
 			auth.configDone = true
 		}
 	})
