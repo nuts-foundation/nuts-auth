@@ -1,11 +1,11 @@
-package methods
+package irma
 
 import (
 	"testing"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/types"
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 
 	"github.com/nuts-foundation/nuts-auth/testdata"
 
@@ -17,7 +17,7 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 
 	irmaConfig := func(t *testing.T) *irma.Configuration {
 		t.Helper()
-		irmaConfig, err := irma.NewConfiguration("../../testdata/irma", irma.ConfigurationOptions{})
+		irmaConfig, err := irma.NewConfiguration("../../../testdata/irma", irma.ConfigurationOptions{})
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
@@ -40,7 +40,7 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
-		assert.Equal(t, types.Invalid, res.ValidationResult)
+		assert.Equal(t, services.Invalid, res.ValidationResult)
 	})
 
 	t.Run("a valid contract with a valid IRMA config is Valid", func(t *testing.T) {
@@ -54,7 +54,7 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		res, err := cv.VerifySignature(sic)
 		res, err = cv.verifyRequiredAttributes(sic, res)
 		assert.NoError(t, err)
-		assert.Equal(t, types.Valid, res.ValidationResult)
+		assert.Equal(t, services.Valid, res.ValidationResult)
 	})
 
 	t.Run("valid contract signed with wrong attributes is Invalid", func(t *testing.T) {
@@ -81,6 +81,6 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		res, err := cv.VerifySignature(sic)
 		res, err = cv.verifyRequiredAttributes(sic, res)
 		assert.NoError(t, err)
-		assert.Equal(t, types.Invalid, res.ValidationResult)
+		assert.Equal(t, services.Invalid, res.ValidationResult)
 	})
 }

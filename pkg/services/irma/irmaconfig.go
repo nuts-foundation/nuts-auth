@@ -1,12 +1,10 @@
-package methods
+package irma
 
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
-
-	"github.com/nuts-foundation/nuts-auth/pkg/types"
 
 	"github.com/pkg/errors"
 	irma "github.com/privacybydesign/irmago"
@@ -37,7 +35,7 @@ var serverOnce = new(sync.Once)
 
 // GetIrmaConfig creates and returns an IRMA config.
 // The config sets the given irma path or a temporary folder. Then it downloads the schemas.
-func GetIrmaConfig(config types.AuthConfig) (irmaConfig *irma.Configuration, err error) {
+func GetIrmaConfig(config IrmaServiceConfig) (irmaConfig *irma.Configuration, err error) {
 	irmaConfig = _irmaConfig
 
 	configOnce.Do(func() {
@@ -72,7 +70,7 @@ func GetIrmaConfig(config types.AuthConfig) (irmaConfig *irma.Configuration, err
 
 // GetIrmaServer creates and starts the irma server instance.
 // The server can be used by a IRMA client like the app to handle IRMA sessions
-func GetIrmaServer(config types.AuthConfig) (irmaServer *irmaserver.Server, err error) {
+func GetIrmaServer(config IrmaServiceConfig) (irmaServer *irmaserver.Server, err error) {
 	irmaServer = _irmaServer
 
 	serverOnce.Do(func() {
@@ -109,7 +107,7 @@ func GetIrmaServer(config types.AuthConfig) (irmaServer *irmaserver.Server, err 
 	return
 }
 
-func irmaConfigDir(config types.AuthConfig) (string, error) {
+func irmaConfigDir(config IrmaServiceConfig) (string, error) {
 	path := config.IrmaConfigPath
 
 	if path == "" {

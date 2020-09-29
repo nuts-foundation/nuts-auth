@@ -1,4 +1,4 @@
-package methods
+package irma
 
 import (
 	"encoding/base64"
@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
+
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
-
-	types "github.com/nuts-foundation/nuts-auth/pkg/types"
 
 	"github.com/nuts-foundation/nuts-auth/test"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -36,7 +36,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/nuts-foundation/nuts-auth/testdata"
-	irma2 "github.com/privacybydesign/irmago"
+	irma "github.com/privacybydesign/irmago"
 	irmaservercore "github.com/privacybydesign/irmago/server"
 	irmaserver "github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
@@ -49,7 +49,7 @@ func TestDefaultValidator_IsInitialized(t *testing.T) {
 	})
 
 	t.Run("with irma config returns true", func(t *testing.T) {
-		v := IrmaMethod{IrmaConfig: &irma2.Configuration{}}
+		v := IrmaMethod{IrmaConfig: &irma.Configuration{}}
 		assert.True(t, v.IsInitialized())
 	})
 }
@@ -57,7 +57,7 @@ func TestDefaultValidator_IsInitialized(t *testing.T) {
 func TestValidateContract(t *testing.T) {
 	type args struct {
 		contract      string
-		format        types.ContractFormat
+		format        services.ContractFormat
 		actingPartyCN string
 		legalEntity   string
 	}
@@ -66,22 +66,22 @@ func TestValidateContract(t *testing.T) {
 		name    string
 		args    args
 		date    time.Time
-		want    *types.ContractValidationResult
+		want    *services.ContractValidationResult
 		wantErr bool
 	}{
 		{
 			"a valid contract should be valid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				types.IrmaFormat,
+				services.IrmaFormat,
 				"Demo EHR",
 				"verpleeghuis De nootjes",
 			},
 			// contract is valid at 1 oct 2019 11:46:00
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
-			&types.ContractValidationResult{
-				types.Valid,
-				types.IrmaFormat,
+			&services.ContractValidationResult{
+				services.Valid,
+				services.IrmaFormat,
 				map[string]string{"nuts.agb.agbcode": "00000007"},
 			},
 			false,
@@ -90,14 +90,14 @@ func TestValidateContract(t *testing.T) {
 			"a valid contract with the wrong actingPartyCn is invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				types.IrmaFormat,
+				services.IrmaFormat,
 				"Awesome ECD!!",
 				"legalEntity",
 			},
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
-			&types.ContractValidationResult{
-				types.Invalid,
-				types.IrmaFormat,
+			&services.ContractValidationResult{
+				services.Invalid,
+				services.IrmaFormat,
 				map[string]string{"nuts.agb.agbcode": "00000007"},
 			},
 			false,
@@ -106,7 +106,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid contract without a provided actingParty returns an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				types.IrmaFormat,
+				services.IrmaFormat,
 				"",
 				"legalEntity",
 			},
@@ -118,14 +118,14 @@ func TestValidateContract(t *testing.T) {
 			"an expired contract should be invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidIrmaContract)),
-				types.IrmaFormat,
+				services.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
 			time.Date(2019, time.October, 2, 13, 46, 00, 0, location),
-			&types.ContractValidationResult{
-				types.Invalid,
-				types.IrmaFormat,
+			&services.ContractValidationResult{
+				services.Invalid,
+				services.IrmaFormat,
 				map[string]string{"nuts.agb.agbcode": "00000007"},
 			},
 			false,
@@ -134,14 +134,14 @@ func TestValidateContract(t *testing.T) {
 			"a forged contract it should be invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ForgedIrmaContract)),
-				types.IrmaFormat,
+				services.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
-			&types.ContractValidationResult{
-				types.Invalid,
-				types.IrmaFormat,
+			&services.ContractValidationResult{
+				services.Invalid,
+				services.IrmaFormat,
 				nil,
 			},
 			false,
@@ -150,7 +150,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid but unknown contract should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ValidUnknownIrmaContract)),
-				types.IrmaFormat,
+				services.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
@@ -162,7 +162,7 @@ func TestValidateContract(t *testing.T) {
 			"a valid json string which is not a contract should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.InvalidContract)),
-				types.IrmaFormat,
+				services.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
@@ -174,7 +174,7 @@ func TestValidateContract(t *testing.T) {
 			"a random string should give an error",
 			args{
 				base64.StdEncoding.EncodeToString([]byte("some string which is not json")),
-				types.IrmaFormat,
+				services.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
@@ -186,7 +186,7 @@ func TestValidateContract(t *testing.T) {
 			"an invalid base64 contract should give an error",
 			args{
 				"invalid base64",
-				types.IrmaFormat,
+				services.IrmaFormat,
 				"Helder",
 				"legalEntity",
 			},
@@ -208,8 +208,8 @@ func TestValidateContract(t *testing.T) {
 		},
 	}
 
-	authConfig := types.AuthConfig{
-		IrmaConfigPath:            "../../testdata/irma",
+	authConfig := IrmaServiceConfig{
+		IrmaConfigPath:            "../../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 
@@ -233,28 +233,28 @@ func TestValidateContract(t *testing.T) {
 }
 
 func TestDefaultValidator_SessionStatus(t *testing.T) {
-	authConfig := types.AuthConfig{
-		IrmaConfigPath:            "../../testdata/irma",
+	serviceConfig := IrmaServiceConfig{
+		IrmaConfigPath:            "../../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 
-	signatureRequest := &irma2.SignatureRequest{
+	signatureRequest := &irma.SignatureRequest{
 		Message: "Ik ga akkoord",
-		DisclosureRequest: irma2.DisclosureRequest{
-			BaseRequest: irma2.BaseRequest{
-				Type: irma2.ActionSigning,
+		DisclosureRequest: irma.DisclosureRequest{
+			BaseRequest: irma.BaseRequest{
+				Type: irma.ActionSigning,
 			},
-			Disclose: irma2.AttributeConDisCon{
-				irma2.AttributeDisCon{
-					irma2.AttributeCon{
-						irma2.NewAttributeRequest("irma-demo.nuts.agb.agbcode"),
+			Disclose: irma.AttributeConDisCon{
+				irma.AttributeDisCon{
+					irma.AttributeCon{
+						irma.NewAttributeRequest("irma-demo.nuts.agb.agbcode"),
 					},
 				},
 			},
 		},
 	}
 
-	irmaServer, _ := GetIrmaServer(authConfig)
+	irmaServer, _ := GetIrmaServer(serviceConfig)
 	_, knownSessionID, _ := irmaServer.StartSession(signatureRequest, func(result *irmaservercore.SessionResult) {
 		logrus.Infof("session done, result: %s", irmaservercore.ToJson(result))
 	})
@@ -263,14 +263,14 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 		IrmaServer *irmaserver.Server
 	}
 	type args struct {
-		id types.SessionID
+		id services.SessionID
 	}
-	irmaServer, _ = GetIrmaServer(authConfig)
+	irmaServer, _ = GetIrmaServer(serviceConfig)
 	tests := []struct {
 		name   string
 		fields fields
 		args   args
-		want   *types.SessionStatusResult
+		want   *services.SessionStatusResult
 	}{
 		{
 			"for an unknown session, it returns nil",
@@ -281,9 +281,9 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 		{
 			"for a known session it returns a status",
 			fields{irmaServer},
-			args{types.SessionID(knownSessionID)},
-			&types.SessionStatusResult{
-				irmaservercore.SessionResult{Token: knownSessionID, Status: irmaservercore.StatusInitialized, Type: irma2.ActionSigning},
+			args{services.SessionID(knownSessionID)},
+			&services.SessionStatusResult{
+				irmaservercore.SessionResult{Token: knownSessionID, Status: irmaservercore.StatusInitialized, Type: irma.ActionSigning},
 				"",
 			},
 		},
@@ -315,7 +315,7 @@ func (m *mockIrmaClient) GetSessionResult(token string) *irmaservercore.SessionR
 	return &m.sessionResult
 }
 
-func (m *mockIrmaClient) StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma2.Qr, string, error) {
+func (m *mockIrmaClient) StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma.Qr, string, error) {
 	if m.err != nil {
 		return nil, "", m.err
 	}
@@ -325,8 +325,8 @@ func (m *mockIrmaClient) StartSession(request interface{}, handler irmaservercor
 
 // tests using mocks
 func TestDefaultValidator_SessionStatus2(t *testing.T) {
-	authConfig := types.AuthConfig{
-		IrmaConfigPath:            "../../testdata/irma",
+	serviceConfig := IrmaServiceConfig{
+		IrmaConfigPath:            "../../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 
@@ -337,13 +337,13 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 		iMock := mockIrmaClient{
 			sessionResult: irmaservercore.SessionResult{
 				Token: "token",
-				Signature: &irma2.SignedMessage{
+				Signature: &irma.SignedMessage{
 					Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens verpleeghuis De nootjes en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
 				},
 			},
 		}
 
-		irmaConfig, _ := GetIrmaConfig(authConfig)
+		irmaConfig, _ := GetIrmaConfig(serviceConfig)
 		v := IrmaMethod{
 			IrmaSessionHandler: &iMock,
 			IrmaConfig:         irmaConfig,
@@ -356,7 +356,7 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 		rMock.EXPECT().ReverseLookup("verpleeghuis De nootjes").Return(&db.Organization{Identifier: orgID}, nil)
 		cMock.EXPECT().SignJWT(gomock.Any(), cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: orgID.String()})).Return("token", nil)
 
-		s, err := v.SessionStatus(types.SessionID("known"))
+		s, err := v.SessionStatus(services.SessionID("known"))
 
 		if !assert.Nil(t, err) || !assert.NotNil(t, s) {
 			t.FailNow()
@@ -390,8 +390,8 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		result, err := validator.ValidateJwt(string(token), actingParty)
 		if assert.NoError(t, err) && assert.NotNil(t, result) {
-			assert.Equal(t, types.ValidationState("VALID"), result.ValidationResult)
-			assert.Equal(t, types.ContractFormat("irma"), result.ContractFormat)
+			assert.Equal(t, services.ValidationState("VALID"), result.ValidationResult)
+			assert.Equal(t, services.ContractFormat("irma"), result.ContractFormat)
 			assert.Equal(t, map[string]string{"nuts.agb.agbcode": "00000007"}, result.DisclosedAttributes)
 		}
 	})
@@ -411,7 +411,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 			contract.NowFunc = oldFunc
 		}()
 
-		var payload types.NutsIdentityToken
+		var payload services.NutsIdentityToken
 
 		var claims map[string]interface{}
 		jsonString, _ := json.Marshal(payload)
@@ -426,7 +426,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		result, err := validator.ValidateJwt(token, actingParty)
 		if assert.Nil(t, result) && assert.NotNil(t, err) {
-			assert.EqualError(t, err, types.ErrLegalEntityNotProvided.Error())
+			assert.EqualError(t, err, ErrLegalEntityNotProvided.Error())
 		}
 	})
 
@@ -459,7 +459,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		result, err := validator.ValidateJwt(string(token), "Demo EHR")
 
 		if assert.NotNil(t, result) && assert.Nil(t, err) {
-			assert.Equal(t, types.Invalid, result.ValidationResult)
+			assert.Equal(t, services.Invalid, result.ValidationResult)
 		}
 	})
 
@@ -497,7 +497,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 			actingParty := "Demo EHR"
 			result, err := validator.ValidateJwt(string(token), actingParty)
 			if assert.NoError(t, err) && assert.NotNil(t, result) {
-				assert.Equal(t, types.ValidationState("INVALID"), result.ValidationResult)
+				assert.Equal(t, services.ValidationState("INVALID"), result.ValidationResult)
 			}
 		}
 		os.Unsetenv("NUTS_STRICTMODE")
@@ -530,7 +530,7 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 		if assert.Nil(t, err) && assert.NotEmpty(t, tokenString) {
 			result, err := validator.ValidateJwt(tokenString, "Demo EHR")
 			if assert.NoError(t, err) && assert.NotNil(t, result) {
-				assert.Equal(t, types.Valid, result.ValidationResult)
+				assert.Equal(t, services.Valid, result.ValidationResult)
 			}
 		}
 	})
@@ -556,7 +556,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	t.Run("Empty message returns error", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma2.SignedMessage{}, ContractTemplate: &contract.ContractTemplate{}})
+		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma.SignedMessage{}, ContractTemplate: &contract.ContractTemplate{}})
 
 		assert.NotNil(t, err)
 		assert.Error(t, contract.ErrInvalidContractText, err)
@@ -566,7 +566,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{
-			IrmaContract: irma2.SignedMessage{
+			IrmaContract: irma.SignedMessage{
 				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens  en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
 			},
 			ContractTemplate: contract.Contracts["NL"]["BehandelaarLogin"]["v1"],
@@ -583,7 +583,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 		ctx.rMock.EXPECT().ReverseLookup("UNKNOWN").Return(nil, db.ErrOrganizationNotFound)
 
 		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{
-			IrmaContract: irma2.SignedMessage{
+			IrmaContract: irma.SignedMessage{
 				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens UNKNOWN en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
 			},
 			ContractTemplate: contract.Contracts["NL"]["BehandelaarLogin"]["v1"],
@@ -711,7 +711,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 		//	"iat": 1578910481,
 		//	"jti": "123-456-789",
 		//}
-		claims := types.NutsJwtBearerToken{
+		claims := services.NutsJwtBearerToken{
 			StandardClaims: jwt.StandardClaims{
 				Audience:  "https://target_token_endpoint",
 				ExpiresAt: 4070908800,
@@ -749,9 +749,9 @@ func createJwt(cryptoInstance crypto.Client, iss core.PartyID, sub core.PartyID,
 
 	encodedContract := base64.StdEncoding.EncodeToString([]byte(contractStr))
 
-	var payload types.NutsIdentityToken
+	var payload services.NutsIdentityToken
 	payload.Issuer = iss.String()
-	payload.Type = types.IrmaFormat
+	payload.Type = services.IrmaFormat
 	payload.Subject = sub.String()
 	payload.Signature = encodedContract
 
@@ -774,7 +774,6 @@ func defaultValidator(t *testing.T) (IrmaMethod, crypto.Client) {
 	os.Setenv("NUTS_IDENTITY", registryTest.VendorID("1234").String())
 	core.NutsConfig().Load(&cobra.Command{})
 	testDirectory := io.TestDirectory(t)
-	//auth := pkg.NewTestAuthInstance(testDirectory)
 	testCrypto := crypto.NewTestCryptoInstance(testDirectory)
 	testRegistry := registry.NewTestRegistryInstance(testDirectory)
 
@@ -790,23 +789,23 @@ func defaultValidator(t *testing.T) (IrmaMethod, crypto.Client) {
 		t.Fatal(err)
 	}
 	address := "localhost:1323"
-	config := types.AuthConfig{
+	serviceConfig := IrmaServiceConfig{
 		Address:                   address,
 		IrmaSchemeManager:         "pbdf",
 		SkipAutoUpdateIrmaSchemas: true,
 		IrmaConfigPath:            path.Join(testDirectory, "auth", "irma"),
-		ActingPartyCn:             "CN=Awesomesoft",
-		PublicUrl:                 "http://" + address,
+		//ActingPartyCn:             "CN=Awesomesoft",
+		PublicUrl: "http://" + address,
 	}
-	if err := os.MkdirAll(config.IrmaConfigPath, 0777); err != nil {
+	if err := os.MkdirAll(serviceConfig.IrmaConfigPath, 0777); err != nil {
 		logrus.Fatal(err)
 	}
-	if err := test.CopyDir("../../testdata/irma", config.IrmaConfigPath); err != nil {
+	if err := test.CopyDir("../../../testdata/irma", serviceConfig.IrmaConfigPath); err != nil {
 		logrus.Fatal(err)
 	}
-	config.IrmaSchemeManager = "irma-demo"
+	serviceConfig.IrmaSchemeManager = "irma-demo"
 
-	irmaConfig, err := GetIrmaConfig(config)
+	irmaConfig, err := GetIrmaConfig(serviceConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -821,8 +820,8 @@ func defaultValidator(t *testing.T) (IrmaMethod, crypto.Client) {
 func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 	t.Run("missing subject", func(t *testing.T) {
 		v, _ := defaultValidator(t)
-		claims := &types.NutsJwtBearerToken{}
-		identityValidationResult := &types.ContractValidationResult{ValidationResult: types.Valid}
+		claims := &services.NutsJwtBearerToken{}
+		identityValidationResult := &services.ContractValidationResult{ValidationResult: services.Valid}
 		token, err := v.BuildAccessToken(claims, identityValidationResult)
 		assert.Empty(t, token)
 		assert.EqualError(t, err, "could not build accessToken: subject is missing")
@@ -830,8 +829,8 @@ func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 
 	t.Run("build an access token", func(t *testing.T) {
 		v, _ := defaultValidator(t)
-		claims := &types.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}}
-		identityValidationResult := &types.ContractValidationResult{ValidationResult: types.Valid}
+		claims := &services.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}}
+		identityValidationResult := &services.ContractValidationResult{ValidationResult: services.Valid}
 		token, err := v.BuildAccessToken(claims, identityValidationResult)
 		if assert.NotEmpty(t, token) {
 			subject, _ := core.ParsePartyID(claims.Subject)
@@ -859,7 +858,7 @@ func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 	t.Run("create a JwtBearerToken", func(t *testing.T) {
 		v, _ := defaultValidator(t)
-		request := types.CreateJwtBearerTokenRequest{
+		request := services.CreateJwtBearerTokenRequest{
 			Custodian:     otherOrganizationID.String(),
 			Actor:         organizationID.String(),
 			Subject:       "789",
@@ -891,7 +890,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 		t.Skip("Disabled for now since the relation between scope, custodians and endpoints is not yet clear.")
 		v, _ := defaultValidator(t)
 
-		request := types.CreateJwtBearerTokenRequest{
+		request := services.CreateJwtBearerTokenRequest{
 			Custodian:     "123",
 			Actor:         organizationID.String(),
 			Subject:       "789",
@@ -909,7 +908,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 	t.Run("invalid actor", func(t *testing.T) {
 		v, _ := defaultValidator(t)
 
-		request := types.CreateJwtBearerTokenRequest{
+		request := services.CreateJwtBearerTokenRequest{
 			Custodian:     otherOrganizationID.String(),
 			Actor:         "456",
 			Subject:       "789",
@@ -928,7 +927,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 		t.Skip("Disabled for now since the relation between scope, custodians and endpoints is not yet clear.")
 		v, _ := defaultValidator(t)
 
-		request := types.CreateJwtBearerTokenRequest{
+		request := services.CreateJwtBearerTokenRequest{
 			Custodian:     organizationID.String(),
 			Actor:         "456",
 			Subject:       "789",
@@ -947,7 +946,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 
 func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 	tokenID, _ := uuid.NewRandom()
-	buildClaims := types.NutsJwtBearerToken{
+	buildClaims := services.NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "",
 			Id:        tokenID.String(),
@@ -962,8 +961,8 @@ func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 		Scope:         "nuts-sso",
 	}
 
-	userIdentityValidationResult := types.ContractValidationResult{
-		ValidationResult:    types.Valid,
+	userIdentityValidationResult := services.ContractValidationResult{
+		ValidationResult:    services.Valid,
 		ContractFormat:      "",
 		DisclosedAttributes: map[string]string{"nuts.agb.agbcode": "1234"},
 	}

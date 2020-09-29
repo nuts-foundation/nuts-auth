@@ -1,8 +1,9 @@
-package types
+package services
 
 import (
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
@@ -74,4 +75,35 @@ type AccessTokenResponse struct {
 // JwtBearerTokenResponse defines the return value back to the api for the createJwtBearerToken method
 type JwtBearerTokenResponse struct {
 	BearerToken string
+}
+
+// NutsJwtBearerToken contains the deserialized Jwt Bearer Token as defined in rfc7523. It contains a NutsIdentity token which can be
+// verified by the authorization server.
+type NutsJwtBearerToken struct {
+	jwt.StandardClaims
+	IdentityToken string `json:"usi"`
+	SubjectID     string `json:"sid"`
+	Scope         string `json:"scope"`
+}
+
+// NutsAccessToken is a OAuth 2.0 access token which provides context to a request.
+// Its contents are derived from a Jwt Bearer token. The Jwt Bearer token is verified by the authorization server and
+// stripped from the proof to make it compact.
+type NutsAccessToken struct {
+	jwt.StandardClaims
+	SubjectID  string `json:"sid"`
+	Scope      string `json:"scope"`
+	Name       string `json:"name"`
+	GivenName  string `json:"given_name"`
+	Prefix     string `json:"prefix"`
+	FamilyName string `json:"family_name"`
+	Email      string `json:"email"`
+}
+
+// ContractValidationResult contains the result of a contract validation
+type ContractValidationResult struct {
+	ValidationResult ValidationState `json:"validation_result"`
+	ContractFormat   ContractFormat  `json:"contract_format"`
+	// DisclosedAttributes contain the attributes used to sign this contract
+	DisclosedAttributes map[string]string `json:"disclosed_attributes"`
 }

@@ -10,11 +10,9 @@ import (
 	"testing"
 	"time"
 
+	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
-
-	"github.com/nuts-foundation/nuts-auth/pkg/types"
-
-	"github.com/nuts-foundation/nuts-auth/pkg/methods"
 
 	test2 "github.com/nuts-foundation/nuts-auth/test"
 	"github.com/nuts-foundation/nuts-go-test/io"
@@ -147,10 +145,10 @@ func Test_Integration(t *testing.T) {
 			ctx := createContext(t)
 
 			// create an id token from a valid irma contract
-			defaultValidator := methods.IrmaMethod{Crypto: ctx.auth.Crypto}
+			defaultValidator := irmaService.IrmaMethod{Crypto: ctx.auth.Crypto}
 			signedIrmaContract := irma.SignedMessage{}
 			_ = json.Unmarshal([]byte(testdata.ValidIrmaContract2), &signedIrmaContract)
-			contract := methods.SignedIrmaContract{IrmaContract: signedIrmaContract}
+			contract := irmaService.SignedIrmaContract{IrmaContract: signedIrmaContract}
 			idToken, err := defaultValidator.CreateIdentityTokenFromIrmaContract(&contract, organizationID)
 			if !assert.NoError(t, err) {
 				t.FailNow()
@@ -178,7 +176,7 @@ func Test_Integration(t *testing.T) {
 			printTokenConents(t, "jwtBearerToken", jwtBearerTokenResponse.BearerToken)
 
 			// make sure the echo mock returns the correct form values
-			ctx.echoMock.EXPECT().FormValue("grant_type").Return(types.JwtBearerGrantType)
+			ctx.echoMock.EXPECT().FormValue("grant_type").Return(pkg.JwtBearerGrantType)
 			ctx.echoMock.EXPECT().FormValue("assertion").Return(jwtBearerTokenResponse.BearerToken)
 
 			// store the response for later use

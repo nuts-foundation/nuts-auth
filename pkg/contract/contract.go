@@ -217,3 +217,9 @@ func (c ContractTemplate) ValidateTimeFrame(params map[string]string) (bool, err
 }
 
 type ContractMatrix map[Language]map[ContractType]map[Version]*ContractTemplate
+
+// ErrUnknownContractFormat is returned when the contract format is unknown
+var ErrUnknownContractFormat = errors.New("unknown contract format")
+
+// ErrInvalidContractFormat indicates tha a contract format is unknown.
+var ErrInvalidContractFormat = errors.New("unknown contract type")

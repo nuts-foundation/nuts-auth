@@ -7,10 +7,11 @@ package mock
 import (
 	reflect "reflect"
 
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
+
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/nuts-foundation/nuts-auth/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 )
 
@@ -38,10 +39,10 @@ func (m *MockAuthClient) EXPECT() *MockAuthClientMockRecorder {
 }
 
 // CreateContractSession mocks base method
-func (m *MockAuthClient) CreateContractSession(sessionRequest types.CreateSessionRequest) (*types.CreateSessionResult, error) {
+func (m *MockAuthClient) CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateContractSession", sessionRequest)
-	ret0, _ := ret[0].(*types.CreateSessionResult)
+	ret0, _ := ret[0].(*services.CreateSessionResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -53,10 +54,10 @@ func (mr *MockAuthClientMockRecorder) CreateContractSession(sessionRequest inter
 }
 
 // ContractSessionStatus mocks base method
-func (m *MockAuthClient) ContractSessionStatus(sessionID string) (*types.SessionStatusResult, error) {
+func (m *MockAuthClient) ContractSessionStatus(sessionID string) (*services.SessionStatusResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContractSessionStatus", sessionID)
-	ret0, _ := ret[0].(*types.SessionStatusResult)
+	ret0, _ := ret[0].(*services.SessionStatusResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -83,10 +84,10 @@ func (mr *MockAuthClientMockRecorder) ContractByType(contractType, language, ver
 }
 
 // ValidateContract mocks base method
-func (m *MockAuthClient) ValidateContract(request types.ValidationRequest) (*types.ContractValidationResult, error) {
+func (m *MockAuthClient) ValidateContract(request services.ValidationRequest) (*services.ContractValidationResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidateContract", request)
-	ret0, _ := ret[0].(*types.ContractValidationResult)
+	ret0, _ := ret[0].(*services.ContractValidationResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -98,10 +99,10 @@ func (mr *MockAuthClientMockRecorder) ValidateContract(request interface{}) *gom
 }
 
 // CreateAccessToken mocks base method
-func (m *MockAuthClient) CreateAccessToken(request types.CreateAccessTokenRequest) (*types.AccessTokenResponse, error) {
+func (m *MockAuthClient) CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateAccessToken", request)
-	ret0, _ := ret[0].(*types.AccessTokenResponse)
+	ret0, _ := ret[0].(*services.AccessTokenResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -113,10 +114,10 @@ func (mr *MockAuthClientMockRecorder) CreateAccessToken(request interface{}) *go
 }
 
 // CreateJwtBearerToken mocks base method
-func (m *MockAuthClient) CreateJwtBearerToken(request types.CreateJwtBearerTokenRequest) (*types.JwtBearerTokenResponse, error) {
+func (m *MockAuthClient) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateJwtBearerToken", request)
-	ret0, _ := ret[0].(*types.JwtBearerTokenResponse)
+	ret0, _ := ret[0].(*services.JwtBearerTokenResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -128,10 +129,10 @@ func (mr *MockAuthClientMockRecorder) CreateJwtBearerToken(request interface{}) 
 }
 
 // IntrospectAccessToken mocks base method
-func (m *MockAuthClient) IntrospectAccessToken(token string) (*types.NutsAccessToken, error) {
+func (m *MockAuthClient) IntrospectAccessToken(token string) (*services.NutsAccessToken, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IntrospectAccessToken", token)
-	ret0, _ := ret[0].(*types.NutsAccessToken)
+	ret0, _ := ret[0].(*services.NutsAccessToken)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

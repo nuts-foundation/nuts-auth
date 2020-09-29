@@ -7,9 +7,10 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
+
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 
 	"github.com/labstack/echo/v4"
@@ -71,7 +72,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	}
 
 	// convert generated api format to internal struct
-	sessionRequest := types.CreateSessionRequest{
+	sessionRequest := services.CreateSessionRequest{
 		Type:        contract.ContractType(params.Type),
 		Version:     contract.Version(params.Version),
 		Language:    contract.Language(params.Language),
@@ -105,7 +106,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) error {
 	sessionStatus, err := api.Auth.ContractSessionStatus(sessionID)
 	if err != nil {
-		if errors.Is(err, types.ErrSessionNotFound) {
+		if errors.Is(err, services.ErrSessionNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -159,8 +160,8 @@ func (api *Wrapper) ValidateContract(ctx echo.Context) error {
 	}
 	logrus.Debug(params)
 
-	validationRequest := types.ValidationRequest{
-		ContractFormat: types.ContractFormat(params.ContractFormat),
+	validationRequest := services.ValidationRequest{
+		ContractFormat: services.ContractFormat(params.ContractFormat),
 		ContractString: params.ContractString,
 		ActingPartyCN:  params.ActingPartyCn,
 	}
@@ -229,8 +230,8 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 	request.Assertion = ctx.FormValue("assertion")
 	request.GrantType = ctx.FormValue("grant_type")
 
-	if request.GrantType != types.JwtBearerGrantType {
-		errDesc := fmt.Sprintf("grant_type must be: '%s'", types.JwtBearerGrantType)
+	if request.GrantType != pkg.JwtBearerGrantType {
+		errDesc := fmt.Sprintf("grant_type must be: '%s'", pkg.JwtBearerGrantType)
 		errorResponse := AccessTokenRequestFailedResponse{Error: "unsupported_grant_type", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
@@ -247,7 +248,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-	catRequest := types.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: vendorID}
+	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: vendorID}
 	acResponse, err := api.Auth.CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()
@@ -266,7 +267,7 @@ func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
 		return err
 	}
 
-	request := types.CreateJwtBearerTokenRequest{
+	request := services.CreateJwtBearerTokenRequest{
 		Actor:         requestBody.Actor,
 		Custodian:     requestBody.Custodian,
 		IdentityToken: requestBody.Identity,

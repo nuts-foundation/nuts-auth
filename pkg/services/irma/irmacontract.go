@@ -1,4 +1,4 @@
-package methods
+package irma
 
 import (
 	"encoding/json"
@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/types"
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 
 	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
@@ -54,7 +54,7 @@ func (cv *IrmaContractVerifier) ParseSignedIrmaContract(rawContract string) (*Si
 	return signedContract, nil
 }
 
-func (cv *IrmaContractVerifier) VerifyAll(signedContract *SignedIrmaContract, actingPartyCn string) (*types.ContractValidationResult, error) {
+func (cv *IrmaContractVerifier) VerifyAll(signedContract *SignedIrmaContract, actingPartyCn string) (*services.ContractValidationResult, error) {
 	res, err := cv.VerifySignature(signedContract)
 	if err != nil {
 		return res, err
@@ -69,7 +69,7 @@ func (cv *IrmaContractVerifier) VerifyAll(signedContract *SignedIrmaContract, ac
 // VerifySignature verifies the IRMA signature.
 // Returns a ContractValidationResult
 // Note: This method only checks the IRMA crypto, not the attributes used or the contents of the contract.
-func (cv *IrmaContractVerifier) VerifySignature(signedContract *SignedIrmaContract) (*types.ContractValidationResult, error) {
+func (cv *IrmaContractVerifier) VerifySignature(signedContract *SignedIrmaContract) (*services.ContractValidationResult, error) {
 	// Actual verification
 	attributes, status, err := signedContract.IrmaContract.Verify(cv.irmaConfig, nil)
 	if err != nil {
@@ -78,9 +78,9 @@ func (cv *IrmaContractVerifier) VerifySignature(signedContract *SignedIrmaContra
 
 	var disclosedAttributes map[string]string
 	// wrapper around irma status result
-	validationResult := types.Invalid
+	validationResult := services.Invalid
 	if status == irma.ProofStatusValid {
-		validationResult = types.Valid
+		validationResult = services.Valid
 
 		// a contract needs attributes
 		if len(attributes) == 0 {
@@ -95,7 +95,7 @@ func (cv *IrmaContractVerifier) VerifySignature(signedContract *SignedIrmaContra
 			schemaManager := att.Identifier.Root()
 			if strictMode && schemaManager != "pbdf" {
 				logrus.Infof("IRMA schemeManager %s is not valid in strictMode", schemaManager)
-				validationResult = types.Invalid
+				validationResult = services.Invalid
 			}
 			identifier := att.Identifier.String()
 			// strip of the schemeManager
@@ -107,9 +107,9 @@ func (cv *IrmaContractVerifier) VerifySignature(signedContract *SignedIrmaContra
 	}
 
 	// Assemble and return the validation response
-	return &types.ContractValidationResult{
+	return &services.ContractValidationResult{
 		validationResult,
-		types.IrmaFormat,
+		services.IrmaFormat,
 		disclosedAttributes,
 	}, nil
 
@@ -117,8 +117,8 @@ func (cv *IrmaContractVerifier) VerifySignature(signedContract *SignedIrmaContra
 
 // ValidateContractContents validates at the actual contract contents.
 // Is the timeframe valid and does the common name corresponds with the contract message.
-func (cv *IrmaContractVerifier) ValidateContractContents(signedContract *SignedIrmaContract, validationResult *types.ContractValidationResult, actingPartyCn string) (*types.ContractValidationResult, error) {
-	if validationResult.ValidationResult == types.Invalid {
+func (cv *IrmaContractVerifier) ValidateContractContents(signedContract *SignedIrmaContract, validationResult *services.ContractValidationResult, actingPartyCn string) (*services.ContractValidationResult, error) {
+	if validationResult.ValidationResult == services.Invalid {
 		return validationResult, nil
 	}
 
@@ -130,7 +130,7 @@ func (cv *IrmaContractVerifier) ValidateContractContents(signedContract *SignedI
 	// Validate time frame
 	ok, err := signedContract.ContractTemplate.ValidateTimeFrame(params)
 	if !ok || err != nil {
-		validationResult.ValidationResult = types.Invalid
+		validationResult.ValidationResult = services.Invalid
 		return validationResult, err
 	}
 
@@ -140,7 +140,7 @@ func (cv *IrmaContractVerifier) ValidateContractContents(signedContract *SignedI
 		return nil, err
 	}
 	if !ok {
-		validationResult.ValidationResult = types.Invalid
+		validationResult.ValidationResult = services.Invalid
 		return validationResult, nil
 	}
 
@@ -168,8 +168,8 @@ func validateActingParty(params map[string]string, actingParty string) (bool, er
 	return actingParty == actingPartyFromContract, nil
 }
 
-func (cv *IrmaContractVerifier) verifyRequiredAttributes(signedIrmaContract *SignedIrmaContract, validationResult *types.ContractValidationResult) (*types.ContractValidationResult, error) {
-	if validationResult.ValidationResult == types.Invalid {
+func (cv *IrmaContractVerifier) verifyRequiredAttributes(signedIrmaContract *SignedIrmaContract, validationResult *services.ContractValidationResult) (*services.ContractValidationResult, error) {
+	if validationResult.ValidationResult == services.Invalid {
 		return validationResult, nil
 	}
 
@@ -200,7 +200,7 @@ func (cv *IrmaContractVerifier) verifyRequiredAttributes(signedIrmaContract *Sig
 		for k := range validationResult.DisclosedAttributes {
 			disclosedAttributes = append(disclosedAttributes, k)
 		}
-		validationResult.ValidationResult = types.Invalid
+		validationResult.ValidationResult = services.Invalid
 		logrus.Infof("missing required attributes in signature. found: %v, needed: %v, disclosed: %v", foundAttributes, requiredAttributes, disclosedAttributes)
 	}
 
