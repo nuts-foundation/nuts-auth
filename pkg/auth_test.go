@@ -228,6 +228,59 @@ func TestAuth_Configure(t *testing.T) {
 			return
 		}
 	})
+
+	t.Run("error - Missing oauth file", func(t *testing.T) {
+		i := &Auth{
+			Config: AuthConfig{
+				Mode:                      core.ServerEngineMode,
+				PublicUrl:                 "url",
+				ActingPartyCn:             "url",
+				IrmaConfigPath:            "../testdata/irma",
+				SkipAutoUpdateIrmaSchemas: true,
+				GenerateOAuthKeys:         false,
+				OAuthSigningKey:           "../testdata/oauth/missing.pem",
+			},
+		}
+		assert.Error(t, i.Configure())
+	})
+
+	t.Run("ok - OAuth keys generated", func(t *testing.T) {
+		dir := io.TestDirectory(t)
+		pkf := fmt.Sprintf("%s/new.pem", dir)
+		i := &Auth{
+			Config: AuthConfig{
+				Mode:                      core.ServerEngineMode,
+				PublicUrl:                 "url",
+				ActingPartyCn:             "url",
+				IrmaConfigPath:            "../testdata/irma",
+				SkipAutoUpdateIrmaSchemas: true,
+				GenerateOAuthKeys:         true,
+				OAuthSigningKey:           pkf,
+			},
+		}
+		if assert.NoError(t, i.Configure()) {
+			_, err := os.Stat(pkf)
+			assert.NoError(t, err)
+
+			_, err = os.Stat(fmt.Sprintf("%s/new.pub", dir))
+			assert.NoError(t, err)
+		}
+	})
+
+	t.Run("ok - OAuth key loaded", func(t *testing.T) {
+		i := &Auth{
+			Config: AuthConfig{
+				Mode:                      core.ServerEngineMode,
+				PublicUrl:                 "url",
+				ActingPartyCn:             "url",
+				IrmaConfigPath:            "../testdata/irma",
+				SkipAutoUpdateIrmaSchemas: true,
+				GenerateOAuthKeys:         false,
+				OAuthSigningKey:           "../testdata/oauth/sk.pem",
+			},
+		}
+		assert.NoError(t, i.Configure())
+	})
 }
 
 func TestAuth_ContractSessionStatus(t *testing.T) {

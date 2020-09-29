@@ -1,6 +1,7 @@
 package oauth
 
 import (
+	"crypto"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,6 +22,7 @@ var _ services.AccessTokenHandler = (*OAuthService)(nil)
 type OAuthService struct {
 	Crypto   nutsCrypto.Client
 	Registry nutsRegistry.RegistryClient
+	Signer   crypto.Signer
 }
 
 // CreateJwtBearerToken creates a JwtBearerTokenResult containing a jwtBearerToken from a CreateJwtBearerTokenRequest.

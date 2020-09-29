@@ -14,4 +14,6 @@ type AuthConfig struct {
 	SkipAutoUpdateIrmaSchemas bool
 	ActingPartyCn             string
 	EnableCORS                bool
+	GenerateOAuthKeys         bool
+	OAuthSigningKey           string
 }

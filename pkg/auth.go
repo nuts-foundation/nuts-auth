@@ -1,9 +1,18 @@
 package pkg
 
 import (
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -21,7 +30,7 @@ import (
 	core "github.com/nuts-foundation/nuts-go-core"
 
 	"github.com/mdp/qrterminal/v3"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
@@ -42,6 +51,12 @@ const ConfEnableCORS = "enableCORS"
 
 // ConfActingPartyCN is the config key to provide the Acting party common name
 const ConfActingPartyCN = "actingPartyCn"
+
+// ConfGenerateOAuthKeys enables key generation for JWT signing keys used in the oauth flow.
+const ConfGenerateOAuthKeys = "oAuthKeyGeneration"
+
+// ConfOAuthSigningKey is the config for where the OAuth JWT signing key is located.
+const ConfOAuthSigningKey = "oAuthSigningKey"
 
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
@@ -66,7 +81,7 @@ type Auth struct {
 	AccessTokenHandler     services.AccessTokenHandler
 	IrmaServiceConfig      irmaService.IrmaServiceConfig
 	IrmaServer             *irmaserver.Server
-	Crypto                 crypto.Client
+	Crypto                 nutscrypto.Client
 	Registry               registry.RegistryClient
 	ValidContracts         contract.Matrix
 }
@@ -75,6 +90,7 @@ func DefaultAuthConfig() AuthConfig {
 	return AuthConfig{
 		Address:           "localhost:1323",
 		IrmaSchemeManager: "pbdf",
+		GenerateOAuthKeys: true,
 	}
 }
 
@@ -87,12 +103,12 @@ func AuthInstance() *Auth {
 		return instance
 	}
 	oneBackend.Do(func() {
-		instance = NewAuthInstance(DefaultAuthConfig(), crypto.CryptoInstance(), registry.RegistryInstance())
+		instance = NewAuthInstance(DefaultAuthConfig(), nutscrypto.CryptoInstance(), registry.RegistryInstance())
 	})
 	return instance
 }
 
-func NewAuthInstance(config AuthConfig, cryptoClient crypto.Client, registryClient registry.RegistryClient) *Auth {
+func NewAuthInstance(config AuthConfig, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) *Auth {
 	return &Auth{
 		Config:         config,
 		Crypto:         cryptoClient,
@@ -107,38 +123,38 @@ var ErrMissingActingParty = errors.New("missing actingPartyCn")
 // ErrMissingPublicURL is returned when the publicUrl is missing from the config
 var ErrMissingPublicURL = errors.New("missing publicUrl")
 
+// ErrIncorrectOAuthSigningKey is returned when the OAuthSigningKey can't be parsed
+var ErrIncorrectOAuthSigningKey = errors.New("failed to parse OAuthSigningKey")
+
 // Configure the Auth struct by creating a validator and create an Irma server
 func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
 		auth.Config.Mode = core.NutsConfig().GetEngineMode(auth.Config.Mode)
 		if auth.Config.Mode == core.ServerEngineMode {
-			if auth.Config.ActingPartyCn == "" {
-				err = ErrMissingActingParty
+			if err = auth.configureContracts(); err != nil {
 				return
 			}
-			if auth.Config.PublicUrl == "" {
-				err = ErrMissingPublicURL
-				return
-			}
-			auth.ValidContracts = contract.Contracts
 
-			var irmaConfig *irma.Configuration
-			auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
-				Mode:                      auth.Config.Mode,
-				Address:                   auth.Config.Address,
-				PublicUrl:                 auth.Config.PublicUrl,
-				IrmaConfigPath:            auth.Config.IrmaConfigPath,
-				IrmaSchemeManager:         auth.Config.IrmaSchemeManager,
-				SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,
-			}
-			if irmaConfig, err = irmaService.GetIrmaConfig(auth.IrmaServiceConfig); err != nil {
+			var (
+				irmaConfig *irma.Configuration
+				irmaServer *irmaserver.Server
+				signer     crypto.Signer
+			)
+
+			if irmaServer, irmaConfig, err = auth.configureIrma(); err != nil {
 				return
 			}
-			var irmaServer *irmaserver.Server
-			if irmaServer, err = irmaService.GetIrmaServer(auth.IrmaServiceConfig); err != nil {
+
+			if signer, err = auth.configureOAuth(); err != nil {
 				return
 			}
-			auth.IrmaServer = irmaServer
+
+			oauthService := &oauth.OAuthService{
+				Crypto:   auth.Crypto,
+				Registry: auth.Registry,
+				Signer:   signer,
+			}
+
 			irmaService := irmaService.IrmaService{
 				IrmaSessionHandler: &irmaService.DefaultIrmaSessionHandler{I: irmaServer},
 				IrmaConfig:         irmaConfig,
@@ -148,17 +164,109 @@ func (auth *Auth) Configure() (err error) {
 			}
 			auth.ContractSessionHandler = irmaService
 			auth.ContractValidator = irmaService
-
-			oauthService := &oauth.OAuthService{
-				Crypto:   auth.Crypto,
-				Registry: auth.Registry,
-			}
 			auth.AccessTokenHandler = oauthService
 			auth.configDone = true
 		}
 	})
 
 	return err
+}
+
+func (auth *Auth) configureContracts() (err error) {
+	if auth.Config.ActingPartyCn == "" {
+		err = ErrMissingActingParty
+		return
+	}
+	if auth.Config.PublicUrl == "" {
+		err = ErrMissingPublicURL
+		return
+	}
+	auth.ValidContracts = contract.Contracts
+	return
+}
+
+func (auth *Auth) configureIrma() (irmaServer *irmaserver.Server, irmaConfig *irma.Configuration, err error) {
+	if irmaConfig, err = irmaService.GetIrmaConfig(auth.IrmaServiceConfig); err != nil {
+		return
+	}
+	if irmaServer, err = irmaService.GetIrmaServer(auth.IrmaServiceConfig); err != nil {
+		return
+	}
+	auth.IrmaServer = irmaServer
+	return
+}
+
+// TODO move loading of key from file to crypto package!
+func (auth *Auth) configureOAuth() (signer crypto.Signer, err error) {
+	var bytes []byte
+	if strings.TrimSpace(auth.Config.OAuthSigningKey) == "" {
+		logrus.Warn("OAuth authorization server disabled")
+		return
+	}
+	bytes, err = ioutil.ReadFile(auth.Config.OAuthSigningKey)
+	if os.IsNotExist(err) && auth.Config.GenerateOAuthKeys {
+		bytes, err = auth.generateOAuthSigningKey()
+	}
+
+	if err != nil {
+		return
+	}
+
+	block, _ := pem.Decode(bytes)
+	if block == nil {
+		err = ErrIncorrectOAuthSigningKey
+		return
+	}
+
+	switch block.Type {
+	case "RSA PRIVATE KEY":
+		signer, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	case "EC PRIVATE KEY":
+		signer, err = x509.ParseECPrivateKey(block.Bytes)
+	case "PRIVATE KEY":
+		var key interface{}
+		key, err = x509.ParsePKCS8PrivateKey(block.Bytes)
+		switch key.(type) {
+		case *rsa.PrivateKey:
+			signer = key.(*rsa.PrivateKey)
+		case *ecdsa.PrivateKey:
+			signer = key.(*ecdsa.PrivateKey)
+		case ed25519.PrivateKey:
+			signer = key.(ed25519.PrivateKey)
+		}
+	}
+	return
+}
+
+func (auth *Auth) generateOAuthSigningKey() (bytes []byte, err error) {
+	var (
+		ec  *ecdsa.PrivateKey
+		der []byte
+	)
+	ec, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+
+	if der, err = x509.MarshalECPrivateKey(ec); err != nil {
+		return
+	}
+	bytes = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der})
+
+	if err = ioutil.WriteFile(auth.Config.OAuthSigningKey, bytes, 0660); err != nil {
+		return
+	}
+
+	pub := ec.Public()
+	if der, err = x509.MarshalPKIXPublicKey(pub); err != nil {
+		return
+	}
+	pubBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
+	pubFile := fmt.Sprintf("%s.pub", auth.Config.OAuthSigningKey)
+	lastDot := strings.LastIndex(auth.Config.OAuthSigningKey, ".")
+	if lastDot > 0 {
+		pubFile = fmt.Sprintf("%s.pub", auth.Config.OAuthSigningKey[:lastDot])
+	}
+	err = ioutil.WriteFile(pubFile, pubBytes, 0664)
+
+	return
 }
 
 // CreateContractSession creates a session based on an IRMA contract. This allows the user to permit the application to
