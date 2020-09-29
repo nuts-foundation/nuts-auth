@@ -21,6 +21,12 @@ const IrmaMountPath = "/auth/irmaclient"
 // ConfSkipAutoUpdateIrmaSchemas is the config key to provide an option to skip auto updating the irma schemas
 const ConfSkipAutoUpdateIrmaSchemas = "skipAutoUpdateIrmaSchemas"
 
+// ConfIrmaConfigPath is the config key to provide the irma configuration path
+const ConfIrmaConfigPath = "irmaConfigPath"
+
+// ConfIrmaSchemeManager allows selecting an IRMA scheme manager. During development this can ben irma-demo. Production should be pdfb
+const ConfIrmaSchemeManager = "irmaSchemeManager"
+
 // create a singleton irma config
 var _irmaConfig *irma.Configuration
 var configOnce = new(sync.Once)
