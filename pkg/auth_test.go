@@ -7,7 +7,7 @@ import (
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
-	irma2 "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 
 	registryTest "github.com/nuts-foundation/nuts-registry/test"
 
@@ -76,7 +76,7 @@ func (m MockContractValidator) ValidateJwt(contract string, actingPartyCN string
 	return &m.jwtResult, nil
 }
 
-const qrURL = "https://api.nuts-test.example" + irma2.IrmaMountPath + "/123-session-ref-123"
+const qrURL = "https://api.nuts-test.example" + irmaService.IrmaMountPath + "/123-session-ref-123"
 
 func (v MockContractSessionHandler) SessionStatus(services.SessionID) (*services.SessionStatusResult, error) {
 	return v.SessionStatusResult, nil

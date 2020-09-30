@@ -26,8 +26,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// IrmaMethod validates contracts using the irma logic.
-type IrmaMethod struct {
+// IrmaService validates contracts using the irma logic.
+type IrmaService struct {
 	IrmaSessionHandler IrmaSessionHandler
 	IrmaConfig         *irma.Configuration
 	Registry           registry.RegistryClient
@@ -52,14 +52,14 @@ type LegacyIdentityToken struct {
 }
 
 // IsInitialized is a helper function to determine if the validator has been initialized properly.
-func (v IrmaMethod) IsInitialized() bool {
+func (v IrmaService) IsInitialized() bool {
 	return v.IrmaConfig != nil
 }
 
 // ValidateContract is the entry point for contract validation.
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
 // Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
-func (v IrmaMethod) ValidateContract(b64EncodedContract string, format services.ContractFormat, actingPartyCN string) (*services.ContractValidationResult, error) {
+func (v IrmaService) ValidateContract(b64EncodedContract string, format services.ContractFormat, actingPartyCN string) (*services.ContractValidationResult, error) {
 	if format == services.IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
@@ -77,7 +77,7 @@ func (v IrmaMethod) ValidateContract(b64EncodedContract string, format services.
 }
 
 // ValidateJwt validates a JWT formatted identity token
-func (v IrmaMethod) ValidateJwt(token string, actingPartyCN string) (*services.ContractValidationResult, error) {
+func (v IrmaService) ValidateJwt(token string, actingPartyCN string) (*services.ContractValidationResult, error) {
 	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
 	parsedToken, err := parser.ParseWithClaims(token, &services.NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity, err := parseTokenIssuer(token.Claims.(*services.NutsIdentityToken).Issuer)
@@ -123,7 +123,7 @@ func (v IrmaMethod) ValidateJwt(token string, actingPartyCN string) (*services.C
 
 // SessionStatus returns the current status of a certain session.
 // It returns nil if the session is not found
-func (v IrmaMethod) SessionStatus(id services.SessionID) (*services.SessionStatusResult, error) {
+func (v IrmaService) SessionStatus(id services.SessionID) (*services.SessionStatusResult, error) {
 	if result := v.IrmaSessionHandler.GetSessionResult(string(id)); result != nil {
 		var (
 			token string
@@ -152,7 +152,7 @@ func (v IrmaMethod) SessionStatus(id services.SessionID) (*services.SessionStatu
 	return nil, services.ErrSessionNotFound
 }
 
-func (v IrmaMethod) legalEntityFromContract(sic *SignedIrmaContract) (core.PartyID, error) {
+func (v IrmaService) legalEntityFromContract(sic *SignedIrmaContract) (core.PartyID, error) {
 	params, err := sic.ContractTemplate.ExtractParams(sic.IrmaContract.Message)
 	if err != nil {
 		return core.PartyID{}, err
@@ -171,7 +171,7 @@ func (v IrmaMethod) legalEntityFromContract(sic *SignedIrmaContract) (core.Party
 }
 
 // CreateIdentityTokenFromIrmaContract from a signed irma contract. Returns a JWT signed with the provided legalEntity.
-func (v IrmaMethod) CreateIdentityTokenFromIrmaContract(contract *SignedIrmaContract, legalEntity core.PartyID) (string, error) {
+func (v IrmaService) CreateIdentityTokenFromIrmaContract(contract *SignedIrmaContract, legalEntity core.PartyID) (string, error) {
 	signature, err := json.Marshal(contract.IrmaContract)
 	encodedSignature := base64.StdEncoding.EncodeToString(signature)
 	if err != nil {
@@ -198,7 +198,7 @@ func (v IrmaMethod) CreateIdentityTokenFromIrmaContract(contract *SignedIrmaCont
 }
 
 // func for creating legacy token
-func (v IrmaMethod) createLegacyIdentityToken(contract *SignedIrmaContract, legalEntity string) (string, error) {
+func (v IrmaService) createLegacyIdentityToken(contract *SignedIrmaContract, legalEntity string) (string, error) {
 	payload := LegacyIdentityToken{
 		StandardClaims: jwt.StandardClaims{
 			Issuer:  "nuts",
@@ -264,12 +264,12 @@ func convertPayloadToClaims(payload services.NutsIdentityToken) (map[string]inte
 
 // StartSession starts an irma session.
 // This is mainly a wrapper around the irma.IrmaSessionHandler.StartSession
-func (v IrmaMethod) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
+func (v IrmaService) StartSession(request interface{}, handler irmaserver.SessionHandler) (*irma.Qr, string, error) {
 	return v.IrmaSessionHandler.StartSession(request, handler)
 }
 
 // ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
-func (v IrmaMethod) ParseAndValidateJwtBearerToken(acString string) (*services.NutsJwtBearerToken, error) {
+func (v IrmaService) ParseAndValidateJwtBearerToken(acString string) (*services.NutsJwtBearerToken, error) {
 	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
 	token, err := parser.ParseWithClaims(acString, &services.NutsJwtBearerToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity, err := parseTokenIssuer(token.Claims.(*services.NutsJwtBearerToken).Issuer)
@@ -302,7 +302,7 @@ func (v IrmaMethod) ParseAndValidateJwtBearerToken(acString string) (*services.N
 
 // BuildAccessToken builds an access token based on the oauth claims and the identity of the user provided by the identityValidationResult
 // The token gets signed with the custodians private key and returned as a string.
-func (v IrmaMethod) BuildAccessToken(jwtBearerToken *services.NutsJwtBearerToken, identityValidationResult *services.ContractValidationResult) (string, error) {
+func (v IrmaService) BuildAccessToken(jwtBearerToken *services.NutsJwtBearerToken, identityValidationResult *services.ContractValidationResult) (string, error) {
 
 	if identityValidationResult.ValidationResult != services.Valid {
 		return "", fmt.Errorf("could not build accessToken: %w", errors.New("invalid contract"))
@@ -351,7 +351,7 @@ func (v IrmaMethod) BuildAccessToken(jwtBearerToken *services.NutsJwtBearerToken
 }
 
 // CreateJwtBearerToken creates a JwtBearerTokenResult containing a jwtBearerToken from a CreateJwtBearerTokenRequest.
-func (v IrmaMethod) CreateJwtBearerToken(request *services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
+func (v IrmaService) CreateJwtBearerToken(request *services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
 	jti, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
@@ -387,7 +387,7 @@ func (v IrmaMethod) CreateJwtBearerToken(request *services.CreateJwtBearerTokenR
 }
 
 // ParseAndValidateAccessToken parses and validates a accesstoken string and returns a filled in NutsAccessToken.
-func (v IrmaMethod) ParseAndValidateAccessToken(accessToken string) (*services.NutsAccessToken, error) {
+func (v IrmaService) ParseAndValidateAccessToken(accessToken string) (*services.NutsAccessToken, error) {
 	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
 	token, err := parser.ParseWithClaims(accessToken, &services.NutsAccessToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity, err := parseTokenIssuer(token.Claims.(*services.NutsAccessToken).Issuer)

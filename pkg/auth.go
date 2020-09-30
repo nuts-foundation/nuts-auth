@@ -11,7 +11,7 @@ import (
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
-	irma2 "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 
@@ -63,7 +63,7 @@ type Auth struct {
 	ContractSessionHandler services.ContractSessionHandler
 	ContractValidator      services.ContractValidator
 	AccessTokenHandler     services.AccessTokenHandler
-	IrmaServiceConfig      irma2.IrmaServiceConfig
+	IrmaServiceConfig      irmaService.IrmaServiceConfig
 	IrmaServer             *irmaserver.Server
 	Crypto                 crypto.Client
 	Registry               registry.RegistryClient
@@ -122,7 +122,7 @@ func (auth *Auth) Configure() (err error) {
 			auth.ValidContracts = contract.Contracts
 
 			var irmaConfig *irma.Configuration
-			auth.IrmaServiceConfig = irma2.IrmaServiceConfig{
+			auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
 				Mode:                      auth.Config.Mode,
 				Address:                   auth.Config.Address,
 				PublicUrl:                 auth.Config.PublicUrl,
@@ -130,16 +130,16 @@ func (auth *Auth) Configure() (err error) {
 				IrmaSchemeManager:         auth.Config.IrmaSchemeManager,
 				SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,
 			}
-			if irmaConfig, err = irma2.GetIrmaConfig(auth.IrmaServiceConfig); err != nil {
+			if irmaConfig, err = irmaService.GetIrmaConfig(auth.IrmaServiceConfig); err != nil {
 				return
 			}
 			var irmaServer *irmaserver.Server
-			if irmaServer, err = irma2.GetIrmaServer(auth.IrmaServiceConfig); err != nil {
+			if irmaServer, err = irmaService.GetIrmaServer(auth.IrmaServiceConfig); err != nil {
 				return
 			}
 			auth.IrmaServer = irmaServer
-			irmaMethod := irma2.IrmaMethod{
-				IrmaSessionHandler: &irma2.DefaultIrmaSessionHandler{I: irmaServer},
+			irmaMethod := irmaService.IrmaService{
+				IrmaSessionHandler: &irmaService.DefaultIrmaSessionHandler{I: irmaServer},
 				IrmaConfig:         irmaConfig,
 				Registry:           auth.Registry,
 				Crypto:             auth.Crypto,
