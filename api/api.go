@@ -1,7 +1,7 @@
 package api
 
 import (
-  "errors"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"

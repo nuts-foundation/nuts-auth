@@ -16,7 +16,6 @@ require (
 	github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200806064724-32ed0e791e6a
 	github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200803140648-33ac5360e61d
 	github.com/nuts-foundation/nuts-go-test v0.0.0-20200804135944-9e05711330e7
-	github.com/nuts-foundation/nuts-network v0.0.0-20200806071245-5b12ac465a57
 	github.com/nuts-foundation/nuts-registry v0.13.3-0.20200806072520-025dfb06aa9c
 	github.com/pkg/errors v0.9.1
 	github.com/privacybydesign/gabi v0.0.0-20200805114803-588904629b25 // indirect
@@ -25,5 +24,4 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	gopkg.in/antage/eventsource.v1 v1.0.0-20150318155416-803f4c5af225 // indirect
 )
