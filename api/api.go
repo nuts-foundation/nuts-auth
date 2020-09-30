@@ -72,7 +72,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 
 	// convert generated api format to internal struct
 	sessionRequest := services.CreateSessionRequest{
-		Type:        contract.ContractType(params.Type),
+		Type:        contract.Type(params.Type),
 		Version:     contract.Version(params.Version),
 		Language:    contract.Language(params.Language),
 		LegalEntity: orgName,
@@ -202,7 +202,7 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 	}
 
 	// get contract
-	authContract, err := api.Auth.ContractByType(contract.ContractType(contractType), contractLanguage, contractVersion)
+	authContract, err := api.Auth.ContractByType(contract.Type(contractType), contractLanguage, contractVersion)
 	if errors.Is(err, contract.ErrContractNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	} else if err != nil {

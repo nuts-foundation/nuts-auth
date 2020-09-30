@@ -11,8 +11,8 @@ import (
 
 // CreateSessionRequest is used to create a contract signing session.
 type CreateSessionRequest struct {
-	// ContractType such as "BehandelaarLogin"
-	Type contract.ContractType
+	// Type such as "BehandelaarLogin"
+	Type contract.Type
 	// Version of the contract such as "v1"
 	Version contract.Version
 	// Language of the contact such as "NL"

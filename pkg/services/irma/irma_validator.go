@@ -32,7 +32,7 @@ type IrmaMethod struct {
 	IrmaConfig         *irma.Configuration
 	Registry           registry.RegistryClient
 	Crypto             nutscrypto.Client
-	ValidContracts     contract.ContractMatrix
+	ValidContracts     contract.Matrix
 }
 
 type IrmaServiceConfig struct {
@@ -129,7 +129,7 @@ func (v IrmaMethod) SessionStatus(id services.SessionID) (*services.SessionStatu
 			token string
 		)
 		if result.Signature != nil {
-			contractTemplate, err := contract.NewContractFromMessageContents(result.Signature.Message, v.ValidContracts)
+			contractTemplate, err := contract.NewFromMessageContents(result.Signature.Message, v.ValidContracts)
 			sic := &SignedIrmaContract{*result.Signature, contractTemplate}
 			if err != nil {
 				return nil, err

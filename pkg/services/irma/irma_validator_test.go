@@ -556,7 +556,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	t.Run("Empty message returns error", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma.SignedMessage{}, ContractTemplate: &contract.ContractTemplate{}})
+		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma.SignedMessage{}, ContractTemplate: &contract.Template{}})
 
 		assert.NotNil(t, err)
 		assert.Error(t, contract.ErrInvalidContractText, err)

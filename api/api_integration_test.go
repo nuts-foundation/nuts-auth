@@ -43,9 +43,9 @@ func Test_Integration(t *testing.T) {
 		echoMock *mock.MockContext
 	}
 
-	contract.Contracts = map[contract.Language]map[contract.ContractType]map[contract.Version]*contract.ContractTemplate{
+	contract.Contracts = map[contract.Language]map[contract.Type]map[contract.Version]*contract.Template{
 		"NL": {"BehandelaarLogin": {
-			"v1": &contract.ContractTemplate{
+			"v1": &contract.Template{
 				Type:               "BehandelaarLogin",
 				Version:            "v1",
 				Language:           "NL",

@@ -18,7 +18,7 @@ import (
 // SignedIrmaContract holds the contract and additional methods to parse and validate.
 type SignedIrmaContract struct {
 	IrmaContract     irma.SignedMessage
-	ContractTemplate *contract.ContractTemplate
+	ContractTemplate *contract.Template
 }
 
 // A IrmaContract is valid when:
@@ -29,7 +29,7 @@ type SignedIrmaContract struct {
 //  the acting party named in the contract is the same as the one making the request
 type IrmaContractVerifier struct {
 	irmaConfig     *irma.Configuration
-	validContracts contract.ContractMatrix
+	validContracts contract.Matrix
 }
 
 // ParseSignedIrmaContract parses a json string containing a signed irma contract.
@@ -45,7 +45,7 @@ func (cv *IrmaContractVerifier) ParseSignedIrmaContract(rawContract string) (*Si
 	}
 
 	contractMessage := signedContract.IrmaContract.Message
-	contractTemplate, err := contract.NewContractFromMessageContents(contractMessage, cv.validContracts)
+	contractTemplate, err := contract.NewFromMessageContents(contractMessage, cv.validContracts)
 	if err != nil {
 		return nil, err
 	}

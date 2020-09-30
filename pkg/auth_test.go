@@ -96,7 +96,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 		sut := Auth{
 			ContractSessionHandler: MockContractSessionHandler{},
 		}
-		request := services.CreateSessionRequest{Type: contract.ContractType("BehandelaarLogin"), Language: contract.Language("NL")}
+		request := services.CreateSessionRequest{Type: contract.Type("BehandelaarLogin"), Language: contract.Language("NL")}
 		result, err := sut.CreateContractSession(request)
 
 		if err != nil {
@@ -111,7 +111,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 		sut := Auth{
 			ContractSessionHandler: MockContractSessionHandler{},
 		}
-		request := services.CreateSessionRequest{Type: contract.ContractType("ShadyDeal"), Language: contract.Language("NL")}
+		request := services.CreateSessionRequest{Type: contract.Type("ShadyDeal"), Language: contract.Language("NL")}
 		result, err := sut.CreateContractSession(request)
 
 		assert.Nil(t, result, "result should be nil")
@@ -124,7 +124,7 @@ func TestAuth_ContractByType(t *testing.T) {
 	registerTestDependencies(t)
 	sut := Auth{ValidContracts: contract.Contracts}
 	t.Run("get contract by type", func(t *testing.T) {
-		result, err := sut.ContractByType(contract.ContractType("BehandelaarLogin"), contract.Language("NL"), contract.Version("v1"))
+		result, err := sut.ContractByType(contract.Type("BehandelaarLogin"), contract.Language("NL"), contract.Version("v1"))
 
 		if !assert.Nil(t, err) || !assert.NotNil(t, result) {
 			t.FailNow()
@@ -132,11 +132,11 @@ func TestAuth_ContractByType(t *testing.T) {
 
 		assert.Equal(t, contract.Version("v1"), result.Version)
 		assert.Equal(t, contract.Language("NL"), result.Language)
-		assert.Equal(t, contract.ContractType("BehandelaarLogin"), result.Type)
+		assert.Equal(t, contract.Type("BehandelaarLogin"), result.Type)
 	})
 
 	t.Run("an unknown contract returns an error", func(t *testing.T) {
-		result, err := sut.ContractByType(contract.ContractType("UnknownContract"), contract.Language("NL"), contract.Version("v1"))
+		result, err := sut.ContractByType(contract.Type("UnknownContract"), contract.Language("NL"), contract.Version("v1"))
 
 		assert.Nil(t, result)
 		assert.NotNil(t, err)

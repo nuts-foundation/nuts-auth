@@ -46,7 +46,7 @@ const ConfActingPartyCN = "actingPartyCn"
 type AuthClient interface {
 	CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error)
 	ContractSessionStatus(sessionID string) (*services.SessionStatusResult, error)
-	ContractByType(contractType contract.ContractType, language contract.Language, version contract.Version) (*contract.ContractTemplate, error)
+	ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error)
 	ValidateContract(request services.ValidationRequest) (*services.ContractValidationResult, error)
 	CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResponse, error)
 	CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResponse, error)
@@ -67,7 +67,7 @@ type Auth struct {
 	IrmaServer             *irmaserver.Server
 	Crypto                 crypto.Client
 	Registry               registry.RegistryClient
-	ValidContracts         contract.ContractMatrix
+	ValidContracts         contract.Matrix
 }
 
 func DefaultAuthConfig() AuthConfig {
@@ -161,7 +161,7 @@ func (auth *Auth) Configure() (err error) {
 func (auth *Auth) CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error) {
 
 	// Step 1: Find the correct contract
-	contract, err := contract.NewContractByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version, contract.Contracts)
+	contract, err := contract.NewByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version, contract.Contracts)
 	if err != nil {
 		return nil, err
 	}
@@ -225,10 +225,10 @@ func printQrCode(qrcode string) {
 	qrterminal.GenerateWithConfig(qrcode, config)
 }
 
-// NewContractByType returns a ContractTemplate of a certain type, language and version.
+// NewByType returns a ContractTemplate of a certain type, language and version.
 // If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
-func (auth *Auth) ContractByType(contractType contract.ContractType, language contract.Language, version contract.Version) (*contract.ContractTemplate, error) {
-	return contract.NewContractByType(contractType, language, version, auth.ValidContracts)
+func (auth *Auth) ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error) {
+	return contract.NewByType(contractType, language, version, auth.ValidContracts)
 }
 
 // ContractSessionStatus returns the current session status for a given sessionID.
@@ -247,7 +247,7 @@ func (auth *Auth) ContractSessionStatus(sessionID string) (*services.SessionStat
 	return sessionStatus, nil
 }
 
-// ValidateContract validates a given contract. Currently two ContractType's are accepted: Irma and Jwt.
+// ValidateContract validates a given contract. Currently two Type's are accepted: Irma and Jwt.
 // Both types should be passed as a base64 encoded string in the ContractString of the request paramContractString of the request param
 func (auth *Auth) ValidateContract(request services.ValidationRequest) (*services.ContractValidationResult, error) {
 	if request.ContractFormat == services.IrmaFormat {
