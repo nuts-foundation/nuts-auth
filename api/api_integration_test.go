@@ -3,15 +3,20 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
-	test2 "github.com/nuts-foundation/nuts-auth/test"
-	"github.com/nuts-foundation/nuts-go-test/io"
-	"github.com/nuts-foundation/nuts-registry/test"
 	"net/http"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+
+	test2 "github.com/nuts-foundation/nuts-auth/test"
+	"github.com/nuts-foundation/nuts-go-test/io"
+	"github.com/nuts-foundation/nuts-registry/test"
 
 	"github.com/labstack/echo/v4"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -38,9 +43,9 @@ func Test_Integration(t *testing.T) {
 		echoMock *mock.MockContext
 	}
 
-	pkg.Contracts = map[pkg.Language]map[pkg.ContractType]map[pkg.Version]*pkg.ContractTemplate{
+	contract.Contracts = map[contract.Language]map[contract.Type]map[contract.Version]*contract.Template{
 		"NL": {"BehandelaarLogin": {
-			"v1": &pkg.ContractTemplate{
+			"v1": &contract.Template{
 				Type:               "BehandelaarLogin",
 				Version:            "v1",
 				Language:           "NL",
@@ -105,13 +110,13 @@ func Test_Integration(t *testing.T) {
 	// Set the pkg.NowFunc to a temporary one to return a fake time. This makes it convenient to use stored test contracts.
 	fakeTime := func(t *testing.T, newTime time.Time, f func(t *testing.T)) {
 		t.Helper()
-		oldFunc := pkg.NowFunc
+		oldFunc := contract.NowFunc
 
-		pkg.NowFunc = func() time.Time {
+		contract.NowFunc = func() time.Time {
 			return newTime
 		}
 		defer func() {
-			pkg.NowFunc = oldFunc
+			contract.NowFunc = oldFunc
 		}()
 
 		f(t)
@@ -140,10 +145,10 @@ func Test_Integration(t *testing.T) {
 			ctx := createContext(t)
 
 			// create an id token from a valid irma contract
-			defaultValidator := pkg.DefaultValidator{Crypto: ctx.auth.Crypto}
+			defaultValidator := irmaService.IrmaService{Crypto: ctx.auth.Crypto}
 			signedIrmaContract := irma.SignedMessage{}
 			_ = json.Unmarshal([]byte(testdata.ValidIrmaContract2), &signedIrmaContract)
-			contract := pkg.SignedIrmaContract{IrmaContract: signedIrmaContract}
+			contract := irmaService.SignedIrmaContract{IrmaContract: signedIrmaContract}
 			idToken, err := defaultValidator.CreateIdentityTokenFromIrmaContract(&contract, organizationID)
 			if !assert.NoError(t, err) {
 				t.FailNow()

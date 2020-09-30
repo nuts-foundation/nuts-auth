@@ -1,4 +1,4 @@
-package pkg
+package irma
 
 import (
 	"fmt"
@@ -16,6 +16,15 @@ import (
 // The location the irma webserver will mount
 const IrmaMountPath = "/auth/irmaclient"
 
+// ConfSkipAutoUpdateIrmaSchemas is the config key to provide an option to skip auto updating the irma schemas
+const ConfSkipAutoUpdateIrmaSchemas = "skipAutoUpdateIrmaSchemas"
+
+// ConfIrmaConfigPath is the config key to provide the irma configuration path
+const ConfIrmaConfigPath = "irmaConfigPath"
+
+// ConfIrmaSchemeManager allows selecting an IRMA scheme manager. During development this can ben irma-demo. Production should be pdfb
+const ConfIrmaSchemeManager = "irmaSchemeManager"
+
 // create a singleton irma config
 var _irmaConfig *irma.Configuration
 var configOnce = new(sync.Once)
@@ -26,7 +35,7 @@ var serverOnce = new(sync.Once)
 
 // GetIrmaConfig creates and returns an IRMA config.
 // The config sets the given irma path or a temporary folder. Then it downloads the schemas.
-func GetIrmaConfig(config AuthConfig) (irmaConfig *irma.Configuration, err error) {
+func GetIrmaConfig(config IrmaServiceConfig) (irmaConfig *irma.Configuration, err error) {
 	irmaConfig = _irmaConfig
 
 	configOnce.Do(func() {
@@ -61,7 +70,7 @@ func GetIrmaConfig(config AuthConfig) (irmaConfig *irma.Configuration, err error
 
 // GetIrmaServer creates and starts the irma server instance.
 // The server can be used by a IRMA client like the app to handle IRMA sessions
-func GetIrmaServer(config AuthConfig) (irmaServer *irmaserver.Server, err error) {
+func GetIrmaServer(config IrmaServiceConfig) (irmaServer *irmaserver.Server, err error) {
 	irmaServer = _irmaServer
 
 	serverOnce.Do(func() {
@@ -98,7 +107,7 @@ func GetIrmaServer(config AuthConfig) (irmaServer *irmaserver.Server, err error)
 	return
 }
 
-func irmaConfigDir(config AuthConfig) (string, error) {
+func irmaConfigDir(config IrmaServiceConfig) (string, error) {
 	path := config.IrmaConfigPath
 
 	if path == "" {

@@ -1,4 +1,4 @@
-package pkg
+package contract
 
 import (
 	"errors"
@@ -13,35 +13,29 @@ import (
 
 const timeLayout = "Monday, 2 January 2006 15:04:05"
 
-// ContractTemplate is a template which can result in a signed contract
-type ContractTemplate struct {
-	Type                 ContractType `json:"type"`
-	Version              Version      `json:"version"`
-	Language             Language     `json:"language"`
-	SignerAttributes     []string     `json:"signer_attributes"`
-	SignerDemoAttributes []string     `json:"-"`
-	Template             string       `json:"template"`
-	TemplateAttributes   []string     `json:"template_attributes"`
-	Regexp               string       `json:"-"`
+// Template is a template which can result in a signed contract
+type Template struct {
+	Type                 Type     `json:"type"`
+	Version              Version  `json:"version"`
+	Language             Language `json:"language"`
+	SignerAttributes     []string `json:"signer_attributes"`
+	SignerDemoAttributes []string `json:"-"`
+	Template             string   `json:"template"`
+	TemplateAttributes   []string `json:"template_attributes"`
+	Regexp               string   `json:"-"`
 }
 
 // Language of the contract in all caps. example: "NL"
 type Language string
 
-// ContractType contains type of the contract to sign. Example: "BehandelaarLogin"
-type ContractType string
+// Type contains type of the contract to sign. Example: "BehandelaarLogin"
+type Type string
 
 // Version of the contract. example: "v1"
 type Version string
 
 // NowFunc is used to store a function that returns the current time. This can be changed when you want to mock the current time.
 var NowFunc = time.Now
-
-// ErrContractNotFound is used when a certain combination of type, language and version cannot resolve to a contract
-var ErrContractNotFound = errors.New("contract not found")
-
-// ErrInvalidContractText is used when contract texts cannot be parsed or contain invalid values
-var ErrInvalidContractText = errors.New("invalid contract text")
 
 // StandardSignerAttributes defines the standard list of attributes used for a contract.
 // If SignerAttribute name starts with a dot '.', it uses the configured scheme manager
@@ -50,10 +44,10 @@ var StandardSignerAttributes = []string{
 	"pbdf.pbdf.email.email",
 }
 
-// EN:PractitionerLogin:v1 ContractTemplate
-var Contracts = ContractMatrix{
+// EN:PractitionerLogin:v1 Template
+var Contracts = Matrix{
 	"NL": {"BehandelaarLogin": {
-		"v1": &ContractTemplate{
+		"v1": &Template{
 			Type:               "BehandelaarLogin",
 			Version:            "v1",
 			Language:           "NL",
@@ -62,7 +56,7 @@ var Contracts = ContractMatrix{
 			TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
 			Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
 		},
-		"v2": &ContractTemplate{
+		"v2": &Template{
 			Type:               "BehandelaarLogin",
 			Version:            "v2",
 			Language:           "NL",
@@ -73,7 +67,7 @@ var Contracts = ContractMatrix{
 		},
 	}},
 	"EN": {"PractitionerLogin": {
-		"v1": &ContractTemplate{
+		"v1": &Template{
 			Type:               "PractitionerLogin",
 			Version:            "v1",
 			Language:           "EN",
@@ -82,7 +76,7 @@ var Contracts = ContractMatrix{
 			TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
 			Regexp:             `EN:PractitionerLogin:v1 Undersigned gives permission to (.+) to make request to the Nuts network on behalf of (.+) and itself. This permission is valid from (.+) until (.+).`,
 		},
-		"v2": &ContractTemplate{
+		"v2": &Template{
 			Type:               "PractitionerLogin",
 			Version:            "v2",
 			Language:           "EN",
@@ -94,9 +88,9 @@ var Contracts = ContractMatrix{
 	}},
 }
 
-// NewContractFromMessageContents finds the contract for a certain message.
+// NewFromMessageContents finds the contract for a certain message.
 // Every message should begin with a special sequence like "NL:ContractName:version".
-func NewContractFromMessageContents(contents string, validContracts ContractMatrix) (*ContractTemplate, error) {
+func NewFromMessageContents(contents string, validContracts Matrix) (*Template, error) {
 	r, _ := regexp.Compile(`^(.{2}):(.+):(v\d+)`)
 
 	matchResult := r.FindSubmatch([]byte(contents))
@@ -105,16 +99,16 @@ func NewContractFromMessageContents(contents string, validContracts ContractMatr
 	}
 
 	language := Language(matchResult[1])
-	contractType := ContractType(matchResult[2])
+	contractType := Type(matchResult[2])
 	version := Version(matchResult[3])
 
-	return NewContractByType(contractType, language, version, validContracts)
+	return NewByType(contractType, language, version, validContracts)
 
 }
 
-// NewContractByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
+// NewByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
 // If no contract is found, the error vaule of ErrContractNotFound is returned.
-func NewContractByType(contractType ContractType, language Language, version Version, validContracts ContractMatrix) (*ContractTemplate, error) {
+func NewByType(contractType Type, language Language, version Version, validContracts Matrix) (*Template, error) {
 	if version == "" {
 		version = "v1"
 	}
@@ -125,19 +119,19 @@ func NewContractByType(contractType ContractType, language Language, version Ver
 	return nil, fmt.Errorf("type %s, lang: %s, version: %s: %w", contractType, language, version, ErrContractNotFound)
 }
 
-func (c ContractTemplate) timeLocation() *time.Location {
+func (c Template) timeLocation() *time.Location {
 	loc, _ := time.LoadLocation("Europe/Amsterdam")
 	return loc
 }
 
-func (c ContractTemplate) renderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
+func (c Template) RenderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
 	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 
 	return mustache.Render(c.Template, vars)
 }
 
-func (c ContractTemplate) extractParams(text string) (map[string]string, error) {
+func (c Template) ExtractParams(text string) (map[string]string, error) {
 	r, _ := regexp.Compile(c.Regexp)
 	matchResult := r.FindSubmatch([]byte(text))
 	if len(matchResult) < 1 {
@@ -167,7 +161,7 @@ func parseTime(timeStr string, _ Language) (*time.Time, error) {
 	return &parsedTime, nil
 }
 
-func (c ContractTemplate) validateTimeFrame(params map[string]string) (bool, error) {
+func (c Template) ValidateTimeFrame(params map[string]string) (bool, error) {
 	var (
 		err                      error
 		ok                       bool
@@ -215,3 +209,17 @@ func (c ContractTemplate) validateTimeFrame(params map[string]string) (bool, err
 
 	return true, nil
 }
+
+type Matrix map[Language]map[Type]map[Version]*Template
+
+// ErrUnknownContractFormat is returned when the contract format is unknown
+var ErrUnknownContractFormat = errors.New("unknown contract format")
+
+// ErrInvalidContractFormat indicates tha a contract format is unknown.
+var ErrInvalidContractFormat = errors.New("unknown contract type")
+
+// ErrContractNotFound is used when a certain combination of type, language and version cannot resolve to a contract
+var ErrContractNotFound = errors.New("contract not found")
+
+// ErrInvalidContractText is used when contract texts cannot be parsed or contain invalid values
+var ErrInvalidContractText = errors.New("invalid contract text")

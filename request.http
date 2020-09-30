@@ -28,7 +28,7 @@ GET http://localhost:1323/auth/contract/session/xWv3oalzMb4LhbtGOsFS
 
 ###
 
-POST http://localhost:3000/auth/contract/validate
+POST http://localhost:1323/auth/contract/validate
 Content-Type: application/json
 
 {

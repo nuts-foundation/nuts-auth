@@ -7,11 +7,14 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/labstack/echo/v4"
+	"github.com/sirupsen/logrus"
+
 	core "github.com/nuts-foundation/nuts-go-core"
 
-	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-auth/pkg"
-	"github.com/sirupsen/logrus"
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
 // Wrapper bridges the generated api types and http logic to the internal types and logic.
@@ -68,10 +71,10 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	}
 
 	// convert generated api format to internal struct
-	sessionRequest := pkg.CreateSessionRequest{
-		Type:        pkg.ContractType(params.Type),
-		Version:     pkg.Version(params.Version),
-		Language:    pkg.Language(params.Language),
+	sessionRequest := services.CreateSessionRequest{
+		Type:        contract.Type(params.Type),
+		Version:     contract.Version(params.Version),
+		Language:    contract.Language(params.Language),
 		LegalEntity: orgName,
 		ValidFrom:   vf,
 		ValidTo:     vt,
@@ -80,7 +83,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	// Initiate the actual session
 	result, err := api.Auth.CreateContractSession(sessionRequest)
 	if err != nil {
-		if errors.Is(err, pkg.ErrContractNotFound) {
+		if errors.Is(err, contract.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 		logrus.WithError(err).Error("error while creating contract session")
@@ -102,7 +105,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) error {
 	sessionStatus, err := api.Auth.ContractSessionStatus(sessionID)
 	if err != nil {
-		if errors.Is(err, pkg.ErrSessionNotFound) {
+		if errors.Is(err, services.ErrSessionNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -156,8 +159,8 @@ func (api *Wrapper) ValidateContract(ctx echo.Context) error {
 	}
 	logrus.Debug(params)
 
-	validationRequest := pkg.ValidationRequest{
-		ContractFormat: pkg.ContractFormat(params.ContractFormat),
+	validationRequest := services.ValidationRequest{
+		ContractFormat: services.ContractFormat(params.ContractFormat),
 		ContractString: params.ContractString,
 		ActingPartyCN:  params.ActingPartyCn,
 	}
@@ -187,20 +190,20 @@ func (api *Wrapper) ValidateContract(ctx echo.Context) error {
 func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, params GetContractByTypeParams) error {
 	// convert generated data types to internal types
 	var (
-		contractLanguage pkg.Language
-		contractVersion  pkg.Version
+		contractLanguage contract.Language
+		contractVersion  contract.Version
 	)
 	if params.Language != nil {
-		contractLanguage = pkg.Language(*params.Language)
+		contractLanguage = contract.Language(*params.Language)
 	}
 
 	if params.Version != nil {
-		contractVersion = pkg.Version(*params.Version)
+		contractVersion = contract.Version(*params.Version)
 	}
 
 	// get contract
-	contract, err := api.Auth.ContractByType(pkg.ContractType(contractType), contractLanguage, contractVersion)
-	if errors.Is(err, pkg.ErrContractNotFound) {
+	authContract, err := api.Auth.ContractByType(contract.Type(contractType), contractLanguage, contractVersion)
+	if errors.Is(err, contract.ErrContractNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	} else if err != nil {
 		return err
@@ -208,11 +211,11 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 
 	// convert internal data types to generated api types
 	answer := Contract{
-		Language:           Language(contract.Language),
-		Template:           &contract.Template,
-		TemplateAttributes: &contract.TemplateAttributes,
-		Type:               Type(contract.Type),
-		Version:            Version(contract.Version),
+		Language:           Language(authContract.Language),
+		Template:           &authContract.Template,
+		TemplateAttributes: &authContract.TemplateAttributes,
+		Type:               Type(authContract.Type),
+		Version:            Version(authContract.Version),
 	}
 
 	return ctx.JSON(http.StatusOK, answer)
@@ -244,7 +247,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-	catRequest := pkg.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: vendorID}
+	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: vendorID}
 	acResponse, err := api.Auth.CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()
@@ -263,7 +266,7 @@ func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
 		return err
 	}
 
-	request := pkg.CreateJwtBearerTokenRequest{
+	request := services.CreateJwtBearerTokenRequest{
 		Actor:         requestBody.Actor,
 		Custodian:     requestBody.Custodian,
 		IdentityToken: requestBody.Identity,
