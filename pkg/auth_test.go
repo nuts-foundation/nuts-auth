@@ -19,6 +19,7 @@ import (
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-go-test/io"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
+	"github.com/spf13/cobra"
 
 	"github.com/golang/mock/gomock"
 	cryptoMock2 "github.com/nuts-foundation/nuts-crypto/test/mock"
