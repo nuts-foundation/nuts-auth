@@ -3,11 +3,13 @@ package pkg
 import (
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-go-test/io"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
+	"github.com/spf13/cobra"
 
 	"github.com/golang/mock/gomock"
 	cryptoMock2 "github.com/nuts-foundation/nuts-crypto/test/mock"
@@ -18,6 +20,8 @@ import (
 	irmaservercore "github.com/privacybydesign/irmago/server"
 	"github.com/stretchr/testify/assert"
 )
+
+const vendorID = "urn:oid:1.3.6.1.4.1.54851.4:vendorId"
 
 type MockContractSessionHandler struct {
 	SessionStatusResult *SessionStatusResult
@@ -388,6 +392,8 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 func registerTestDependencies(t *testing.T) {
 	// This makes sure instances of Auth use test instances of Crypto and Registry which write their data to a temp dir
 	testDirectory := io.TestDirectory(t)
+	os.Setenv("NUTS_IDENTITY", vendorID)
+	core.NutsConfig().Load(&cobra.Command{})
 	crypto.NewTestCryptoInstance(testDirectory)
 	registry.NewTestRegistryInstance(testDirectory)
 }
