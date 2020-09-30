@@ -3,7 +3,10 @@ package pkg
 import (
 	"errors"
 	"fmt"
+	"os"
 	"testing"
+
+	"github.com/spf13/cobra"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
@@ -29,6 +32,8 @@ import (
 
 var organizationID = registryTest.OrganizationID("00000001")
 var otherOrganizationID = registryTest.OrganizationID("00000002")
+
+const vendorID = "urn:oid:1.3.6.1.4.1.54851.4:vendorId"
 
 type MockContractSessionHandler struct {
 	SessionStatusResult *services.SessionStatusResult
@@ -399,6 +404,8 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 func registerTestDependencies(t *testing.T) {
 	// This makes sure instances of Auth use test instances of Crypto and Registry which write their data to a temp dir
 	testDirectory := io.TestDirectory(t)
+	os.Setenv("NUTS_IDENTITY", vendorID)
+	core.NutsConfig().Load(&cobra.Command{})
 	crypto.NewTestCryptoInstance(testDirectory)
 	registry.NewTestRegistryInstance(testDirectory)
 }

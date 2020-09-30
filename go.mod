@@ -13,10 +13,10 @@ require (
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/mdp/qrterminal/v3 v3.0.0
-	github.com/nuts-foundation/nuts-crypto v0.13.2-0.20200806064724-32ed0e791e6a
-	github.com/nuts-foundation/nuts-go-core v0.14.1-0.20200803140648-33ac5360e61d
-	github.com/nuts-foundation/nuts-go-test v0.0.0-20200804135944-9e05711330e7
-	github.com/nuts-foundation/nuts-registry v0.13.3-0.20200806072520-025dfb06aa9c
+	github.com/nuts-foundation/nuts-crypto v0.15.0
+	github.com/nuts-foundation/nuts-go-core v0.15.0
+	github.com/nuts-foundation/nuts-go-test v0.15.0
+	github.com/nuts-foundation/nuts-registry v0.15.0
 	github.com/pkg/errors v0.9.1
 	github.com/privacybydesign/gabi v0.0.0-20200805114803-588904629b25 // indirect
 	github.com/privacybydesign/irmago v0.5.1
