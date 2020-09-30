@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
 
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 
@@ -138,16 +139,21 @@ func (auth *Auth) Configure() (err error) {
 				return
 			}
 			auth.IrmaServer = irmaServer
-			irmaMethod := irmaService.IrmaService{
+			irmaService := irmaService.IrmaService{
 				IrmaSessionHandler: &irmaService.DefaultIrmaSessionHandler{I: irmaServer},
 				IrmaConfig:         irmaConfig,
 				Registry:           auth.Registry,
 				Crypto:             auth.Crypto,
 				ValidContracts:     auth.ValidContracts,
 			}
-			auth.ContractSessionHandler = irmaMethod
-			auth.ContractValidator = irmaMethod
-			auth.AccessTokenHandler = irmaMethod
+			auth.ContractSessionHandler = irmaService
+			auth.ContractValidator = irmaService
+
+			oauthService := &oauth.OAuthService{
+				Crypto:   auth.Crypto,
+				Registry: auth.Registry,
+			}
+			auth.AccessTokenHandler = oauthService
 			auth.configDone = true
 		}
 	})
