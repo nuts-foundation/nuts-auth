@@ -9,12 +9,12 @@ import (
 	contract "github.com/nuts-foundation/nuts-auth/pkg/contract"
 	services "github.com/nuts-foundation/nuts-auth/pkg/services"
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
+	nutsCrypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	nutsCryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
 	core "github.com/nuts-foundation/nuts-go-core"
 	testIo "github.com/nuts-foundation/nuts-go-test/io"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
-	registry "github.com/nuts-foundation/nuts-registry/pkg"
+	nutsRegistry "github.com/nuts-foundation/nuts-registry/pkg"
 	registryDB "github.com/nuts-foundation/nuts-registry/pkg/db"
 	registryTest "github.com/nuts-foundation/nuts-registry/test"
 
@@ -26,7 +26,6 @@ import (
 )
 
 var organizationID = registryTest.OrganizationID("00000001")
-var otherOrganizationID = registryTest.OrganizationID("00000002")
 
 const vendorID = "urn:oid:1.3.6.1.4.1.54851.4:vendorId"
 
@@ -351,19 +350,19 @@ func TestAuth_KeyExistsFor(t *testing.T) {
 	registerTestDependencies(t)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	cryptoMock := cryptoMock.NewMockClient(ctrl)
+	cryptoMock := nutsCryptoMock.NewMockClient(ctrl)
 	auth := &Auth{
 		Crypto: cryptoMock,
 	}
 
-	t.Run("false when crypto returns false", func(t *testing.T) {
+	t.Run("false when nutsCrypto returns false", func(t *testing.T) {
 		cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).Return(false)
 
 		orgID := auth.KeyExistsFor(organizationID)
 		assert.False(t, orgID)
 	})
 
-	t.Run("true when crypto returns false", func(t *testing.T) {
+	t.Run("true when nutsCrypto returns false", func(t *testing.T) {
 		cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).Return(true)
 
 		assert.True(t, auth.KeyExistsFor(organizationID))
@@ -374,13 +373,13 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 	registerTestDependencies(t)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	registryMock := registryMock.NewMockRegistryClient(ctrl)
+	registry := registryMock.NewMockRegistryClient(ctrl)
 	auth := &Auth{
-		Registry: registryMock,
+		Registry: registry,
 	}
 
 	t.Run("returns name", func(t *testing.T) {
-		registryMock.EXPECT().OrganizationById(organizationID).Return(&registryDB.Organization{Name: "name"}, nil)
+		registry.EXPECT().OrganizationById(organizationID).Return(&registryDB.Organization{Name: "name"}, nil)
 
 		name, err := auth.OrganizationNameByID(organizationID)
 		if assert.NoError(t, err) {
@@ -389,7 +388,7 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 	})
 
 	t.Run("returns error", func(t *testing.T) {
-		registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, errors.New("error"))
+		registry.EXPECT().OrganizationById(gomock.Any()).Return(nil, errors.New("error"))
 
 		_, err := auth.OrganizationNameByID(organizationID)
 		assert.Error(t, err)
@@ -399,8 +398,8 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 func registerTestDependencies(t *testing.T) {
 	// This makes sure instances of Auth use test instances of Crypto and Registry which write their data to a temp dir
 	testDirectory := testIo.TestDirectory(t)
-	os.Setenv("NUTS_IDENTITY", vendorID)
-	core.NutsConfig().Load(&cobra.Command{})
-	crypto.NewTestCryptoInstance(testDirectory)
-	registry.NewTestRegistryInstance(testDirectory)
+	_ = os.Setenv("NUTS_IDENTITY", vendorID)
+	_ = core.NutsConfig().Load(&cobra.Command{})
+	nutsCrypto.NewTestCryptoInstance(testDirectory)
+	nutsRegistry.NewTestRegistryInstance(testDirectory)
 }
