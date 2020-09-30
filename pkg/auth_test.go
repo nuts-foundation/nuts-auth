@@ -6,28 +6,22 @@ import (
 	"os"
 	"testing"
 
-	"github.com/spf13/cobra"
-
-	"github.com/nuts-foundation/nuts-auth/pkg/services"
-
+	contract "github.com/nuts-foundation/nuts-auth/pkg/contract"
+	services "github.com/nuts-foundation/nuts-auth/pkg/services"
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
-
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
+	core "github.com/nuts-foundation/nuts-go-core"
+	testIo "github.com/nuts-foundation/nuts-go-test/io"
+	registryMock "github.com/nuts-foundation/nuts-registry/mock"
+	registry "github.com/nuts-foundation/nuts-registry/pkg"
+	registryDB "github.com/nuts-foundation/nuts-registry/pkg/db"
 	registryTest "github.com/nuts-foundation/nuts-registry/test"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
-
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	"github.com/nuts-foundation/nuts-go-test/io"
-	registry "github.com/nuts-foundation/nuts-registry/pkg"
-	"github.com/spf13/cobra"
-
 	"github.com/golang/mock/gomock"
-	cryptoMock2 "github.com/nuts-foundation/nuts-crypto/test/mock"
-	core "github.com/nuts-foundation/nuts-go-core"
-	registryMock "github.com/nuts-foundation/nuts-registry/mock"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	irma "github.com/privacybydesign/irmago"
 	irmaservercore "github.com/privacybydesign/irmago/server"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -357,7 +351,7 @@ func TestAuth_KeyExistsFor(t *testing.T) {
 	registerTestDependencies(t)
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	cryptoMock := cryptoMock2.NewMockClient(ctrl)
+	cryptoMock := cryptoMock.NewMockClient(ctrl)
 	auth := &Auth{
 		Crypto: cryptoMock,
 	}
@@ -386,7 +380,7 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 	}
 
 	t.Run("returns name", func(t *testing.T) {
-		registryMock.EXPECT().OrganizationById(organizationID).Return(&db.Organization{Name: "name"}, nil)
+		registryMock.EXPECT().OrganizationById(organizationID).Return(&registryDB.Organization{Name: "name"}, nil)
 
 		name, err := auth.OrganizationNameByID(organizationID)
 		if assert.NoError(t, err) {
@@ -404,7 +398,7 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 
 func registerTestDependencies(t *testing.T) {
 	// This makes sure instances of Auth use test instances of Crypto and Registry which write their data to a temp dir
-	testDirectory := io.TestDirectory(t)
+	testDirectory := testIo.TestDirectory(t)
 	os.Setenv("NUTS_IDENTITY", vendorID)
 	core.NutsConfig().Load(&cobra.Command{})
 	crypto.NewTestCryptoInstance(testDirectory)
