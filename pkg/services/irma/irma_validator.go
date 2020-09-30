@@ -350,8 +350,8 @@ func (v IrmaMethod) BuildAccessToken(jwtBearerToken *services.NutsJwtBearerToken
 	return token, err
 }
 
-// CreateJwtBearerToken creates a JwtBearerTokenResponse containing a jwtBearerToken from a CreateJwtBearerTokenRequest.
-func (v IrmaMethod) CreateJwtBearerToken(request *services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResponse, error) {
+// CreateJwtBearerToken creates a JwtBearerTokenResult containing a jwtBearerToken from a CreateJwtBearerTokenRequest.
+func (v IrmaMethod) CreateJwtBearerToken(request *services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
 	jti, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
@@ -383,7 +383,7 @@ func (v IrmaMethod) CreateJwtBearerToken(request *services.CreateJwtBearerTokenR
 		return nil, err
 	}
 
-	return &services.JwtBearerTokenResponse{BearerToken: signingString}, nil
+	return &services.JwtBearerTokenResult{BearerToken: signingString}, nil
 }
 
 // ParseAndValidateAccessToken parses and validates a accesstoken string and returns a filled in NutsAccessToken.

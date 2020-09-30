@@ -22,7 +22,7 @@ type ContractSessionHandler interface {
 // logic concerning creating and introspecting OAuth 2.0 Access tokens
 type AccessTokenHandler interface {
 	// CreateJwtBearerToken from a JwtBearerTokenRequest. Returns a signed JWT string.
-	CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (token *JwtBearerTokenResponse, err error)
+	CreateJwtBearerToken(request *CreateJwtBearerTokenRequest) (token *JwtBearerTokenResult, err error)
 
 	// ParseAndValidateJwtBearerToken accepts a jwt encoded bearer token as string and returns the NutsJwtBearerToken object if valid.
 	// it returns a ErrLegalEntityNotProvided if the issuer does not contain an legal entity

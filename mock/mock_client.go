@@ -99,10 +99,10 @@ func (mr *MockAuthClientMockRecorder) ValidateContract(request interface{}) *gom
 }
 
 // CreateAccessToken mocks base method
-func (m *MockAuthClient) CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResponse, error) {
+func (m *MockAuthClient) CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateAccessToken", request)
-	ret0, _ := ret[0].(*services.AccessTokenResponse)
+	ret0, _ := ret[0].(*services.AccessTokenResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -114,10 +114,10 @@ func (mr *MockAuthClientMockRecorder) CreateAccessToken(request interface{}) *go
 }
 
 // CreateJwtBearerToken mocks base method
-func (m *MockAuthClient) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResponse, error) {
+func (m *MockAuthClient) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateJwtBearerToken", request)
-	ret0, _ := ret[0].(*services.JwtBearerTokenResponse)
+	ret0, _ := ret[0].(*services.JwtBearerTokenResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

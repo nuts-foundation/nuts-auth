@@ -48,8 +48,8 @@ type AuthClient interface {
 	ContractSessionStatus(sessionID string) (*services.SessionStatusResult, error)
 	ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error)
 	ValidateContract(request services.ValidationRequest) (*services.ContractValidationResult, error)
-	CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResponse, error)
-	CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResponse, error)
+	CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResult, error)
+	CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error)
 	IntrospectAccessToken(token string) (*services.NutsAccessToken, error)
 	KeyExistsFor(legalEntity core.PartyID) bool
 	OrganizationNameByID(legalEntity core.PartyID) (string, error)
@@ -259,7 +259,7 @@ func (auth *Auth) ValidateContract(request services.ValidationRequest) (*service
 }
 
 // CreateAccessToken extracts the claims out of the request, checks the validity and builds the access token
-func (auth *Auth) CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResponse, error) {
+func (auth *Auth) CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResult, error) {
 	// extract the JwtBearerToken
 	jwtBearerToken, err := auth.AccessTokenHandler.ParseAndValidateJwtBearerToken(request.RawJwtBearerToken)
 	if err != nil {
@@ -280,11 +280,11 @@ func (auth *Auth) CreateAccessToken(request services.CreateAccessTokenRequest) (
 		return nil, err
 	}
 
-	return &services.AccessTokenResponse{AccessToken: accessToken}, nil
+	return &services.AccessTokenResult{AccessToken: accessToken}, nil
 }
 
 // CreateJwtBearerToken creates a JwtBearerToken from the given CreateJwtBearerTokenRequest
-func (auth *Auth) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResponse, error) {
+func (auth *Auth) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
 	return auth.AccessTokenHandler.CreateJwtBearerToken(&request)
 }
 

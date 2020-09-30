@@ -67,13 +67,13 @@ type CreateJwtBearerTokenRequest struct {
 	Scope         string
 }
 
-// AccessTokenResponse defines the return value back to the api for the CreateAccessToken method
-type AccessTokenResponse struct {
+// AccessTokenResult defines the return value back to the api for the CreateAccessToken method
+type AccessTokenResult struct {
 	AccessToken string
 }
 
-// JwtBearerTokenResponse defines the return value back to the api for the createJwtBearerToken method
-type JwtBearerTokenResponse struct {
+// JwtBearerTokenResult defines the return value back to the api for the createJwtBearerToken method
+type JwtBearerTokenResult struct {
 	BearerToken string
 }
 

@@ -536,7 +536,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
 		bindPostBody(ctx, params)
 
-		pkgResponse := &services.AccessTokenResponse{AccessToken: "foo"}
+		pkgResponse := &services.AccessTokenResult{AccessToken: "foo"}
 		ctx.authMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(pkgResponse, nil)
 
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
@@ -604,7 +604,7 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 			Scope:         body.Scope,
 		}
 
-		ctx.authMock.EXPECT().CreateJwtBearerToken(expectedRequest).Return(&services.JwtBearerTokenResponse{BearerToken: response.BearerToken}, nil)
+		ctx.authMock.EXPECT().CreateJwtBearerToken(expectedRequest).Return(&services.JwtBearerTokenResult{BearerToken: response.BearerToken}, nil)
 		expectStatusOK(ctx, response)
 
 		if !assert.Nil(t, ctx.wrapper.CreateJwtBearerToken(ctx.echoMock)) {
