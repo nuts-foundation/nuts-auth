@@ -3,10 +3,8 @@ package pkg
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -18,23 +16,19 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/services"
-	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
-
-	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
-
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
-
-	"github.com/privacybydesign/irmago/server/irmaserver"
-
-	core "github.com/nuts-foundation/nuts-go-core"
-
 	"github.com/mdp/qrterminal/v3"
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
+	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
+	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
 )
 
@@ -212,29 +206,7 @@ func (auth *Auth) configureOAuth() (signer crypto.Signer, err error) {
 		return
 	}
 
-	block, _ := pem.Decode(bytes)
-	if block == nil {
-		err = ErrIncorrectOAuthSigningKey
-		return
-	}
-
-	switch block.Type {
-	case "RSA PRIVATE KEY":
-		signer, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-	case "EC PRIVATE KEY":
-		signer, err = x509.ParseECPrivateKey(block.Bytes)
-	case "PRIVATE KEY":
-		var key interface{}
-		key, err = x509.ParsePKCS8PrivateKey(block.Bytes)
-		switch key.(type) {
-		case *rsa.PrivateKey:
-			signer = key.(*rsa.PrivateKey)
-		case *ecdsa.PrivateKey:
-			signer = key.(*ecdsa.PrivateKey)
-		case ed25519.PrivateKey:
-			signer = key.(ed25519.PrivateKey)
-		}
-	}
+	signer, err = cert.PemToSigner(bytes)
 	return
 }
 

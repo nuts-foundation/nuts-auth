@@ -296,36 +296,6 @@ func TestAuth_Configure(t *testing.T) {
 		}
 		assert.NoError(t, i.Configure())
 	})
-
-	t.Run("ok - OAuth RSA key loaded", func(t *testing.T) {
-		i := &Auth{
-			Config: AuthConfig{
-				Mode:                      core.ServerEngineMode,
-				PublicUrl:                 "url",
-				ActingPartyCn:             "url",
-				IrmaConfigPath:            "../testdata/irma",
-				SkipAutoUpdateIrmaSchemas: true,
-				GenerateOAuthKeys:         false,
-				OAuthSigningKey:           "../testdata/oauth/rsa.sk",
-			},
-		}
-		assert.NoError(t, i.Configure())
-	})
-
-	t.Run("ok - OAuth key loaded", func(t *testing.T) {
-		i := &Auth{
-			Config: AuthConfig{
-				Mode:                      core.ServerEngineMode,
-				PublicUrl:                 "url",
-				ActingPartyCn:             "url",
-				IrmaConfigPath:            "../testdata/irma",
-				SkipAutoUpdateIrmaSchemas: true,
-				GenerateOAuthKeys:         false,
-				OAuthSigningKey:           "../testdata/oauth/sk.pem",
-			},
-		}
-		assert.NoError(t, i.Configure())
-	})
 }
 
 func TestAuth_ContractSessionStatus(t *testing.T) {
