@@ -6,8 +6,9 @@ import (
 	"os"
 	"testing"
 
-	contract "github.com/nuts-foundation/nuts-auth/pkg/contract"
-	services "github.com/nuts-foundation/nuts-auth/pkg/services"
+	"github.com/golang/mock/gomock"
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 	nutsCrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	nutsCryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
@@ -17,8 +18,6 @@ import (
 	nutsRegistry "github.com/nuts-foundation/nuts-registry/pkg"
 	registryDB "github.com/nuts-foundation/nuts-registry/pkg/db"
 	registryTest "github.com/nuts-foundation/nuts-registry/test"
-
-	"github.com/golang/mock/gomock"
 	irma "github.com/privacybydesign/irmago"
 	irmaservercore "github.com/privacybydesign/irmago/server"
 	"github.com/spf13/cobra"
@@ -245,7 +244,7 @@ func TestAuth_Configure(t *testing.T) {
 	})
 
 	t.Run("ok - OAuth keys generated", func(t *testing.T) {
-		dir := io.TestDirectory(t)
+		dir := testIo.TestDirectory(t)
 		pkf := fmt.Sprintf("%s/new.pem", dir)
 		i := &Auth{
 			Config: AuthConfig{

@@ -139,16 +139,6 @@ func (auth *Auth) Configure() (err error) {
 				return
 			}
 
-			if signer, err = auth.configureOAuth(); err != nil {
-				return
-			}
-
-			oauthService := &oauth.OAuthService{
-				Crypto:   auth.Crypto,
-				Registry: auth.Registry,
-				Signer:   signer,
-			}
-
 			irmaService := irmaService.IrmaService{
 				IrmaSessionHandler: &irmaService.DefaultIrmaSessionHandler{I: irmaServer},
 				IrmaConfig:         irmaConfig,
@@ -158,6 +148,16 @@ func (auth *Auth) Configure() (err error) {
 			}
 			auth.ContractSessionHandler = irmaService
 			auth.ContractValidator = irmaService
+
+			if signer, err = auth.configureOAuth(); err != nil {
+				return
+			}
+
+			oauthService := &oauth.OAuthService{
+				Crypto:   auth.Crypto,
+				Registry: auth.Registry,
+				Signer:   signer,
+			}
 			auth.AccessTokenHandler = oauthService
 			auth.configDone = true
 		}
@@ -180,6 +180,14 @@ func (auth *Auth) configureContracts() (err error) {
 }
 
 func (auth *Auth) configureIrma() (irmaServer *irmaserver.Server, irmaConfig *irma.Configuration, err error) {
+	auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
+		Mode:                      auth.Config.Mode,
+		Address:                   auth.Config.Address,
+		PublicUrl:                 auth.Config.PublicUrl,
+		IrmaConfigPath:            auth.Config.IrmaConfigPath,
+		IrmaSchemeManager:         auth.Config.IrmaSchemeManager,
+		SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,
+	}
 	if irmaConfig, err = irmaService.GetIrmaConfig(auth.IrmaServiceConfig); err != nil {
 		return
 	}
