@@ -1,16 +1,9 @@
 package pkg
 
 import (
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -22,7 +15,6 @@ import (
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
@@ -45,12 +37,6 @@ const ConfEnableCORS = "enableCORS"
 
 // ConfActingPartyCN is the config key to provide the Acting party common name
 const ConfActingPartyCN = "actingPartyCn"
-
-// ConfGenerateOAuthKeys enables key generation for JWT signing keys used in the oauth flow.
-const ConfGenerateOAuthKeys = "oAuthKeyGeneration"
-
-// ConfOAuthSigningKey is the config for where the OAuth JWT signing key is located.
-const ConfOAuthSigningKey = "oAuthSigningKey"
 
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
@@ -132,7 +118,6 @@ func (auth *Auth) Configure() (err error) {
 			var (
 				irmaConfig *irma.Configuration
 				irmaServer *irmaserver.Server
-				signer     crypto.Signer
 			)
 
 			if irmaServer, irmaConfig, err = auth.configureIrma(); err != nil {
@@ -149,14 +134,14 @@ func (auth *Auth) Configure() (err error) {
 			auth.ContractSessionHandler = irmaService
 			auth.ContractValidator = irmaService
 
-			if signer, err = auth.configureOAuth(); err != nil {
-				return
-			}
-
 			oauthService := &oauth.OAuthService{
-				Crypto:   auth.Crypto,
-				Registry: auth.Registry,
-				Signer:   signer,
+				OAuthSigningKey:   auth.Config.OAuthSigningKey,
+				GenerateOAuthKeys: auth.Config.GenerateOAuthKeys,
+				Crypto:            auth.Crypto,
+				Registry:          auth.Registry,
+			}
+			if err = oauthService.Configure(); err != nil {
+				return
 			}
 			auth.AccessTokenHandler = oauthService
 			auth.configDone = true
@@ -195,55 +180,6 @@ func (auth *Auth) configureIrma() (irmaServer *irmaserver.Server, irmaConfig *ir
 		return
 	}
 	auth.IrmaServer = irmaServer
-	return
-}
-
-// TODO move loading of key from file to crypto package!
-func (auth *Auth) configureOAuth() (signer crypto.Signer, err error) {
-	var bytes []byte
-	if strings.TrimSpace(auth.Config.OAuthSigningKey) == "" {
-		logrus.Warn("OAuth authorization server disabled")
-		return
-	}
-	bytes, err = ioutil.ReadFile(auth.Config.OAuthSigningKey)
-	if os.IsNotExist(err) && auth.Config.GenerateOAuthKeys {
-		bytes, err = auth.generateOAuthSigningKey()
-	}
-
-	if err != nil {
-		return
-	}
-
-	signer, err = cert.PemToSigner(bytes)
-	return
-}
-
-func (auth *Auth) generateOAuthSigningKey() (bytes []byte, err error) {
-	var (
-		ec  *ecdsa.PrivateKey
-		der []byte
-	)
-	ec, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-
-	der, _ = x509.MarshalECPrivateKey(ec)
-	bytes = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der})
-
-	if err = ioutil.WriteFile(auth.Config.OAuthSigningKey, bytes, 0660); err != nil {
-		return
-	}
-
-	pub := ec.Public()
-	if der, err = x509.MarshalPKIXPublicKey(pub); err != nil {
-		return
-	}
-	pubBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
-	pubFile := fmt.Sprintf("%s.pub", auth.Config.OAuthSigningKey)
-	lastDot := strings.LastIndex(auth.Config.OAuthSigningKey, ".")
-	if lastDot > 0 {
-		pubFile = fmt.Sprintf("%s.pub", auth.Config.OAuthSigningKey[:lastDot])
-	}
-	err = ioutil.WriteFile(pubFile, pubBytes, 0664)
-
 	return
 }
 

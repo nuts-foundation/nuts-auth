@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -151,8 +152,8 @@ func flagSet() *pflag.FlagSet {
 	flags.String(pkg.ConfActingPartyCN, defs.ActingPartyCn, "The acting party Common name used in contracts")
 	flags.Bool(irma.ConfSkipAutoUpdateIrmaSchemas, defs.SkipAutoUpdateIrmaSchemas, "set if you want to skip the auto download of the irma schemas every 60 minutes.")
 	flags.Bool(pkg.ConfEnableCORS, defs.EnableCORS, "Set if you want to allow CORS requests. This is useful when you want browsers to directly communicate with the nuts node.")
-	flags.Bool(pkg.ConfGenerateOAuthKeys, defs.GenerateOAuthKeys, "Auto generate OAuth JWT signing key if missing.")
-	flags.String(pkg.ConfOAuthSigningKey, defs.OAuthSigningKey, "Path to PEM encoded private key.")
+	flags.Bool(oauth.ConfGenerateOAuthKeys, defs.GenerateOAuthKeys, "Auto generate OAuth JWT signing key if missing.")
+	flags.String(oauth.ConfOAuthSigningKey, defs.OAuthSigningKey, "Path to PEM encoded private key.")
 
 	return flags
 }

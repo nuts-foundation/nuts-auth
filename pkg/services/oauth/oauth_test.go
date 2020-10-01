@@ -2,6 +2,7 @@ package oauth
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -361,6 +362,50 @@ func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 		// Check the if SubjectID contains the citizen service number
 		assert.Equal(t, buildClaims.SubjectID, claims.SubjectID)
 		assert.Equal(t, "nuts-sso", claims.Scope)
+	})
+}
+
+func TestAuth_Configure(t *testing.T) {
+	t.Run("ok - config valid", func(t *testing.T) {
+		v := defaultValidator(t)
+		assert.NoError(t, v.Configure())
+	})
+
+	t.Run("error - Missing oauth file", func(t *testing.T) {
+		v := defaultValidator(t)
+		v.GenerateOAuthKeys = false
+		v.OAuthSigningKey = "../../../testdata/oauth/missing.pem"
+		assert.Error(t, v.Configure())
+	})
+
+	t.Run("ok - OAuth keys generated", func(t *testing.T) {
+		dir := io.TestDirectory(t)
+		v := defaultValidator(t)
+		pkf := fmt.Sprintf("%s/new.pem", dir)
+		v.GenerateOAuthKeys = true
+		v.OAuthSigningKey = pkf
+
+		if assert.NoError(t, v.Configure()) {
+			_, err := os.Stat(pkf)
+			assert.NoError(t, err)
+
+			_, err = os.Stat(fmt.Sprintf("%s/new.pub", dir))
+			assert.NoError(t, err)
+		}
+	})
+
+	t.Run("error - OAuth keys generated in wrong location", func(t *testing.T) {
+		v := defaultValidator(t)
+		v.GenerateOAuthKeys = true
+		v.OAuthSigningKey = "../../../testdata/oauth/missing/sk.pem"
+		assert.Error(t, v.Configure())
+	})
+
+	t.Run("ok - OAuth EC key loaded", func(t *testing.T) {
+		v := defaultValidator(t)
+		v.GenerateOAuthKeys = false
+		v.OAuthSigningKey = "../../../testdata/oauth/ec.sk"
+		assert.NoError(t, v.Configure())
 	})
 }
 

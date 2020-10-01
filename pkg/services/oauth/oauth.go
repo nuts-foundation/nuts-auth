@@ -2,27 +2,93 @@ package oauth
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
 	nutsCrypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	nutsCryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 	nutsRegistry "github.com/nuts-foundation/nuts-registry/pkg"
+	"github.com/sirupsen/logrus"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
+// ConfGenerateOAuthKeys enables key generation for JWT signing keys used in the oauth flow.
+const ConfGenerateOAuthKeys = "oAuthKeyGeneration"
+
+// ConfOAuthSigningKey is the config for where the OAuth JWT signing key is located.
+const ConfOAuthSigningKey = "oAuthSigningKey"
+
 var _ services.AccessTokenHandler = (*OAuthService)(nil)
 
 type OAuthService struct {
-	Crypto   nutsCrypto.Client
-	Registry nutsRegistry.RegistryClient
-	Signer   crypto.Signer
+	OAuthSigningKey   string
+	GenerateOAuthKeys bool
+	Crypto            nutsCrypto.Client
+	Registry          nutsRegistry.RegistryClient
+	signer            crypto.Signer
+}
+
+func (s *OAuthService) Configure() (err error) {
+	var bytes []byte
+	if strings.TrimSpace(s.OAuthSigningKey) == "" {
+		logrus.Warn("OAuth authorization server disabled")
+		return
+	}
+	bytes, err = ioutil.ReadFile(s.OAuthSigningKey)
+	if os.IsNotExist(err) && s.GenerateOAuthKeys {
+		bytes, err = s.generateOAuthSigningKey()
+	}
+
+	if err != nil {
+		return
+	}
+
+	s.signer, err = cert.PemToSigner(bytes)
+	return
+}
+
+func (s *OAuthService) generateOAuthSigningKey() (bytes []byte, err error) {
+	var (
+		ec  *ecdsa.PrivateKey
+		der []byte
+	)
+	ec, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+
+	der, _ = x509.MarshalECPrivateKey(ec)
+	bytes = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der})
+
+	if err = ioutil.WriteFile(s.OAuthSigningKey, bytes, 0660); err != nil {
+		return
+	}
+
+	pub := ec.Public()
+	if der, err = x509.MarshalPKIXPublicKey(pub); err != nil {
+		return
+	}
+	pubBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
+	pubFile := fmt.Sprintf("%s.pub", s.OAuthSigningKey)
+	lastDot := strings.LastIndex(s.OAuthSigningKey, ".")
+	if lastDot > 0 {
+		pubFile = fmt.Sprintf("%s.pub", s.OAuthSigningKey[:lastDot])
+	}
+	err = ioutil.WriteFile(pubFile, pubBytes, 0664)
+
+	return
 }
 
 // CreateJwtBearerToken creates a JwtBearerTokenResult containing a jwtBearerToken from a CreateJwtBearerTokenRequest.
