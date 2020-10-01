@@ -103,9 +103,6 @@ var ErrMissingActingParty = errors.New("missing actingPartyCn")
 // ErrMissingPublicURL is returned when the publicUrl is missing from the config
 var ErrMissingPublicURL = errors.New("missing publicUrl")
 
-// ErrIncorrectOAuthSigningKey is returned when the OAuthSigningKey can't be parsed
-var ErrIncorrectOAuthSigningKey = errors.New("failed to parse OAuthSigningKey")
-
 // Configure the Auth struct by creating a validator and create an Irma server
 func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {

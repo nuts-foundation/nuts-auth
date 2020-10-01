@@ -55,6 +55,7 @@ func (s *OAuthService) Configure() (err error) {
 	}
 
 	if err != nil {
+		fmt.Errorf("failed to parse OAuthSigningKey: %w", err)
 		return
 	}
 
