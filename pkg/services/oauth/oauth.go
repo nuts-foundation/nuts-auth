@@ -2,23 +2,14 @@ package oauth
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
 	nutsCrypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	nutsCryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 	nutsRegistry "github.com/nuts-foundation/nuts-registry/pkg"
@@ -27,68 +18,31 @@ import (
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
-// ConfGenerateOAuthKeys enables key generation for JWT signing keys used in the oauth flow.
-const ConfGenerateOAuthKeys = "oAuthKeyGeneration"
-
-// ConfOAuthSigningKey is the config for where the OAuth JWT signing key is located.
-const ConfOAuthSigningKey = "oAuthSigningKey"
-
 var _ services.AccessTokenHandler = (*OAuthService)(nil)
 
+const oauthKeyQualifier = "ouath"
+
+var ErrMissingVendorID = errors.New("missing VendorID")
+
 type OAuthService struct {
-	OAuthSigningKey   string
-	GenerateOAuthKeys bool
-	Crypto            nutsCrypto.Client
-	Registry          nutsRegistry.RegistryClient
-	signer            crypto.Signer
+	VendorID       core.PartyID
+	Crypto         nutsCrypto.Client
+	Registry       nutsRegistry.RegistryClient
+	oauthKeyEntity nutsCryptoTypes.KeyIdentifier
 }
 
 func (s *OAuthService) Configure() (err error) {
-	var bytes []byte
-	if strings.TrimSpace(s.OAuthSigningKey) == "" {
-		logrus.Warn("OAuth authorization server disabled")
-		return
-	}
-	bytes, err = ioutil.ReadFile(s.OAuthSigningKey)
-	if os.IsNotExist(err) && s.GenerateOAuthKeys {
-		bytes, err = s.generateOAuthSigningKey()
-	}
-
-	if err != nil {
-		fmt.Errorf("failed to parse OAuthSigningKey: %w", err)
+	if s.VendorID.IsZero() {
+		err = ErrMissingVendorID
 		return
 	}
 
-	s.signer, err = cert.PemToSigner(bytes)
-	return
-}
+	s.oauthKeyEntity = nutsCryptoTypes.KeyForEntity(nutsCryptoTypes.LegalEntity{URI: s.VendorID.String()}).WithQualifier(oauthKeyQualifier)
 
-func (s *OAuthService) generateOAuthSigningKey() (bytes []byte, err error) {
-	var (
-		ec  *ecdsa.PrivateKey
-		der []byte
-	)
-	ec, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-
-	der, _ = x509.MarshalECPrivateKey(ec)
-	bytes = pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der})
-
-	if err = ioutil.WriteFile(s.OAuthSigningKey, bytes, 0660); err != nil {
-		return
+	if !s.Crypto.PrivateKeyExists(s.oauthKeyEntity) {
+		logrus.Info("Missing OAuth JWT signing key, generating new one")
+		s.Crypto.GenerateKeyPair(s.oauthKeyEntity, false)
 	}
-
-	pub := ec.Public()
-	if der, err = x509.MarshalPKIXPublicKey(pub); err != nil {
-		return
-	}
-	pubBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
-	pubFile := fmt.Sprintf("%s.pub", s.OAuthSigningKey)
-	lastDot := strings.LastIndex(s.OAuthSigningKey, ".")
-	if lastDot > 0 {
-		pubFile = fmt.Sprintf("%s.pub", s.OAuthSigningKey[:lastDot])
-	}
-	err = ioutil.WriteFile(pubFile, pubBytes, 0664)
-
 	return
 }
 
@@ -164,28 +118,19 @@ func (s *OAuthService) ParseAndValidateJwtBearerToken(acString string) (*service
 func (s *OAuthService) ParseAndValidateAccessToken(accessToken string) (*services.NutsAccessToken, error) {
 	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
 	token, err := parser.ParseWithClaims(accessToken, &services.NutsAccessToken{}, func(token *jwt.Token) (i interface{}, e error) {
-		legalEntity, err := parseTokenIssuer(token.Claims.(*services.NutsAccessToken).Issuer)
-		if err != nil {
-			return nil, err
+		// Check if the care provider which signed the token is managed by this node
+		if !s.Crypto.PrivateKeyExists(s.oauthKeyEntity) {
+			return nil, fmt.Errorf("invalid token: not signed by this node")
 		}
 
-		// Check if the care provider which signed the token is managed by this node
-		if !s.Crypto.PrivateKeyExists(nutsCryptoTypes.KeyForEntity(nutsCryptoTypes.LegalEntity{URI: legalEntity.String()})) {
-			return nil, fmt.Errorf("invalid token: not signed by a care provider of this node")
+		var sk crypto.Signer
+		if sk, e = s.Crypto.GetPrivateKey(s.oauthKeyEntity); e != nil {
+			return
 		}
 
 		// get public key
-		org, err := s.Registry.OrganizationById(legalEntity)
-		if err != nil {
-			return nil, err
-		}
-
-		pk, err := org.CurrentPublicKey()
-		if err != nil {
-			return nil, err
-		}
-
-		return pk.Materialize()
+		i = sk.Public()
+		return
 	})
 
 	if token != nil && token.Valid {
@@ -238,7 +183,7 @@ func (s *OAuthService) BuildAccessToken(jwtBearerToken *services.NutsJwtBearerTo
 	}
 
 	// Sign with the private key of the issuer
-	token, err := s.Crypto.SignJWT(keyVals, nutsCryptoTypes.KeyForEntity(nutsCryptoTypes.LegalEntity{URI: issuer}))
+	token, err := s.Crypto.SignJWT(keyVals, s.oauthKeyEntity)
 	if err != nil {
 		return token, fmt.Errorf("could not build accessToken: %w", err)
 	}

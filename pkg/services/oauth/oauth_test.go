@@ -2,7 +2,6 @@ package oauth
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -172,6 +171,7 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 	t.Run("missing subject", func(t *testing.T) {
 		v := defaultValidator(t)
+		v.Configure()
 		claims := &services.NutsJwtBearerToken{}
 		identityValidationResult := &services.ContractValidationResult{ValidationResult: services.Valid}
 		token, err := v.BuildAccessToken(claims, identityValidationResult)
@@ -181,15 +181,16 @@ func TestDefaultValidator_BuildAccessToken(t *testing.T) {
 
 	t.Run("build an access token", func(t *testing.T) {
 		v := defaultValidator(t)
+		v.Configure()
 		claims := &services.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}}
 		identityValidationResult := &services.ContractValidationResult{ValidationResult: services.Valid}
 		token, err := v.BuildAccessToken(claims, identityValidationResult)
 		if assert.NotEmpty(t, token) {
 			subject, _ := core.ParsePartyID(claims.Subject)
 			token, err := jwt.Parse(token, func(token *jwt.Token) (i interface{}, err error) {
-				org, _ := v.Registry.OrganizationById(subject)
-				pk, _ := org.CurrentPublicKey()
-				return pk.Materialize()
+				sk, _ := v.Crypto.GetPrivateKey(v.oauthKeyEntity)
+				i = sk.Public()
+				return
 			})
 			if assert.Nil(t, err) {
 				if assert.True(t, token.Valid) {
@@ -319,31 +320,12 @@ func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 		DisclosedAttributes: map[string]string{"nuts.agb.agbcode": "1234"},
 	}
 
-	t.Run("token not issued by care provider of this node", func(t *testing.T) {
-
-		v := defaultValidator(t)
-
-		// Use this code to regenerate the token if needed. Don't forget to delete the private keys from the testdata afterwards
-		//localBuildClaims := buildClaims
-		//localBuildClaims.Subject = registryTest.OrganizationID("unknown-party").String()
-		//c.GenerateKeyPair(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: localBuildClaims.Subject}))
-		//token, err := v.BuildAccessToken(&localBuildClaims, &userIdentityValidationResult)
-		//t.Log(token)
-
-		token := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsImV4cCI6MTU5NjUzOTkwNSwiZmFtaWx5X25hbWUiOiIiLCJnaXZlbl9uYW1lIjoiIiwiaWF0IjoxNTk2NTM5MDA1LCJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6dW5rbm93bi1wYXJ0eSIsIm5hbWUiOiIiLCJwcmVmaXgiOiIiLCJzY29wZSI6Im51dHMtc3NvIiwic2lkIjoidXJuOm9pZDoyLjE2Ljg0MC4xLjExMzg4My4yLjQuNi4zOjk5OTk5OTAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDIifQ.hCDVxoZ9mYdMRzHmgcFpPcQFKXf1LBorBH8lr2HZ1k04QVoSLfOjcImglwibXtBNEjbQ3zggmzNI9R1FvTLnmDCN6A-Z1DsJtBLVfZkQOS1kYFlYj7KFGVCQpyAJR4O-LPeYx1_TgkRsSaKQKaonQkA3Vaq9LD-hHh59xQ1sOVk"
-
-		claims, err := v.ParseAndValidateAccessToken(token)
-		if !assert.Error(t, err) || !assert.Nil(t, claims) {
-			t.FailNow()
-		}
-		assert.Equal(t, "invalid token: not signed by a care provider of this node", err.Error())
-	})
-
 	// Other organization sends access token to Organization in a request.
 	// Validate the Access Token
 	// Everything should be fine
 	t.Run("validate access token", func(t *testing.T) {
 		v := defaultValidator(t)
+		v.Configure()
 		// First build an access token
 		token, err := v.BuildAccessToken(&buildClaims, &userIdentityValidationResult)
 		if !assert.NoError(t, err) {
@@ -368,43 +350,6 @@ func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 func TestAuth_Configure(t *testing.T) {
 	t.Run("ok - config valid", func(t *testing.T) {
 		v := defaultValidator(t)
-		assert.NoError(t, v.Configure())
-	})
-
-	t.Run("error - Missing oauth file", func(t *testing.T) {
-		v := defaultValidator(t)
-		v.GenerateOAuthKeys = false
-		v.OAuthSigningKey = "../../../testdata/oauth/missing.pem"
-		assert.Error(t, v.Configure())
-	})
-
-	t.Run("ok - OAuth keys generated", func(t *testing.T) {
-		dir := io.TestDirectory(t)
-		v := defaultValidator(t)
-		pkf := fmt.Sprintf("%s/new.pem", dir)
-		v.GenerateOAuthKeys = true
-		v.OAuthSigningKey = pkf
-
-		if assert.NoError(t, v.Configure()) {
-			_, err := os.Stat(pkf)
-			assert.NoError(t, err)
-
-			_, err = os.Stat(fmt.Sprintf("%s/new.pub", dir))
-			assert.NoError(t, err)
-		}
-	})
-
-	t.Run("error - OAuth keys generated in wrong location", func(t *testing.T) {
-		v := defaultValidator(t)
-		v.GenerateOAuthKeys = true
-		v.OAuthSigningKey = "../../../testdata/oauth/missing/sk.pem"
-		assert.Error(t, v.Configure())
-	})
-
-	t.Run("ok - OAuth EC key loaded", func(t *testing.T) {
-		v := defaultValidator(t)
-		v.GenerateOAuthKeys = false
-		v.OAuthSigningKey = "../../../testdata/oauth/ec.sk"
 		assert.NoError(t, v.Configure())
 	})
 }
@@ -434,6 +379,7 @@ func defaultValidator(t *testing.T) OAuthService {
 		t.Fatal(err)
 	}
 	return OAuthService{
+		VendorID: core.NutsConfig().VendorID(),
 		Registry: testRegistry,
 		Crypto:   testCrypto,
 	}

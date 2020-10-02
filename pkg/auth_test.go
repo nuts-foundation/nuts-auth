@@ -156,55 +156,43 @@ func TestAuthInstance(t *testing.T) {
 func TestAuth_Configure(t *testing.T) {
 	registerTestDependencies(t)
 	t.Run("ok - mode defaults to server", func(t *testing.T) {
-		i := &Auth{
-			Config: AuthConfig{},
-		}
+		i := testInstance(t, AuthConfig{})
 		_ = i.Configure()
 		assert.Equal(t, core.ServerEngineMode, i.Config.Mode)
 	})
 
 	t.Run("ok - client mode", func(t *testing.T) {
-		i := &Auth{
-			Config: AuthConfig{
-				Mode: core.ClientEngineMode,
-			},
-		}
+		i := testInstance(t, AuthConfig{Mode: core.ClientEngineMode})
 
 		assert.NoError(t, i.Configure())
 	})
 
 	t.Run("error - missing actingPartyCn", func(t *testing.T) {
-		i := &Auth{
-			Config: AuthConfig{
-				Mode:      core.ServerEngineMode,
-				PublicUrl: "url",
-			},
-		}
+		i := testInstance(t, AuthConfig{
+			Mode:      core.ServerEngineMode,
+			PublicUrl: "url",
+		})
 
 		assert.Equal(t, ErrMissingActingParty, i.Configure())
 	})
 
 	t.Run("error - missing publicUrl", func(t *testing.T) {
-		i := &Auth{
-			Config: AuthConfig{
-				Mode:          core.ServerEngineMode,
-				ActingPartyCn: "url",
-			},
-		}
+		i := testInstance(t, AuthConfig{
+			Mode:          core.ServerEngineMode,
+			ActingPartyCn: "url",
+		})
 
 		assert.Equal(t, ErrMissingPublicURL, i.Configure())
 	})
 
 	t.Run("ok - config valid", func(t *testing.T) {
-		i := &Auth{
-			Config: AuthConfig{
-				Mode:                      core.ServerEngineMode,
-				PublicUrl:                 "url",
-				ActingPartyCn:             "url",
-				IrmaConfigPath:            "../testdata/irma",
-				SkipAutoUpdateIrmaSchemas: true,
-			},
-		}
+		i := testInstance(t, AuthConfig{
+			Mode:                      core.ServerEngineMode,
+			PublicUrl:                 "url",
+			ActingPartyCn:             "url",
+			IrmaConfigPath:            "../testdata/irma",
+			SkipAutoUpdateIrmaSchemas: true,
+		})
 
 		if assert.NoError(t, i.Configure()) {
 			// BUG: nuts-auth#23
@@ -213,15 +201,13 @@ func TestAuth_Configure(t *testing.T) {
 	})
 
 	t.Run("error - IRMA config failure", func(t *testing.T) {
-		i := &Auth{
-			Config: AuthConfig{
-				Mode:                      core.ServerEngineMode,
-				PublicUrl:                 "url",
-				ActingPartyCn:             "url",
-				IrmaSchemeManager:         "asdasdsad",
-				SkipAutoUpdateIrmaSchemas: true,
-			},
-		}
+		i := testInstance(t, AuthConfig{
+			Mode:                      core.ServerEngineMode,
+			PublicUrl:                 "url",
+			ActingPartyCn:             "url",
+			IrmaSchemeManager:         "asdasdsad",
+			SkipAutoUpdateIrmaSchemas: true,
+		})
 		err := i.Configure()
 		if !assert.NoError(t, err) {
 			return
@@ -392,6 +378,19 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 		_, err := auth.OrganizationNameByID(organizationID)
 		assert.Error(t, err)
 	})
+}
+
+func testInstance(t *testing.T, cfg AuthConfig) *Auth {
+	testDirectory := testIo.TestDirectory(t)
+	_ = os.Setenv("NUTS_IDENTITY", vendorID)
+	_ = core.NutsConfig().Load(&cobra.Command{})
+	testCrypto := nutsCrypto.NewTestCryptoInstance(testDirectory)
+	nutsRegistry.NewTestRegistryInstance(testDirectory)
+
+	return &Auth{
+		Crypto: testCrypto,
+		Config: cfg,
+	}
 }
 
 func registerTestDependencies(t *testing.T) {

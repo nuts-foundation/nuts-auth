@@ -70,7 +70,6 @@ func DefaultAuthConfig() AuthConfig {
 	return AuthConfig{
 		Address:           "localhost:1323",
 		IrmaSchemeManager: "pbdf",
-		GenerateOAuthKeys: true,
 	}
 }
 
@@ -132,10 +131,9 @@ func (auth *Auth) Configure() (err error) {
 			auth.ContractValidator = irmaService
 
 			oauthService := &oauth.OAuthService{
-				OAuthSigningKey:   auth.Config.OAuthSigningKey,
-				GenerateOAuthKeys: auth.Config.GenerateOAuthKeys,
-				Crypto:            auth.Crypto,
-				Registry:          auth.Registry,
+				VendorID: core.NutsConfig().VendorID(),
+				Crypto:   auth.Crypto,
+				Registry: auth.Registry,
 			}
 			if err = oauthService.Configure(); err != nil {
 				return
