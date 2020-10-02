@@ -32,7 +32,7 @@ type IrmaService struct {
 	IrmaConfig         *irma.Configuration
 	Registry           registry.RegistryClient
 	Crypto             nutscrypto.Client
-	ValidContracts     contract.Matrix
+	ValidContracts     contract.TemplateStore
 }
 
 type IrmaServiceConfig struct {
@@ -129,8 +129,8 @@ func (v IrmaService) SessionStatus(id services.SessionID) (*services.SessionStat
 			token string
 		)
 		if result.Signature != nil {
-			contractTemplate, err := contract.NewFromMessageContents(result.Signature.Message, v.ValidContracts)
-			sic := &SignedIrmaContract{*result.Signature, contractTemplate}
+			c, err := contract.ParseContractString(result.Signature.Message, v.ValidContracts)
+			sic := &SignedIrmaContract{*result.Signature, c}
 			if err != nil {
 				return nil, err
 			}
@@ -153,10 +153,7 @@ func (v IrmaService) SessionStatus(id services.SessionID) (*services.SessionStat
 }
 
 func (v IrmaService) legalEntityFromContract(sic *SignedIrmaContract) (core.PartyID, error) {
-	params, err := sic.ContractTemplate.ExtractParams(sic.IrmaContract.Message)
-	if err != nil {
-		return core.PartyID{}, err
-	}
+	params := sic.Contract.Params
 
 	if _, ok := params["legal_entity"]; !ok {
 		return core.PartyID{}, ErrLegalEntityNotProvided

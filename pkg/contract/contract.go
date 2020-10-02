@@ -1,155 +1,109 @@
 package contract
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"time"
 
-	"github.com/cbroglie/mustache"
 	"github.com/goodsign/monday"
 	"github.com/sirupsen/logrus"
 )
 
-const timeLayout = "Monday, 2 January 2006 15:04:05"
-
-// Template is a template which can result in a signed contract
-type Template struct {
-	Type                 Type     `json:"type"`
-	Version              Version  `json:"version"`
-	Language             Language `json:"language"`
-	SignerAttributes     []string `json:"signer_attributes"`
-	SignerDemoAttributes []string `json:"-"`
-	Template             string   `json:"template"`
-	TemplateAttributes   []string `json:"template_attributes"`
-	Regexp               string   `json:"-"`
+// Contract contains the contract template, the raw contract text and the extracted params.
+type Contract struct {
+	RawContractText string
+	Template        *Template
+	Params          map[string]string
 }
 
-// Language of the contract in all caps. example: "NL"
-type Language string
+// ParseContractString parses a raw string, fids the contrac from the store and extracts the prarams
+// Note: It does not verify the params
+func ParseContractString(rawContractText string, validContracts TemplateStore) (*Contract, error) {
 
-// Type contains type of the contract to sign. Example: "BehandelaarLogin"
-type Type string
-
-// Version of the contract. example: "v1"
-type Version string
-
-// NowFunc is used to store a function that returns the current time. This can be changed when you want to mock the current time.
-var NowFunc = time.Now
-
-// StandardSignerAttributes defines the standard list of attributes used for a contract.
-// If SignerAttribute name starts with a dot '.', it uses the configured scheme manager
-var StandardSignerAttributes = []string{
-	".gemeente.personalData.firstnames",
-	"pbdf.pbdf.email.email",
-}
-
-// EN:PractitionerLogin:v1 Template
-var Contracts = Matrix{
-	"NL": {"BehandelaarLogin": {
-		"v1": &Template{
-			Type:               "BehandelaarLogin",
-			Version:            "v1",
-			Language:           "NL",
-			SignerAttributes:   []string{".nuts.agb.agbcode"},
-			Template:           `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan {{acting_party}} om namens {{legal_entity}} en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
-			TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
-			Regexp:             `NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
-		},
-		"v2": &Template{
-			Type:               "BehandelaarLogin",
-			Version:            "v2",
-			Language:           "NL",
-			SignerAttributes:   StandardSignerAttributes,
-			Template:           `NL:BehandelaarLogin:v2 Ondergetekende geeft toestemming aan {{acting_party}} om namens {{legal_entity}} en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van {{valid_from}} tot {{valid_to}}.`,
-			TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
-			Regexp:             `NL:BehandelaarLogin:v2 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
-		},
-	}},
-	"EN": {"PractitionerLogin": {
-		"v1": &Template{
-			Type:               "PractitionerLogin",
-			Version:            "v1",
-			Language:           "EN",
-			SignerAttributes:   []string{"nuts.agb.agbcode"},
-			Template:           `EN:PractitionerLogin:v1 Undersigned gives permission to {{acting_party}} to make request to the Nuts network on behalf of {{legal_entity}} and itself. This permission is valid from {{valid_from}} until {{valid_to}}.`,
-			TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
-			Regexp:             `EN:PractitionerLogin:v1 Undersigned gives permission to (.+) to make request to the Nuts network on behalf of (.+) and itself. This permission is valid from (.+) until (.+).`,
-		},
-		"v2": &Template{
-			Type:               "PractitionerLogin",
-			Version:            "v2",
-			Language:           "EN",
-			SignerAttributes:   StandardSignerAttributes,
-			Template:           `EN:PractitionerLogin:v2 Undersigned gives permission to {{acting_party}} to make request to the Nuts network on behalf of {{legal_entity}} and itself. This permission is valid from {{valid_from}} until {{valid_to}}.`,
-			TemplateAttributes: []string{"acting_party", "legal_entity", "valid_from", "valid_to"},
-			Regexp:             `EN:PractitionerLogin:v2 Undersigned gives permission to (.+) to make request to the Nuts network on behalf of (.+) and itself. This permission is valid from (.+) until (.+).`,
-		},
-	}},
-}
-
-// NewFromMessageContents finds the contract for a certain message.
-// Every message should begin with a special sequence like "NL:ContractName:version".
-func NewFromMessageContents(contents string, validContracts Matrix) (*Template, error) {
-	r, _ := regexp.Compile(`^(.{2}):(.+):(v\d+)`)
-
-	matchResult := r.FindSubmatch([]byte(contents))
-	if len(matchResult) != 4 {
-		return nil, fmt.Errorf("%w: could not extract contract version, language and type", ErrInvalidContractText)
+	// first, find the contract Template
+	template, err := validContracts.FindFromRawContractText(rawContractText)
+	if err != nil {
+		return nil, err
 	}
 
-	language := Language(matchResult[1])
-	contractType := Type(matchResult[2])
-	version := Version(matchResult[3])
-
-	return NewByType(contractType, language, version, validContracts)
-
-}
-
-// NewByType returns the contract for a certain type, language and version. If version is omitted "v1" is used
-// If no contract is found, the error vaule of ErrContractNotFound is returned.
-func NewByType(contractType Type, language Language, version Version, validContracts Matrix) (*Template, error) {
-	if version == "" {
-		version = "v1"
-	}
-	if contract, ok := validContracts[language][contractType][version]; ok {
-		return contract, nil
+	contract := &Contract{
+		Template:        template,
+		RawContractText: rawContractText,
 	}
 
-	return nil, fmt.Errorf("type %s, lang: %s, version: %s: %w", contractType, language, version, ErrContractNotFound)
+	if err = contract.extractParams(); err != nil {
+		return nil, err
+	}
+
+	return contract, nil
 }
 
-func (c Template) timeLocation() *time.Location {
-	loc, _ := time.LoadLocation("Europe/Amsterdam")
-	return loc
-}
-
-func (c Template) RenderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (string, error) {
-	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
-	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
-
-	return mustache.Render(c.Template, vars)
-}
-
-func (c Template) ExtractParams(text string) (map[string]string, error) {
-	r, _ := regexp.Compile(c.Regexp)
-	matchResult := r.FindSubmatch([]byte(text))
+func (sc *Contract) extractParams() error {
+	// extract the params
+	r, _ := regexp.Compile(sc.Template.Regexp)
+	matchResult := r.FindSubmatch([]byte(sc.RawContractText))
 	if len(matchResult) < 1 {
-		return nil, fmt.Errorf("%w: could not match the contract template regex", ErrInvalidContractText)
+		return fmt.Errorf("%w: could not match the contract Template regex", ErrInvalidContractText)
 	}
 	matches := matchResult[1:]
 
-	if len(matches) != len(c.TemplateAttributes) {
-		return nil, fmt.Errorf("%w: amount of template attributes does not match the amount of params: found: %d, expected %d", ErrInvalidContractText, len(matches), len(c.TemplateAttributes))
+	if len(matches) != len(sc.Template.TemplateAttributes) {
+		return fmt.Errorf("%w: amount of Template attributes does not match the amount of Params: found: %d, expected %d", ErrInvalidContractText, len(matches), len(sc.Template.TemplateAttributes))
 	}
 
-	result := make(map[string]string, len(matches))
+	sc.Params = make(map[string]string, len(matches))
+	for idx, match := range matches {
+		sc.Params[sc.Template.TemplateAttributes[idx]] = string(match)
+	}
+	return nil
+}
 
-	for i, m := range matches {
-		result[c.TemplateAttributes[i]] = string(m)
+// Verify verifies the params with the template
+func (sc Contract) Verify() error {
+	var (
+		err                      error
+		ok                       bool
+		validFrom, validTo       *time.Time
+		validFromStr, validToStr string
+	)
+
+	if validFromStr, ok = sc.Params["valid_from"]; !ok {
+		return fmt.Errorf("%w: value for [valid_from] is missing", ErrInvalidContractText)
 	}
 
-	return result, nil
+	validFrom, err = parseTime(validFromStr, sc.Template.Language)
+	if err != nil {
+		return fmt.Errorf("%w: unable to parse [valid_from]: %s", ErrInvalidContractText, err)
+
+	}
+
+	if validToStr, ok = sc.Params["valid_to"]; !ok {
+		return fmt.Errorf("%w: value for [valid_to] is missing", ErrInvalidContractText)
+	}
+
+	validTo, err = parseTime(validToStr, sc.Template.Language)
+	if err != nil {
+		return fmt.Errorf("%w: unable to parse [valid_to]: %s", ErrInvalidContractText, err)
+	}
+
+	// All parsed, check time range
+	if validFrom.After(*validTo) {
+		return fmt.Errorf("%w: [valid_from] must be after [valid_to]", ErrInvalidContractText)
+	}
+
+	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
+	now := NowFunc()
+	logrus.Debugf("checking timeframe: now %v, validFrom: %v, validTo: %v", now, *validFrom, *validTo)
+
+	if now.In(amsterdamLocation).Before(*validFrom) {
+		return fmt.Errorf("contract is not yet valid. now: %s, validFrom: %s", now, validFrom)
+
+	}
+	if now.In(amsterdamLocation).After(*validTo) {
+		return fmt.Errorf("contract is expired since: %s", validTo)
+	}
+
+	return nil
 }
 
 func parseTime(timeStr string, _ Language) (*time.Time, error) {
@@ -160,66 +114,3 @@ func parseTime(timeStr string, _ Language) (*time.Time, error) {
 	}
 	return &parsedTime, nil
 }
-
-func (c Template) ValidateTimeFrame(params map[string]string) (bool, error) {
-	var (
-		err                      error
-		ok                       bool
-		validFrom, validTo       *time.Time
-		validFromStr, validToStr string
-	)
-
-	if validFromStr, ok = params["valid_from"]; !ok {
-		return false, fmt.Errorf("%w: value for [valid_from] is missing", ErrInvalidContractText)
-	}
-
-	validFrom, err = parseTime(validFromStr, c.Language)
-	if err != nil {
-		return false, fmt.Errorf("%w: unable to parse [valid_from]: %s", ErrInvalidContractText, err)
-
-	}
-
-	if validToStr, ok = params["valid_to"]; !ok {
-		return false, fmt.Errorf("%w: value for [valid_to] is missing", ErrInvalidContractText)
-	}
-
-	validTo, err = parseTime(validToStr, c.Language)
-	if err != nil {
-		return false, fmt.Errorf("%w: unable to parse [valid_to]: %s", ErrInvalidContractText, err)
-	}
-
-	// All parsed, check time range
-	if validFrom.After(*validTo) {
-		return false, fmt.Errorf("%w: [valid_from] must be after [valid_to]", ErrInvalidContractText)
-	}
-
-	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
-	now := NowFunc()
-	logrus.Debugf("checking timeframe: now %v, validFrom: %v, validTo: %v", now, *validFrom, *validTo)
-
-	if now.In(amsterdamLocation).Before(*validFrom) {
-		logrus.Infof("contract is not yet valid. now: %s, validFrom: %s", now, validFrom)
-		return false, nil
-
-	}
-	if now.In(amsterdamLocation).After(*validTo) {
-		logrus.Info("contract is expired")
-		return false, nil
-	}
-
-	return true, nil
-}
-
-type Matrix map[Language]map[Type]map[Version]*Template
-
-// ErrUnknownContractFormat is returned when the contract format is unknown
-var ErrUnknownContractFormat = errors.New("unknown contract format")
-
-// ErrInvalidContractFormat indicates tha a contract format is unknown.
-var ErrInvalidContractFormat = errors.New("unknown contract type")
-
-// ErrContractNotFound is used when a certain combination of type, language and version cannot resolve to a contract
-var ErrContractNotFound = errors.New("contract not found")
-
-// ErrInvalidContractText is used when contract texts cannot be parsed or contain invalid values
-var ErrInvalidContractText = errors.New("invalid contract text")
