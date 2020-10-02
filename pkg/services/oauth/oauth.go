@@ -40,9 +40,9 @@ func (s *OAuthService) CreateJwtBearerToken(request *services.CreateJwtBearerTok
 			NotBefore: 0,
 			Subject:   request.Custodian,
 		},
-		IdentityToken: request.IdentityToken,
-		SubjectID:     request.Subject,
-		Scope:         request.Scope,
+		AuthTokenContainer: request.IdentityToken,
+		SubjectID:          request.Subject,
+		Scope:              request.Scope,
 	}
 
 	var keyVals map[string]interface{}

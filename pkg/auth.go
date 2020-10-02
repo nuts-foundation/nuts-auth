@@ -276,8 +276,8 @@ func (auth *Auth) CreateAccessToken(request services.CreateAccessTokenRequest) (
 		return nil, fmt.Errorf("jwt bearer token validation failed: %w", err)
 	}
 
-	// Validate the IdentityToken
-	res, err := auth.ContractValidator.ValidateJwt(jwtBearerToken.IdentityToken, request.VendorIdentifier)
+	// Validate the AuthTokenContainer
+	res, err := auth.ContractValidator.ValidateJwt(jwtBearerToken.AuthTokenContainer, request.VendorIdentifier)
 	if err != nil {
 		return nil, fmt.Errorf("identity tokenen validation failed: %w", err)
 	}

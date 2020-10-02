@@ -148,9 +148,9 @@ func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
 				Issuer:    organizationID.String(),
 				Subject:   otherOrganizationID.String(),
 			},
-			IdentityToken: "base64 encoded signature",
-			SubjectID:     "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
-			Scope:         "nuts-sso",
+			AuthTokenContainer: "base64 encoded signature",
+			SubjectID:          "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+			Scope:              "nuts-sso",
 		}
 
 		var inInterface map[string]interface{}
@@ -307,9 +307,9 @@ func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
 			ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
 			Subject:   organizationID.String(),
 		},
-		SubjectID:     "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
-		IdentityToken: "base64 encoded identity ",
-		Scope:         "nuts-sso",
+		SubjectID:          "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+		AuthTokenContainer: "base64 encoded identity ",
+		Scope:              "nuts-sso",
 	}
 
 	userIdentityValidationResult := services.ContractValidationResult{

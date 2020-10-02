@@ -81,9 +81,9 @@ type JwtBearerTokenResult struct {
 // verified by the authorization server.
 type NutsJwtBearerToken struct {
 	jwt.StandardClaims
-	IdentityToken string `json:"usi"`
-	SubjectID     string `json:"sid"`
-	Scope         string `json:"scope"`
+	AuthTokenContainer string `json:"usi"`
+	SubjectID          string `json:"sid"`
+	Scope              string `json:"scope"`
 }
 
 // NutsAccessToken is a OAuth 2.0 access token which provides context to a request.

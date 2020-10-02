@@ -18,7 +18,7 @@ type ContractSessionHandler interface {
 	StartSession(request interface{}, handler server.SessionHandler) (*irma.Qr, string, error)
 }
 
-// AccessTokenHandler interface must be implemented by Access token handlers. Ir defines the interface to handle all
+// AccessTokenHandler interface must be implemented by Access token handlers. It defines the interface to handle all
 // logic concerning creating and introspecting OAuth 2.0 Access tokens
 type AccessTokenHandler interface {
 	// CreateJwtBearerToken from a JwtBearerTokenRequest. Returns a signed JWT string.
