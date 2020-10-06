@@ -9,8 +9,8 @@ import (
 )
 
 func TestContract_RenderTemplate(t *testing.T) {
-	contract := &Template{Type: "Simple", Template: "ga je akkoord met {{wat}} van {{valid_from}} tot {{valid_to}}?"}
-	result, err := contract.RenderTemplate(map[string]string{"wat": "alles"}, 0, 60*time.Minute)
+	template := &Template{Type: "Simple", Template: "ga je akkoord met {{wat}} van {{valid_from}} tot {{valid_to}}?"}
+	result, err := template.Render(map[string]string{"wat": "alles"}, 0, 60*time.Minute)
 	if err != nil {
 		t.Error(err)
 	}

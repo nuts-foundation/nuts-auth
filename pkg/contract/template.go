@@ -46,7 +46,7 @@ func (c Template) timeLocation() *time.Location {
 	return loc
 }
 
-func (c Template) RenderTemplate(vars map[string]string, validFromOffset, validToOffset time.Duration) (*Contract, error) {
+func (c Template) Render(vars map[string]string, validFromOffset, validToOffset time.Duration) (*Contract, error) {
 	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 
