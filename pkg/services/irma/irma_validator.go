@@ -32,7 +32,7 @@ type IrmaService struct {
 	IrmaConfig         *irma.Configuration
 	Registry           registry.RegistryClient
 	Crypto             nutscrypto.Client
-	ValidContracts     contract.TemplateStore
+	ContractTemplates  contract.TemplateStore
 }
 
 type IrmaServiceConfig struct {
@@ -66,7 +66,7 @@ func (v IrmaService) ValidateContract(b64EncodedContract string, format services
 			return nil, fmt.Errorf("could not base64-decode contract: %w", err)
 		}
 		// Create the irma contract validator
-		contractValidator := IrmaContractVerifier{v.IrmaConfig, v.ValidContracts}
+		contractValidator := IrmaContractVerifier{v.IrmaConfig, v.ContractTemplates}
 		signedContract, err := contractValidator.ParseSignedIrmaContract(string(contract))
 		if err != nil {
 			return nil, err
@@ -116,7 +116,7 @@ func (v IrmaService) ValidateJwt(token string, actingPartyCN string) (*services.
 	}
 
 	// Create the irma contract validator
-	contractValidator := IrmaContractVerifier{v.IrmaConfig, v.ValidContracts}
+	contractValidator := IrmaContractVerifier{v.IrmaConfig, v.ContractTemplates}
 	signedContract, err := contractValidator.ParseSignedIrmaContract(string(contractStr))
 	return contractValidator.VerifyAll(signedContract, actingPartyCN)
 }
@@ -129,7 +129,7 @@ func (v IrmaService) SessionStatus(id services.SessionID) (*services.SessionStat
 			token string
 		)
 		if result.Signature != nil {
-			c, err := contract.ParseContractString(result.Signature.Message, v.ValidContracts)
+			c, err := contract.ParseContractString(result.Signature.Message, v.ContractTemplates)
 			sic := &SignedIrmaContract{*result.Signature, c}
 			if err != nil {
 				return nil, err

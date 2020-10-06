@@ -144,7 +144,7 @@ func (auth *Auth) Configure() (err error) {
 				IrmaConfig:         irmaConfig,
 				Registry:           auth.Registry,
 				Crypto:             auth.Crypto,
-				ValidContracts:     auth.ValidContracts,
+				ContractTemplates:  auth.ValidContracts,
 			}
 			auth.ContractSessionHandler = irmaService
 			auth.ContractValidator = irmaService
