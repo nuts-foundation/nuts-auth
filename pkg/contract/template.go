@@ -63,7 +63,7 @@ func (c Template) Render(vars map[string]string, validFromOffset, validToOffset 
 		RawContractText: rawContractText,
 		Template:        &c,
 	}
-	if err := contract.extractParams(); err != nil {
+	if err := contract.initParams(); err != nil {
 		return nil, err
 	}
 

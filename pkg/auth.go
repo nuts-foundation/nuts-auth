@@ -178,11 +178,10 @@ func (auth *Auth) CreateContractSession(sessionRequest services.CreateSessionReq
 		contract.LegalEntityAttr: sessionRequest.LegalEntity,
 	}, 0, 60*time.Minute)
 	if err != nil {
-		return nil, fmt.Errorf("could not render template template: %w", err)
+		return nil, fmt.Errorf("could not render template: %w", err)
 	}
 	logrus.Debugf("contractMessage: %v", renderedContract.RawContractText)
 	if err := renderedContract.Verify(); err != nil {
-		logrus.Debugf("rendered contract invalid: %s", err.Error())
 		return nil, err
 	}
 

@@ -26,7 +26,6 @@ type NutsIdentityToken struct {
 	Type ContractFormat `json:"type"`
 	// The base64 encoded signature
 	Signature string `json:"sig"`
-	//Contract SignedIrmaContract `json:"nuts_signature"`
 }
 
 // ErrSessionNotFound is returned when there is no contract signing session found for a certain SessionID

@@ -104,9 +104,8 @@ func TestAuth_CreateContractSession(t *testing.T) {
 		}
 		result, err := sut.CreateContractSession(request)
 
-		if err != nil {
-			t.Error("ContractCreation failed with error:", err)
-			t.FailNow()
+		if assert.NoError(t, err) {
+			return
 		}
 
 		assert.Equal(t, result.QrCodeInfo.URL, qrURL, "qrCode should contain the correct URL")
@@ -133,7 +132,7 @@ func TestAuth_ContractByType(t *testing.T) {
 		result, err := sut.ContractByType(contract.Type("BehandelaarLogin"), contract.Language("NL"), contract.Version("v1"))
 
 		if !assert.Nil(t, err) || !assert.NotNil(t, result) {
-			t.FailNow()
+			return
 		}
 
 		assert.Equal(t, contract.Version("v1"), result.Version)

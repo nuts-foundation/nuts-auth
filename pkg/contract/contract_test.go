@@ -28,7 +28,7 @@ func TestContract_extractParams(t *testing.T) {
 			Template:        template,
 		}
 
-		err := contract.extractParams()
+		err := contract.initParams()
 		assert.NoError(t, err)
 
 		if !reflect.DeepEqual(expectedParams, contract.Params) {
@@ -50,7 +50,7 @@ func TestContract_extractParams(t *testing.T) {
 			Template:        template,
 		}
 
-		err := contract.extractParams()
+		err := contract.initParams()
 		if assert.Error(t, err) {
 			assert.True(t, strings.HasPrefix(err.Error(), "invalid contract text"))
 		}

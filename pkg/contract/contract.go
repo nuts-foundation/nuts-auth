@@ -16,12 +16,12 @@ type Contract struct {
 	Params          map[string]string
 }
 
-// ParseContractString parses a raw string, fids the contrac from the store and extracts the prarams
+// ParseContractString parses a raw string, finds the contract from the store and extracts the params
 // Note: It does not verify the params
-func ParseContractString(rawContractText string, validContracts TemplateStore) (*Contract, error) {
+func ParseContractString(rawContractText string, contractTemplates TemplateStore) (*Contract, error) {
 
 	// first, find the contract Template
-	template, err := validContracts.FindFromRawContractText(rawContractText)
+	template, err := contractTemplates.FindFromRawContractText(rawContractText)
 	if err != nil {
 		return nil, err
 	}
@@ -31,24 +31,24 @@ func ParseContractString(rawContractText string, validContracts TemplateStore) (
 		RawContractText: rawContractText,
 	}
 
-	if err = contract.extractParams(); err != nil {
+	if err = contract.initParams(); err != nil {
 		return nil, err
 	}
 
 	return contract, nil
 }
 
-func (sc *Contract) extractParams() error {
+func (sc *Contract) initParams() error {
 	// extract the params
 	r, _ := regexp.Compile(sc.Template.Regexp)
 	matchResult := r.FindSubmatch([]byte(sc.RawContractText))
 	if len(matchResult) < 1 {
-		return fmt.Errorf("%w: could not match the contract Template regex", ErrInvalidContractText)
+		return fmt.Errorf("%w: could not match the contract template regex", ErrInvalidContractText)
 	}
 	matches := matchResult[1:]
 
 	if len(matches) != len(sc.Template.TemplateAttributes) {
-		return fmt.Errorf("%w: amount of Template attributes does not match the amount of Params: found: %d, expected %d", ErrInvalidContractText, len(matches), len(sc.Template.TemplateAttributes))
+		return fmt.Errorf("%w: amount of template attributes does not match the amount of Params: found: %d, expected %d", ErrInvalidContractText, len(matches), len(sc.Template.TemplateAttributes))
 	}
 
 	sc.Params = make(map[string]string, len(matches))
@@ -88,7 +88,7 @@ func (sc Contract) Verify() error {
 
 	// All parsed, check time range
 	if validFrom.After(*validTo) {
-		return fmt.Errorf("%w: [valid_from] must be after [valid_to]", ErrInvalidContractText)
+		return fmt.Errorf("%w: ["+ValidFromAttr+"] must be after ["+ValidToAttr+"]", ErrInvalidContractText)
 	}
 
 	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
@@ -106,9 +106,14 @@ func (sc Contract) Verify() error {
 	return nil
 }
 
+const amsterdamTimeZone = "Europe/Amsterdam"
+
+// parseTime parses the given timeStr in context of the Europe/Amsterdam time zone and uses the given language.
+// Note that currently only the language "NL" is supported.
 func parseTime(timeStr string, _ Language) (*time.Time, error) {
-	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
-	parsedTime, err := monday.ParseInLocation(timeLayout, timeStr, amsterdamLocation, monday.LocaleNlNL)
+	contractIssuerTimezone, _ := time.LoadLocation(amsterdamTimeZone)
+	// TODO: add support for other languages
+	parsedTime, err := monday.ParseInLocation(timeLayout, timeStr, contractIssuerTimezone, monday.LocaleNlNL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid time string [%v]: %w", timeStr, err)
 	}
