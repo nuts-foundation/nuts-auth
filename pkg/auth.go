@@ -174,8 +174,8 @@ func (auth *Auth) CreateContractSession(sessionRequest services.CreateSessionReq
 
 	// Step 2: Render the template template with all the correct values
 	renderedContract, err := template.Render(map[string]string{
-		"acting_party": auth.Config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
-		"legal_entity": sessionRequest.LegalEntity,
+		contract.ActingPartyAttr: auth.Config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
+		contract.LegalEntityAttr: sessionRequest.LegalEntity,
 	}, 0, 60*time.Minute)
 	if err != nil {
 		return nil, fmt.Errorf("could not render template template: %w", err)

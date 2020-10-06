@@ -153,7 +153,7 @@ func validateActingParty(params map[string]string, actingParty string) (bool, er
 	}
 
 	// if no acting party in the params, error
-	actingPartyFromContract, ok := params["acting_party"]
+	actingPartyFromContract, ok := params[contract.ActingPartyAttr]
 	if !ok {
 		return false, errors.New("actingParty validation failed: no acting party found in contract params")
 	}

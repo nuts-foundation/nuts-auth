@@ -9,6 +9,10 @@ import (
 )
 
 const timeLayout = "Monday, 2 January 2006 15:04:05"
+const ValidFromAttr = "valid_from"
+const ValidToAttr = "valid_to"
+const ActingPartyAttr = "acting_party"
+const LegalEntityAttr = "legal_entity"
 
 // Template stores al properties of a contract template which can result in a signed contract
 type Template struct {
@@ -47,8 +51,8 @@ func (c Template) timeLocation() *time.Location {
 }
 
 func (c Template) Render(vars map[string]string, validFromOffset, validToOffset time.Duration) (*Contract, error) {
-	vars["valid_from"] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
-	vars["valid_to"] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
+	vars[ValidFromAttr] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
+	vars[ValidToAttr] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 
 	rawContractText, err := mustache.Render(c.Template, vars)
 	if err != nil {

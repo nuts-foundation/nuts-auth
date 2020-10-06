@@ -155,11 +155,11 @@ func (v IrmaService) SessionStatus(id services.SessionID) (*services.SessionStat
 func (v IrmaService) legalEntityFromContract(sic *SignedIrmaContract) (core.PartyID, error) {
 	params := sic.Contract.Params
 
-	if _, ok := params["legal_entity"]; !ok {
+	if _, ok := params[contract.LegalEntityAttr]; !ok {
 		return core.PartyID{}, ErrLegalEntityNotProvided
 	}
 
-	le, err := v.Registry.ReverseLookup(params["legal_entity"])
+	le, err := v.Registry.ReverseLookup(params[contract.LegalEntityAttr])
 	if err != nil {
 		return core.PartyID{}, err
 	}

@@ -67,23 +67,23 @@ func (sc Contract) Verify() error {
 		validFromStr, validToStr string
 	)
 
-	if validFromStr, ok = sc.Params["valid_from"]; !ok {
-		return fmt.Errorf("%w: value for [valid_from] is missing", ErrInvalidContractText)
+	if validFromStr, ok = sc.Params[ValidFromAttr]; !ok {
+		return fmt.Errorf("%w: value for ["+ValidFromAttr+"] is missing", ErrInvalidContractText)
 	}
 
 	validFrom, err = parseTime(validFromStr, sc.Template.Language)
 	if err != nil {
-		return fmt.Errorf("%w: unable to parse [valid_from]: %s", ErrInvalidContractText, err)
+		return fmt.Errorf("%w: unable to parse ["+ValidFromAttr+"]: %s", ErrInvalidContractText, err)
 
 	}
 
-	if validToStr, ok = sc.Params["valid_to"]; !ok {
-		return fmt.Errorf("%w: value for [valid_to] is missing", ErrInvalidContractText)
+	if validToStr, ok = sc.Params[ValidToAttr]; !ok {
+		return fmt.Errorf("%w: value for ["+ValidToAttr+"] is missing", ErrInvalidContractText)
 	}
 
 	validTo, err = parseTime(validToStr, sc.Template.Language)
 	if err != nil {
-		return fmt.Errorf("%w: unable to parse [valid_to]: %s", ErrInvalidContractText, err)
+		return fmt.Errorf("%w: unable to parse ["+ValidToAttr+"]: %s", ErrInvalidContractText, err)
 	}
 
 	// All parsed, check time range
