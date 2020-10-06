@@ -20,7 +20,7 @@ import (
 
 var _ services.AccessTokenHandler = (*OAuthService)(nil)
 
-const oauthKeyQualifier = "ouath"
+const oauthKeyQualifier = "oauth"
 
 var ErrMissingVendorID = errors.New("missing VendorID")
 
@@ -120,7 +120,7 @@ func (s *OAuthService) ParseAndValidateAccessToken(accessToken string) (*service
 	token, err := parser.ParseWithClaims(accessToken, &services.NutsAccessToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		// Check if the care provider which signed the token is managed by this node
 		if !s.Crypto.PrivateKeyExists(s.oauthKeyEntity) {
-			return nil, fmt.Errorf("invalid token: not signed by this node")
+			return nil, errors.New("invalid signature")
 		}
 
 		var sk crypto.Signer
