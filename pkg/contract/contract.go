@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/goodsign/monday"
-	"github.com/sirupsen/logrus"
 )
 
 // Contract contains the contract template, the raw contract text and the extracted params.
@@ -58,6 +57,8 @@ func (sc *Contract) initParams() error {
 	return nil
 }
 
+var ErrInvalidPeriod = fmt.Errorf("%w: invalid period", ErrInvalidContractText)
+
 // Verify verifies the params with the template
 func (sc Contract) Verify() error {
 	var (
@@ -68,39 +69,37 @@ func (sc Contract) Verify() error {
 	)
 
 	if validFromStr, ok = sc.Params[ValidFromAttr]; !ok {
-		return fmt.Errorf("%w: value for ["+ValidFromAttr+"] is missing", ErrInvalidContractText)
+		return fmt.Errorf("%w: value for [%s] is missing", ErrInvalidContractText, ValidFromAttr)
 	}
 
 	validFrom, err = parseTime(validFromStr, sc.Template.Language)
 	if err != nil {
-		return fmt.Errorf("%w: unable to parse ["+ValidFromAttr+"]: %s", ErrInvalidContractText, err)
+		return fmt.Errorf("%w: unable to parse [%s]: %s", ErrInvalidContractText, ValidFromAttr, err)
 
 	}
 
 	if validToStr, ok = sc.Params[ValidToAttr]; !ok {
-		return fmt.Errorf("%w: value for ["+ValidToAttr+"] is missing", ErrInvalidContractText)
+		return fmt.Errorf("%w: value for [%s] is missing", ErrInvalidContractText, ValidToAttr)
 	}
 
 	validTo, err = parseTime(validToStr, sc.Template.Language)
 	if err != nil {
-		return fmt.Errorf("%w: unable to parse ["+ValidToAttr+"]: %s", ErrInvalidContractText, err)
+		return fmt.Errorf("%w: unable to parse [%s]: %s", ErrInvalidContractText, ValidToAttr, err)
 	}
 
 	// All parsed, check time range
 	if validFrom.After(*validTo) {
-		return fmt.Errorf("%w: ["+ValidFromAttr+"] must be after ["+ValidToAttr+"]", ErrInvalidContractText)
+		return fmt.Errorf("%w: [%s] must become before [%s]", ErrInvalidPeriod, ValidFromAttr, ValidToAttr)
 	}
 
 	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
 	now := NowFunc()
-	logrus.Debugf("checking timeframe: now %v, validFrom: %v, validTo: %v", now, *validFrom, *validTo)
 
 	if now.In(amsterdamLocation).Before(*validFrom) {
-		return fmt.Errorf("contract is not yet valid. now: %s, validFrom: %s", now, validFrom)
-
+		return fmt.Errorf("%w: contract is not yet valid", ErrInvalidPeriod)
 	}
 	if now.In(amsterdamLocation).After(*validTo) {
-		return fmt.Errorf("contract is expired since: %s", validTo)
+		return fmt.Errorf("%w: contract is expired", ErrInvalidPeriod)
 	}
 
 	return nil

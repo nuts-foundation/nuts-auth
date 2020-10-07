@@ -63,7 +63,7 @@ func TestContract_Verify(t *testing.T) {
 	template := &Template{
 		Type:               "Simple",
 		Template:           "ik geef toestemming van {{valid_from}} tot {{valid_to}}.",
-		TemplateAttributes: []string{"valid_from", "valid_to"},
+		TemplateAttributes: []string{ValidFromAttr, ValidToAttr},
 	}
 
 	timeInAmsterdam := func() time.Time {
@@ -74,7 +74,7 @@ func TestContract_Verify(t *testing.T) {
 	t.Run("a valid contract returns no error", func(t *testing.T) {
 		validFromStr := monday.Format(timeInAmsterdam().Add(-30*time.Minute), timeLayout, monday.LocaleNlNL)
 		validToStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), timeLayout, monday.LocaleNlNL)
-		params := map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr}
+		params := map[string]string{"language": "NL", ValidFromAttr: validFromStr, ValidToAttr: validToStr}
 
 		contract := Contract{
 			Template: template,
@@ -89,7 +89,7 @@ func TestContract_Verify(t *testing.T) {
 		t.Run("a contract with invalid time range returns an error", func(t *testing.T) {
 			validFromStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), timeLayout, monday.LocaleNlNL)
 			validToStr := monday.Format(timeInAmsterdam().Add(-30*time.Minute), timeLayout, monday.LocaleNlNL)
-			params := map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr}
+			params := map[string]string{"language": "NL", ValidFromAttr: validFromStr, ValidToAttr: validToStr}
 
 			contract := Contract{
 				Template: template,
@@ -97,7 +97,7 @@ func TestContract_Verify(t *testing.T) {
 			}
 
 			err := contract.Verify()
-			expected := "invalid contract text: [valid_from] must be after [valid_to]"
+			expected := "invalid contract text: invalid period: [valid_from] must become before [valid_to]"
 			if err == nil || err.Error() != expected {
 				t.Errorf("expected '%v', got '%v'", expected, err)
 			}
@@ -106,7 +106,7 @@ func TestContract_Verify(t *testing.T) {
 		t.Run("a contract valid in the future is invalid", func(t *testing.T) {
 			validFromStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), timeLayout, monday.LocaleNlNL)
 			validToStr := monday.Format(timeInAmsterdam().Add(130*time.Minute), timeLayout, monday.LocaleNlNL)
-			params := map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr}
+			params := map[string]string{"language": "NL", ValidFromAttr: validFromStr, ValidToAttr: validToStr}
 
 			contract := Contract{
 				Template: template,
@@ -115,14 +115,14 @@ func TestContract_Verify(t *testing.T) {
 
 			err := contract.Verify()
 			if assert.Error(t, err) {
-				assert.True(t, strings.HasPrefix(err.Error(), "contract is not yet valid"))
+				assert.Equal(t, err.Error(), "invalid contract text: invalid period: contract is not yet valid")
 			}
 		})
 
 		t.Run("an expired contract is invalid", func(t *testing.T) {
 			validFromStr := monday.Format(timeInAmsterdam().Add(-130*time.Minute), timeLayout, monday.LocaleNlNL)
 			validToStr := monday.Format(timeInAmsterdam().Add(-30*time.Minute), timeLayout, monday.LocaleNlNL)
-			params := map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr}
+			params := map[string]string{"language": "NL", ValidFromAttr: validFromStr, ValidToAttr: validToStr}
 
 			contract := Contract{
 				Template: template,
@@ -131,7 +131,7 @@ func TestContract_Verify(t *testing.T) {
 
 			err := contract.Verify()
 			if assert.Error(t, err) {
-				assert.True(t, strings.HasPrefix(err.Error(), "contract is expired since"))
+				assert.Equal(t, err.Error(), "invalid contract text: invalid period: contract is expired")
 			}
 		})
 	})
@@ -140,7 +140,7 @@ func TestContract_Verify(t *testing.T) {
 
 		t.Run("no valid_from returns an error", func(t *testing.T) {
 			validToStr := monday.Format(timeInAmsterdam().Add(130*time.Minute), timeLayout, monday.LocaleNlNL)
-			params := map[string]string{"language": "NL", "valid_to": validToStr}
+			params := map[string]string{"language": "NL", ValidToAttr: validToStr}
 			contract := Contract{
 				Template: template,
 				Params:   params,
@@ -152,7 +152,7 @@ func TestContract_Verify(t *testing.T) {
 
 		t.Run("no valid_to returns an error", func(t *testing.T) {
 			validFromStr := monday.Format(timeInAmsterdam().Add(30*time.Minute), timeLayout, monday.LocaleNlNL)
-			params := map[string]string{"language": "NL", "valid_from": validFromStr}
+			params := map[string]string{"language": "NL", ValidFromAttr: validFromStr}
 			contract := Contract{
 				Template: template,
 				Params:   params,
@@ -168,7 +168,7 @@ func TestContract_Verify(t *testing.T) {
 		t.Run("a misformed valid_from returns an error", func(t *testing.T) {
 			validFromStr := "vandaag"
 			validToStr := monday.Format(timeInAmsterdam().Add(130*time.Minute), timeLayout, monday.LocaleNlNL)
-			params := map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr}
+			params := map[string]string{"language": "NL", ValidFromAttr: validFromStr, ValidToAttr: validToStr}
 			contract := Contract{
 				Template: template,
 				Params:   params,
@@ -181,7 +181,7 @@ func TestContract_Verify(t *testing.T) {
 		t.Run("a misformed valid_to returns an error", func(t *testing.T) {
 			validFromStr := monday.Format(timeInAmsterdam().Add(130*time.Minute), timeLayout, monday.LocaleNlNL)
 			validToStr := "morgen"
-			params := map[string]string{"language": "NL", "valid_from": validFromStr, "valid_to": validToStr}
+			params := map[string]string{"language": "NL", ValidFromAttr: validFromStr, ValidToAttr: validToStr}
 			contract := Contract{
 				Template: template,
 				Params:   params,
