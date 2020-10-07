@@ -104,7 +104,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 		}
 		result, err := sut.CreateContractSession(request)
 
-		if assert.NoError(t, err) {
+		if !assert.NoError(t, err) {
 			return
 		}
 
