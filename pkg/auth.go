@@ -107,12 +107,10 @@ func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
 		auth.Config.Mode = core.NutsConfig().GetEngineMode(auth.Config.Mode)
 		if auth.Config.Mode == core.ServerEngineMode {
-      
+
 			if err = auth.configureContracts(); err != nil {
 				return
 			}
-      
-			auth.ContractTemplates = contract.StandardContractTemplates
 
 			auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
 				Mode:                      auth.Config.Mode,
@@ -167,7 +165,7 @@ func (auth *Auth) configureContracts() (err error) {
 		err = ErrMissingPublicURL
 		return
 	}
-	auth.ValidContracts = contract.Contracts
+	auth.ContractTemplates = contract.StandardContractTemplates
 	return
 }
 
