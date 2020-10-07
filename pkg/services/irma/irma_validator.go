@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
 
 	irmaserver2 "github.com/privacybydesign/irmago/server/irmaserver"
 
@@ -78,7 +79,7 @@ func (v IrmaService) ValidateContract(b64EncodedContract string, format services
 
 // ValidateJwt validates a JWT formatted identity token
 func (v IrmaService) ValidateJwt(token string, actingPartyCN string) (*services.ContractValidationResult, error) {
-	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name}}
+	parser := &jwt.Parser{ValidMethods: oauth.ValidOAuthJWTAlg}
 	parsedToken, err := parser.ParseWithClaims(token, &services.NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity, err := parseTokenIssuer(token.Claims.(*services.NutsIdentityToken).Issuer)
 		if err != nil {

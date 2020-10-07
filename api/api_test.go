@@ -601,7 +601,6 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 			Custodian:     body.Custodian,
 			IdentityToken: body.Identity,
 			Subject:       body.Subject,
-			Scope:         body.Scope,
 		}
 
 		ctx.authMock.EXPECT().CreateJwtBearerToken(expectedRequest).Return(&services.JwtBearerTokenResult{BearerToken: response.BearerToken}, nil)

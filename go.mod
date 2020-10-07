@@ -1,6 +1,6 @@
 module github.com/nuts-foundation/nuts-auth
 
-go 1.13
+go 1.14
 
 require (
 	github.com/bwesterb/go-atum v1.0.1 // indirect
@@ -25,3 +25,5 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 )
+
+replace github.com/nuts-foundation/nuts-crypto => ../nuts-crypto
