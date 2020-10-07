@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type EchoRouter interface {
+type echoRouter interface {
 	CONNECT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 	DELETE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
 	GET(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
@@ -45,7 +45,7 @@ func NewAuthEngine() *nutsGo.Engine {
 		Name:      "Auth",
 		Routes: func(router nutsGo.EchoRouter) {
 			// Mount the irma-app routes
-			routerWithAny := router.(EchoRouter)
+			routerWithAny := router.(echoRouter)
 
 			// The Irma router operates on the mount path and does not know about the prefix.
 			rewriteFunc := func(w http.ResponseWriter, r *http.Request) {
