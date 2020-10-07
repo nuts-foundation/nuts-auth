@@ -63,7 +63,7 @@ type Auth struct {
 	IrmaServer             *irmaserver.Server
 	Crypto                 nutscrypto.Client
 	Registry               registry.RegistryClient
-	ValidContracts         contract.Matrix
+	ContractTemplates      contract.TemplateStore
 }
 
 func DefaultAuthConfig() AuthConfig {
@@ -89,10 +89,10 @@ func AuthInstance() *Auth {
 
 func NewAuthInstance(config AuthConfig, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) *Auth {
 	return &Auth{
-		Config:         config,
-		Crypto:         cryptoClient,
-		Registry:       registryClient,
-		ValidContracts: contract.Contracts,
+		Config:            config,
+		Crypto:            cryptoClient,
+		Registry:          registryClient,
+		ContractTemplates: contract.StandardContractTemplates,
 	}
 }
 
@@ -107,8 +107,18 @@ func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
 		auth.Config.Mode = core.NutsConfig().GetEngineMode(auth.Config.Mode)
 		if auth.Config.Mode == core.ServerEngineMode {
+
 			if err = auth.configureContracts(); err != nil {
 				return
+			}
+
+			auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
+				Mode:                      auth.Config.Mode,
+				Address:                   auth.Config.Address,
+				PublicUrl:                 auth.Config.PublicUrl,
+				IrmaConfigPath:            auth.Config.IrmaConfigPath,
+				IrmaSchemeManager:         auth.Config.IrmaSchemeManager,
+				SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,
 			}
 
 			var (
@@ -125,7 +135,7 @@ func (auth *Auth) Configure() (err error) {
 				IrmaConfig:         irmaConfig,
 				Registry:           auth.Registry,
 				Crypto:             auth.Crypto,
-				ValidContracts:     auth.ValidContracts,
+				ContractTemplates:  auth.ContractTemplates,
 			}
 			auth.ContractSessionHandler = irmaService
 			auth.ContractValidator = irmaService
@@ -155,7 +165,7 @@ func (auth *Auth) configureContracts() (err error) {
 		err = ErrMissingPublicURL
 		return
 	}
-	auth.ValidContracts = contract.Contracts
+	auth.ContractTemplates = contract.StandardContractTemplates
 	return
 }
 
@@ -183,28 +193,31 @@ func (auth *Auth) configureIrma() (irmaServer *irmaserver.Server, irmaConfig *ir
 // nodes in the network can verify the validity of the contract.
 func (auth *Auth) CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error) {
 
-	// Step 1: Find the correct contract
-	contract, err := contract.NewByType(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version, contract.Contracts)
+	// Step 1: Find the correct template
+	template, err := auth.ContractTemplates.Find(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
 	if err != nil {
 		return nil, err
 	}
 
-	// Step 2: Render the contract template with all the correct values
-	message, err := contract.RenderTemplate(map[string]string{
-		"acting_party": auth.Config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
-		"legal_entity": sessionRequest.LegalEntity,
+	// Step 2: Render the template template with all the correct values
+	renderedContract, err := template.Render(map[string]string{
+		contract.ActingPartyAttr: auth.Config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
+		contract.LegalEntityAttr: sessionRequest.LegalEntity,
 	}, 0, 60*time.Minute)
-	logrus.Debugf("contractMessage: %v", message)
 	if err != nil {
-		return nil, fmt.Errorf("could not render contract template: %w", err)
+		return nil, fmt.Errorf("could not render template: %w", err)
+	}
+	logrus.Debugf("contractMessage: %v", renderedContract.RawContractText)
+	if err := renderedContract.Verify(); err != nil {
+		return nil, err
 	}
 
-	// Step 3: Put the contract in an IMRA envelope
-	signatureRequest := irma.NewSignatureRequest(message)
+	// Step 3: Put the template in an IMRA envelope
+	signatureRequest := irma.NewSignatureRequest(renderedContract.RawContractText)
 	schemeManager := auth.Config.IrmaSchemeManager
 
 	var attributes irma.AttributeCon
-	for _, att := range contract.SignerAttributes {
+	for _, att := range template.SignerAttributes {
 		// Checks if attribute name start with a dot, if so, add the configured scheme manager.
 		if strings.Index(att, ".") == 0 {
 			att = fmt.Sprintf("%s%s", schemeManager, att)
@@ -248,10 +261,10 @@ func printQrCode(qrcode string) {
 	qrterminal.GenerateWithConfig(qrcode, config)
 }
 
-// NewByType returns a ContractTemplate of a certain type, language and version.
+// NewByType returns a Contract of a certain type, language and version.
 // If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
 func (auth *Auth) ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error) {
-	return contract.NewByType(contractType, language, version, auth.ValidContracts)
+	return auth.ContractTemplates.Find(contractType, language, version)
 }
 
 // ContractSessionStatus returns the current session status for a given sessionID.
@@ -289,8 +302,8 @@ func (auth *Auth) CreateAccessToken(request services.CreateAccessTokenRequest) (
 		return nil, fmt.Errorf("jwt bearer token validation failed: %w", err)
 	}
 
-	// Validate the IdentityToken
-	res, err := auth.ContractValidator.ValidateJwt(jwtBearerToken.IdentityToken, request.VendorIdentifier)
+	// Validate the AuthTokenContainer
+	res, err := auth.ContractValidator.ValidateJwt(jwtBearerToken.AuthTokenContainer, request.VendorIdentifier)
 	if err != nil {
 		return nil, fmt.Errorf("identity tokenen validation failed: %w", err)
 	}

@@ -93,12 +93,18 @@ func TestAuth_CreateContractSession(t *testing.T) {
 	t.Run("Create a new session", func(t *testing.T) {
 		sut := Auth{
 			ContractSessionHandler: MockContractSessionHandler{},
+			ContractTemplates:      contract.StandardContractTemplates,
+			Config:                 AuthConfig{ActingPartyCn: "0001"},
 		}
-		request := services.CreateSessionRequest{Type: contract.Type("BehandelaarLogin"), Language: contract.Language("NL")}
+		request := services.CreateSessionRequest{
+			Type:        contract.Type("BehandelaarLogin"),
+			Language:    contract.Language("NL"),
+			LegalEntity: "vendorName",
+		}
 		result, err := sut.CreateContractSession(request)
 
-		if err != nil {
-			t.Error("ContractCreation failed with error:", err)
+		if !assert.NoError(t, err) {
+			return
 		}
 
 		assert.Equal(t, result.QrCodeInfo.URL, qrURL, "qrCode should contain the correct URL")
@@ -120,12 +126,12 @@ func TestAuth_CreateContractSession(t *testing.T) {
 
 func TestAuth_ContractByType(t *testing.T) {
 	registerTestDependencies(t)
-	sut := Auth{ValidContracts: contract.Contracts}
+	sut := Auth{ContractTemplates: contract.StandardContractTemplates}
 	t.Run("get contract by type", func(t *testing.T) {
 		result, err := sut.ContractByType(contract.Type("BehandelaarLogin"), contract.Language("NL"), contract.Version("v1"))
 
 		if !assert.Nil(t, err) || !assert.NotNil(t, result) {
-			t.FailNow()
+			return
 		}
 
 		assert.Equal(t, contract.Version("v1"), result.Version)

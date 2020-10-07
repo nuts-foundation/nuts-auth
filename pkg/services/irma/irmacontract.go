@@ -17,41 +17,41 @@ import (
 
 // SignedIrmaContract holds the contract and additional methods to parse and validate.
 type SignedIrmaContract struct {
-	IrmaContract     irma.SignedMessage
-	ContractTemplate *contract.Template
+	IrmaContract irma.SignedMessage
+	Contract     *contract.Contract
 }
 
 // A IrmaContract is valid when:
 //  it has a valid signature
-//  it contains a message that is a known ContractTemplate
-//  its signature is signed with all attributes required by the ContractTemplate
+//  it contains a message that is a known Contract
+//  its signature is signed with all attributes required by the Contract
 //  it has a valid time period
 //  the acting party named in the contract is the same as the one making the request
 type IrmaContractVerifier struct {
 	irmaConfig     *irma.Configuration
-	validContracts contract.Matrix
+	validContracts contract.TemplateStore
 }
 
 // ParseSignedIrmaContract parses a json string containing a signed irma contract.
 func (cv *IrmaContractVerifier) ParseSignedIrmaContract(rawContract string) (*SignedIrmaContract, error) {
-	signedContract := &SignedIrmaContract{}
+	signedIrmaContract := &SignedIrmaContract{}
 
-	if err := json.Unmarshal([]byte(rawContract), &signedContract.IrmaContract); err != nil {
+	if err := json.Unmarshal([]byte(rawContract), &signedIrmaContract.IrmaContract); err != nil {
 		return nil, fmt.Errorf("could not parse IRMA contract: %w", err)
 	}
 
-	if signedContract.IrmaContract.Message == "" {
+	if signedIrmaContract.IrmaContract.Message == "" {
 		return nil, fmt.Errorf("could not parse contract: empty message")
 	}
 
-	contractMessage := signedContract.IrmaContract.Message
-	contractTemplate, err := contract.NewFromMessageContents(contractMessage, cv.validContracts)
+	contractMessage := signedIrmaContract.IrmaContract.Message
+	c, err := contract.ParseContractString(contractMessage, cv.validContracts)
 	if err != nil {
 		return nil, err
 	}
-	signedContract.ContractTemplate = contractTemplate
+	signedIrmaContract.Contract = c
 
-	return signedContract, nil
+	return signedIrmaContract, nil
 }
 
 func (cv *IrmaContractVerifier) VerifyAll(signedContract *SignedIrmaContract, actingPartyCn string) (*services.ContractValidationResult, error) {
@@ -122,20 +122,14 @@ func (cv *IrmaContractVerifier) ValidateContractContents(signedContract *SignedI
 		return validationResult, nil
 	}
 
-	params, err := signedContract.ContractTemplate.ExtractParams(signedContract.IrmaContract.Message)
-	if err != nil {
-		return nil, err
-	}
-
 	// Validate time frame
-	ok, err := signedContract.ContractTemplate.ValidateTimeFrame(params)
-	if !ok || err != nil {
+	if err := signedContract.Contract.Verify(); err != nil {
 		validationResult.ValidationResult = services.Invalid
-		return validationResult, err
+		return validationResult, nil
 	}
 
 	// Validate ActingParty Common Name
-	ok, err = validateActingParty(params, actingPartyCn)
+	ok, err := validateActingParty(signedContract.Contract.Params, actingPartyCn)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +153,7 @@ func validateActingParty(params map[string]string, actingParty string) (bool, er
 	}
 
 	// if no acting party in the params, error
-	actingPartyFromContract, ok := params["acting_party"]
+	actingPartyFromContract, ok := params[contract.ActingPartyAttr]
 	if !ok {
 		return false, errors.New("actingParty validation failed: no acting party found in contract params")
 	}
@@ -173,7 +167,7 @@ func (cv *IrmaContractVerifier) verifyRequiredAttributes(signedIrmaContract *Sig
 		return validationResult, nil
 	}
 
-	contractTemplate := signedIrmaContract.ContractTemplate
+	contractTemplate := signedIrmaContract.Contract.Template
 
 	// use a map to ignore duplicates. Allows us to compare lengths
 	validationRes := make(map[string]bool)

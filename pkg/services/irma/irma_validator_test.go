@@ -59,7 +59,7 @@ func TestValidateContract(t *testing.T) {
 		actingPartyCN string
 		legalEntity   string
 	}
-	location, _ := time.LoadLocation("Europe/Amsterdam")
+	location, _ := time.LoadLocation(contract.AmsterdamTimeZone)
 	tests := []struct {
 		name    string
 		args    args
@@ -213,7 +213,7 @@ func TestValidateContract(t *testing.T) {
 
 	irmaConfig, _ := GetIrmaConfig(authConfig)
 	irmaServer, _ := GetIrmaServer(authConfig)
-	validator := IrmaService{IrmaSessionHandler: irmaServer, IrmaConfig: irmaConfig, ValidContracts: contract.Contracts}
+	validator := IrmaService{IrmaSessionHandler: irmaServer, IrmaConfig: irmaConfig, ContractTemplates: contract.StandardContractTemplates}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -347,7 +347,7 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 			IrmaConfig:         irmaConfig,
 			Crypto:             cMock,
 			Registry:           rMock,
-			ValidContracts:     contract.Contracts,
+			ContractTemplates:  contract.StandardContractTemplates,
 		}
 
 		orgID := registryTest.OrganizationID("1")
@@ -554,7 +554,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	t.Run("Empty message returns error", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma.SignedMessage{}, ContractTemplate: &contract.Template{}})
+		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma.SignedMessage{}, Contract: &contract.Contract{}})
 
 		assert.NotNil(t, err)
 		assert.Error(t, contract.ErrInvalidContractText, err)
@@ -563,13 +563,10 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	t.Run("Missing legalEntity returns error", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{
-			IrmaContract: irma.SignedMessage{
-				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens  en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
-			},
-			ContractTemplate: contract.Contracts["NL"]["BehandelaarLogin"]["v1"],
-		})
+		rawText := "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens  en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42."
+		signedContract, err := contract.ParseContractString(rawText, contract.StandardContractTemplates)
 
+		assert.Nil(t, signedContract)
 		assert.NotNil(t, err)
 		assert.True(t, errors.Is(err, contract.ErrInvalidContractText))
 	})
@@ -580,11 +577,13 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 
 		ctx.rMock.EXPECT().ReverseLookup("UNKNOWN").Return(nil, db.ErrOrganizationNotFound)
 
-		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{
-			IrmaContract: irma.SignedMessage{
-				Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens UNKNOWN en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
-			},
-			ContractTemplate: contract.Contracts["NL"]["BehandelaarLogin"]["v1"],
+		rawText := "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens UNKNOWN en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42."
+		signedContract, err := contract.ParseContractString(rawText, contract.StandardContractTemplates)
+
+		assert.Nil(t, err)
+
+		_, err = ctx.v.legalEntityFromContract(&SignedIrmaContract{
+			Contract: signedContract,
 		})
 
 		assert.NotNil(t, err)
@@ -662,9 +661,9 @@ func defaultValidator(t *testing.T) (IrmaService, crypto.Client) {
 		t.Fatal(err)
 	}
 	return IrmaService{
-		Registry:       testRegistry,
-		Crypto:         testCrypto,
-		IrmaConfig:     irmaConfig,
-		ValidContracts: contract.Contracts,
+		Registry:          testRegistry,
+		Crypto:            testCrypto,
+		IrmaConfig:        irmaConfig,
+		ContractTemplates: contract.StandardContractTemplates,
 	}, testCrypto
 }
