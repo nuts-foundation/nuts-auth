@@ -94,7 +94,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 	t.Run("Create a new session", func(t *testing.T) {
 		sut := Auth{
 			ContractSessionHandler: MockContractSessionHandler{},
-			ValidContracts:         contract.StandardContractTemplates,
+			ContractTemplates:      contract.StandardContractTemplates,
 			Config:                 AuthConfig{ActingPartyCn: "0001"},
 		}
 		request := services.CreateSessionRequest{
@@ -127,7 +127,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 
 func TestAuth_ContractByType(t *testing.T) {
 	registerTestDependencies(t)
-	sut := Auth{ValidContracts: contract.StandardContractTemplates}
+	sut := Auth{ContractTemplates: contract.StandardContractTemplates}
 	t.Run("get contract by type", func(t *testing.T) {
 		result, err := sut.ContractByType(contract.Type("BehandelaarLogin"), contract.Language("NL"), contract.Version("v1"))
 

@@ -68,7 +68,7 @@ type Auth struct {
 	IrmaServer             *irmaserver.Server
 	Crypto                 crypto.Client
 	Registry               registry.RegistryClient
-	ValidContracts         contract.TemplateStore
+	ContractTemplates      contract.TemplateStore
 }
 
 func DefaultAuthConfig() AuthConfig {
@@ -94,10 +94,10 @@ func AuthInstance() *Auth {
 
 func NewAuthInstance(config AuthConfig, cryptoClient crypto.Client, registryClient registry.RegistryClient) *Auth {
 	return &Auth{
-		Config:         config,
-		Crypto:         cryptoClient,
-		Registry:       registryClient,
-		ValidContracts: contract.StandardContractTemplates,
+		Config:            config,
+		Crypto:            cryptoClient,
+		Registry:          registryClient,
+		ContractTemplates: contract.StandardContractTemplates,
 	}
 }
 
@@ -120,7 +120,7 @@ func (auth *Auth) Configure() (err error) {
 				err = ErrMissingPublicURL
 				return
 			}
-			auth.ValidContracts = contract.StandardContractTemplates
+			auth.ContractTemplates = contract.StandardContractTemplates
 
 			var irmaConfig *irma.Configuration
 			auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
@@ -144,7 +144,7 @@ func (auth *Auth) Configure() (err error) {
 				IrmaConfig:         irmaConfig,
 				Registry:           auth.Registry,
 				Crypto:             auth.Crypto,
-				ContractTemplates:  auth.ValidContracts,
+				ContractTemplates:  auth.ContractTemplates,
 			}
 			auth.ContractSessionHandler = irmaService
 			auth.ContractValidator = irmaService
@@ -167,7 +167,7 @@ func (auth *Auth) Configure() (err error) {
 func (auth *Auth) CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error) {
 
 	// Step 1: Find the correct template
-	template, err := auth.ValidContracts.Find(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
+	template, err := auth.ContractTemplates.Find(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func printQrCode(qrcode string) {
 // NewByType returns a Contract of a certain type, language and version.
 // If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
 func (auth *Auth) ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error) {
-	return auth.ValidContracts.Find(contractType, language, version)
+	return auth.ContractTemplates.Find(contractType, language, version)
 }
 
 // ContractSessionStatus returns the current session status for a given sessionID.
