@@ -5,12 +5,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
-
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nuts-foundation/nuts-auth/api"
 	"github.com/nuts-foundation/nuts-auth/pkg"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 	nutsGo "github.com/nuts-foundation/nuts-go-core"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

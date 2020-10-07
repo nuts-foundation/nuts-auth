@@ -9,23 +9,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/services"
-	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
-
-	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
-
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
-
-	"github.com/privacybydesign/irmago/server/irmaserver"
-
-	core "github.com/nuts-foundation/nuts-go-core"
-
 	"github.com/mdp/qrterminal/v3"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
+	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
+	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
+	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
 )
 
@@ -66,7 +61,7 @@ type Auth struct {
 	AccessTokenHandler     services.AccessTokenHandler
 	IrmaServiceConfig      irmaService.IrmaServiceConfig
 	IrmaServer             *irmaserver.Server
-	Crypto                 crypto.Client
+	Crypto                 nutscrypto.Client
 	Registry               registry.RegistryClient
 	ContractTemplates      contract.TemplateStore
 }
@@ -87,12 +82,12 @@ func AuthInstance() *Auth {
 		return instance
 	}
 	oneBackend.Do(func() {
-		instance = NewAuthInstance(DefaultAuthConfig(), crypto.CryptoInstance(), registry.RegistryInstance())
+		instance = NewAuthInstance(DefaultAuthConfig(), nutscrypto.CryptoInstance(), registry.RegistryInstance())
 	})
 	return instance
 }
 
-func NewAuthInstance(config AuthConfig, cryptoClient crypto.Client, registryClient registry.RegistryClient) *Auth {
+func NewAuthInstance(config AuthConfig, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) *Auth {
 	return &Auth{
 		Config:            config,
 		Crypto:            cryptoClient,
@@ -112,17 +107,13 @@ func (auth *Auth) Configure() (err error) {
 	auth.configOnce.Do(func() {
 		auth.Config.Mode = core.NutsConfig().GetEngineMode(auth.Config.Mode)
 		if auth.Config.Mode == core.ServerEngineMode {
-			if auth.Config.ActingPartyCn == "" {
-				err = ErrMissingActingParty
+      
+			if err = auth.configureContracts(); err != nil {
 				return
 			}
-			if auth.Config.PublicUrl == "" {
-				err = ErrMissingPublicURL
-				return
-			}
+      
 			auth.ContractTemplates = contract.StandardContractTemplates
 
-			var irmaConfig *irma.Configuration
 			auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
 				Mode:                      auth.Config.Mode,
 				Address:                   auth.Config.Address,
@@ -131,14 +122,16 @@ func (auth *Auth) Configure() (err error) {
 				IrmaSchemeManager:         auth.Config.IrmaSchemeManager,
 				SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,
 			}
-			if irmaConfig, err = irmaService.GetIrmaConfig(auth.IrmaServiceConfig); err != nil {
+
+			var (
+				irmaConfig *irma.Configuration
+				irmaServer *irmaserver.Server
+			)
+
+			if irmaServer, irmaConfig, err = auth.configureIrma(); err != nil {
 				return
 			}
-			var irmaServer *irmaserver.Server
-			if irmaServer, err = irmaService.GetIrmaServer(auth.IrmaServiceConfig); err != nil {
-				return
-			}
-			auth.IrmaServer = irmaServer
+
 			irmaService := irmaService.IrmaService{
 				IrmaSessionHandler: &irmaService.DefaultIrmaSessionHandler{I: irmaServer},
 				IrmaConfig:         irmaConfig,
@@ -150,8 +143,12 @@ func (auth *Auth) Configure() (err error) {
 			auth.ContractValidator = irmaService
 
 			oauthService := &oauth.OAuthService{
+				VendorID: core.NutsConfig().VendorID(),
 				Crypto:   auth.Crypto,
 				Registry: auth.Registry,
+			}
+			if err = oauthService.Configure(); err != nil {
+				return
 			}
 			auth.AccessTokenHandler = oauthService
 			auth.configDone = true
@@ -159,6 +156,38 @@ func (auth *Auth) Configure() (err error) {
 	})
 
 	return err
+}
+
+func (auth *Auth) configureContracts() (err error) {
+	if auth.Config.ActingPartyCn == "" {
+		err = ErrMissingActingParty
+		return
+	}
+	if auth.Config.PublicUrl == "" {
+		err = ErrMissingPublicURL
+		return
+	}
+	auth.ValidContracts = contract.Contracts
+	return
+}
+
+func (auth *Auth) configureIrma() (irmaServer *irmaserver.Server, irmaConfig *irma.Configuration, err error) {
+	auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
+		Mode:                      auth.Config.Mode,
+		Address:                   auth.Config.Address,
+		PublicUrl:                 auth.Config.PublicUrl,
+		IrmaConfigPath:            auth.Config.IrmaConfigPath,
+		IrmaSchemeManager:         auth.Config.IrmaSchemeManager,
+		SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,
+	}
+	if irmaConfig, err = irmaService.GetIrmaConfig(auth.IrmaServiceConfig); err != nil {
+		return
+	}
+	if irmaServer, err = irmaService.GetIrmaServer(auth.IrmaServiceConfig); err != nil {
+		return
+	}
+	auth.IrmaServer = irmaServer
+	return
 }
 
 // CreateContractSession creates a session based on an IRMA contract. This allows the user to permit the application to
