@@ -92,7 +92,7 @@ func (sc Contract) Verify() error {
 		return fmt.Errorf("%w: [%s] must become before [%s]", ErrInvalidPeriod, ValidFromAttr, ValidToAttr)
 	}
 
-	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
+	amsterdamLocation, _ := time.LoadLocation(AmsterdamTimeZone)
 	now := NowFunc()
 
 	if now.In(amsterdamLocation).Before(*validFrom) {
@@ -105,12 +105,10 @@ func (sc Contract) Verify() error {
 	return nil
 }
 
-const amsterdamTimeZone = "Europe/Amsterdam"
-
 // parseTime parses the given timeStr in context of the Europe/Amsterdam time zone and uses the given language.
 // Note that currently only the language "NL" is supported.
 func parseTime(timeStr string, _ Language) (*time.Time, error) {
-	contractIssuerTimezone, _ := time.LoadLocation(amsterdamTimeZone)
+	contractIssuerTimezone, _ := time.LoadLocation(AmsterdamTimeZone)
 	// TODO: add support for other languages
 	parsedTime, err := monday.ParseInLocation(timeLayout, timeStr, contractIssuerTimezone, monday.LocaleNlNL)
 	if err != nil {
@@ -118,3 +116,5 @@ func parseTime(timeStr string, _ Language) (*time.Time, error) {
 	}
 	return &parsedTime, nil
 }
+
+const AmsterdamTimeZone = "Europe/Amsterdam"

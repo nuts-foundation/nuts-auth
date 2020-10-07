@@ -14,7 +14,7 @@ func TestContract_RenderTemplate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
+	amsterdamLocation, _ := time.LoadLocation(AmsterdamTimeZone)
 
 	from := monday.Format(time.Now().In(amsterdamLocation).Add(0), timeLayout, monday.LocaleNlNL)
 	to := monday.Format(time.Now().In(amsterdamLocation).Add(60*time.Minute), timeLayout, monday.LocaleNlNL)
@@ -33,7 +33,7 @@ func TestParseTime(t *testing.T) {
 			t.Error("expected date to be parsed")
 		}
 
-		location, _ := time.LoadLocation("Europe/Amsterdam")
+		location, _ := time.LoadLocation(AmsterdamTimeZone)
 		expectedTime := time.Date(2019, 4, 3, 16, 36, 06, 0, location)
 
 		if parsedTime == nil || !parsedTime.Equal(expectedTime) {
@@ -48,7 +48,7 @@ func TestParseTime(t *testing.T) {
 			t.Error("expected date to be parsed")
 		}
 
-		location, _ := time.LoadLocation("Europe/Amsterdam")
+		location, _ := time.LoadLocation(AmsterdamTimeZone)
 		expectedTime := time.Date(2019, 4, 3, 16, 36, 06, 0, location)
 
 		if parsedTime == nil || !parsedTime.Equal(expectedTime) {

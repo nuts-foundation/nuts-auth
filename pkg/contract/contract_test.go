@@ -67,7 +67,7 @@ func TestContract_Verify(t *testing.T) {
 	}
 
 	timeInAmsterdam := func() time.Time {
-		amsterdamLocation, _ := time.LoadLocation("Europe/Amsterdam")
+		amsterdamLocation, _ := time.LoadLocation(AmsterdamTimeZone)
 		return time.Now().In(amsterdamLocation)
 	}
 

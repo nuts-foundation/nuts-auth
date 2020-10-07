@@ -46,7 +46,7 @@ var StandardSignerAttributes = []string{
 }
 
 func (c Template) timeLocation() *time.Location {
-	loc, _ := time.LoadLocation("Europe/Amsterdam")
+	loc, _ := time.LoadLocation(AmsterdamTimeZone)
 	return loc
 }
 

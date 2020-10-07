@@ -59,7 +59,7 @@ func TestValidateContract(t *testing.T) {
 		actingPartyCN string
 		legalEntity   string
 	}
-	location, _ := time.LoadLocation("Europe/Amsterdam")
+	location, _ := time.LoadLocation(contract.AmsterdamTimeZone)
 	tests := []struct {
 		name    string
 		args    args
