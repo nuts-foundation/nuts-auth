@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/nuts-foundation/nuts-auth/engine"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	"github.com/sirupsen/logrus"
-	"os"
 )
 
 var e = engine.NewAuthEngine()
@@ -29,12 +30,9 @@ func Execute() {
 		panic(err)
 	}
 
-	if err := e.Configure(); err != nil {
-		panic(err)
-	}
-
 	// bootstrap registry and crypto for running nuts-auth as local server
 	cr := crypto.CryptoInstance()
+	cr.Config.Mode = core.ServerEngineMode
 	if err := cr.Configure(); err != nil {
 		panic(err)
 	}
@@ -44,6 +42,10 @@ func Execute() {
 	r.Config.Datadir = "tmp"
 	r.Config.SyncMode = "fs"
 	if err := r.Configure(); err != nil {
+		panic(err)
+	}
+
+	if err := e.Configure(); err != nil {
 		panic(err)
 	}
 
