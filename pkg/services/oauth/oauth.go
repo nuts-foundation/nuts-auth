@@ -1,3 +1,21 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package oauth
 
 import (
@@ -43,6 +61,9 @@ func NewOAuthService(vendorID core.PartyID, cryptoClient nutsCrypto.Client, regi
 		contractValidator: contractValidator,
 	}
 }
+
+// OauthBearerTokenMaxValidity is the number of seconds that a bearer token is valid
+const OauthBearerTokenMaxValidity = 5
 
 func (s *service) Configure() (err error) {
 	if s.vendorID.IsZero() {
@@ -123,7 +144,7 @@ func claimsFromRequest(request services.CreateJwtBearerTokenRequest, audience st
 	return services.NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
 			Audience:  audience,
-			ExpiresAt: timeFunc().Add(5 * time.Second).Unix(),
+			ExpiresAt: timeFunc().Add(OauthBearerTokenMaxValidity * time.Second).Unix(),
 			IssuedAt:  timeFunc().Unix(),
 			Issuer:    request.Actor,
 			NotBefore: 0,
@@ -155,6 +176,8 @@ func (s *service) parseAndValidateJwtBearerToken(acString string) (*services.Nut
 
 	if token != nil && token.Valid {
 		if claims, ok := token.Claims.(*services.NutsJwtBearerToken); ok {
+			// this should be ok since it has already succeeded before
+			claims.SigningCertificate, _ = getCertificateFromHeaders(token)
 			return claims, nil
 		}
 	}

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"crypto/x509"
 	"encoding/json"
 	"time"
 
@@ -81,9 +82,10 @@ type JwtBearerTokenResult struct {
 // verified by the authorization server.
 type NutsJwtBearerToken struct {
 	jwt.StandardClaims
-	AuthTokenContainer string `json:"usi"`
-	SubjectID          string `json:"sid"`
-	Scope              string `json:"scope"`
+	AuthTokenContainer string            `json:"usi"`
+	SubjectID          string            `json:"sid"`
+	Scope              string            `json:"scope"`
+	SigningCertificate *x509.Certificate `json:-`
 }
 
 // NutsAccessToken is a OAuth 2.0 access token which provides context to a request.

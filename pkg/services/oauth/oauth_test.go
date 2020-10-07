@@ -1,3 +1,21 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package oauth
 
 import (
@@ -47,6 +65,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		JWT := signToken(token)
 
 		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+
 		assert.Nil(t, response)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "identity validation failed")
@@ -99,6 +118,7 @@ func TestOAuthService_parseAndValidateJwtBearerToken(t *testing.T) {
 		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(jwt)
 		assert.Nil(t, err)
 		assert.Equal(t, "actor", response.Issuer)
+
 	})
 }
 
@@ -195,7 +215,6 @@ func TestOAuthService_CreateJwtBearerToken(t *testing.T) {
 		assert.Error(t, err)
 		assert.Empty(t, token)
 	})
-
 }
 
 func Test_claimsFromRequest(t *testing.T) {
