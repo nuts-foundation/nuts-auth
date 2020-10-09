@@ -106,3 +106,10 @@ type ContractValidationResult struct {
 	// DisclosedAttributes contain the attributes used to sign this contract
 	DisclosedAttributes map[string]string `json:"disclosed_attributes"`
 }
+
+// NutsAuthenticationTokenContainer holds the base64 encoded token and a type which uniquely
+// identifies the means used to sign the contract
+type NutsAuthenticationTokenContainer struct {
+	Type  string `json:"type"`
+	Token string `json:"token"`
+}
