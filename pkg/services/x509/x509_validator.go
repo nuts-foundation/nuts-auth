@@ -94,6 +94,13 @@ var _ services.SignedToken = (*JwtX509Token)(nil)
 var _ services.AuthenticationTokenService = (*JwtX509Validator)(nil)
 
 func NewJwtX509Validator(roots, intermediates *x509.CertPool, contractTemplates *contract.TemplateStore) *JwtX509Validator {
+	if roots == nil {
+		roots = x509.NewCertPool()
+	}
+
+	if intermediates == nil {
+		intermediates = x509.NewCertPool()
+	}
 	return &JwtX509Validator{
 		roots:             roots,
 		intermediates:     intermediates,
@@ -184,26 +191,10 @@ func (validator JwtX509Validator) Verify(signedToken services.SignedToken) error
 		return fmt.Errorf("signedToken is not a X509 signedToken")
 	}
 
-	verifyOpts := x509.VerifyOptions{
-		Intermediates: validator.intermediates,
-		Roots:         validator.roots,
-		CurrentTime:   time.Now(),
-		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
-	}
-
-	if len(x509Token.chain) > 1 {
-		for _, cert := range x509Token.chain[1 : len(x509Token.chain)-2] {
-			verifyOpts.Intermediates.AddCert(cert)
-		}
-	}
-
-	leafCert := x509Token.chain[0]
-
-	verifiedChains, err := leafCert.Verify(verifyOpts)
+	leafCert, verifiedChains, err := validator.verifyCertChain(x509Token)
 	if err != nil {
-		return fmt.Errorf("unable to verify certificate chain: %w", err)
+		return err
 	}
-
 	for _, verifiedChain := range verifiedChains {
 		err := validator.checkCertRevocation(verifiedChain)
 		if err != nil {
@@ -223,6 +214,35 @@ func (validator JwtX509Validator) Verify(signedToken services.SignedToken) error
 	}
 
 	return nil
+}
+
+func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x509.Certificate, [][]*x509.Certificate, error) {
+	verifyOpts := x509.VerifyOptions{
+		Intermediates: validator.intermediates,
+		Roots:         validator.roots,
+		CurrentTime:   time.Now(),
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+	}
+
+	if len(x509Token.chain) > 1 {
+		for _, cert := range x509Token.chain[1:len(x509Token.chain)] {
+			verifyOpts.Intermediates.AddCert(cert)
+		}
+	}
+
+	leafCert := x509Token.chain[0]
+
+	verifiedChains, err := leafCert.Verify(verifyOpts)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to verify certificate chain: %w", err)
+	}
+
+	rootCert := verifiedChains[0][len(verifiedChains[0])-1]
+	if !rootCert.IsCA || !bytes.Equal(rootCert.RawIssuer, rootCert.RawSubject) || rootCert.CheckSignatureFrom(rootCert) != nil {
+		return nil, nil, fmt.Errorf("root certificate is not a root CA")
+	}
+
+	return leafCert, verifiedChains, err
 }
 
 func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Certificate) error {
