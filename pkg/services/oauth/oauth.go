@@ -15,6 +15,7 @@ import (
 	nutsCryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 	nutsRegistry "github.com/nuts-foundation/nuts-registry/pkg"
+	errors2 "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
@@ -141,7 +142,7 @@ func getCertificateFromHeaders(token *jwt.Token) (*x509.Certificate, error) {
 	}
 	bytes, err := base64.StdEncoding.DecodeString(c)
 	if err != nil {
-		return nil, fmt.Errorf("invalid x5c certificate encoding: %w", err)
+		return nil, errors2.Wrap(err, ErrInvalidX5cHeader.Error())
 	}
 	return x509.ParseCertificate(bytes)
 }
