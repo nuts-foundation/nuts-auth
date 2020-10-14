@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	servicesMock "github.com/nuts-foundation/nuts-auth/mock/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
@@ -394,7 +395,7 @@ type TestContext struct {
 	ctrl         *gomock.Controller
 	echoMock     *coreMock.MockContext
 	authMock     *mock.MockAuthClient
-	oauthMock    *mock.MockOAuthClient
+	oauthMock    *servicesMock.MockOAuthClient
 	contractMock *mock.MockContractClient
 	wrapper      Wrapper
 }
@@ -402,7 +403,7 @@ type TestContext struct {
 var createContext = func(t *testing.T) *TestContext {
 	ctrl := gomock.NewController(t)
 	authMock := mock.NewMockAuthClient(ctrl)
-	oauthMock := mock.NewMockOAuthClient(ctrl)
+	oauthMock := servicesMock.NewMockOAuthClient(ctrl)
 	authMock.EXPECT().OAuthClient().AnyTimes().Return(oauthMock)
 	contractMock := mock.NewMockContractClient(ctrl)
 	authMock.EXPECT().ContractClient().AnyTimes().Return(contractMock)

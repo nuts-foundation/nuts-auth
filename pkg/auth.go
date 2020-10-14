@@ -3,6 +3,8 @@ package pkg
 import (
 	"sync"
 
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
@@ -25,7 +27,7 @@ const ConfActingPartyCN = "actingPartyCn"
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
 	// OAuthClient returns an instance of OAuthClient
-	OAuthClient() OAuthClient
+	OAuthClient() services.OAuthClient
 	// ContractClient returns an instance of ContractClient
 	ContractClient() ContractClient
 }
@@ -35,7 +37,7 @@ type Auth struct {
 	Config              AuthConfig
 	configOnce          sync.Once
 	configDone          bool
-	OAuth               *OAuth
+	OAuth               services.OAuthClient
 	oneOauthInstance    sync.Once
 	Contract            *Contract
 	oneContractInstance sync.Once
@@ -73,12 +75,12 @@ func NewAuthInstance(config AuthConfig, cryptoClient nutscrypto.Client, registry
 }
 
 // OAuthClient returns an instance of OAuthClient
-func (auth *Auth) OAuthClient() OAuthClient {
+func (auth *Auth) OAuthClient() services.OAuthClient {
 	if auth.OAuth != nil {
 		return auth.OAuth
 	}
 	auth.oneOauthInstance.Do(func() {
-		auth.OAuth = NewOAuthInstance(core.NutsConfig().VendorID(), auth.Crypto, auth.Registry, auth.Contract.ContractValidator)
+		auth.OAuth = oauth.NewOAuthService(core.NutsConfig().VendorID(), auth.Crypto, auth.Registry, auth.Contract.ContractValidator)
 	})
 	return auth.OAuth
 }
