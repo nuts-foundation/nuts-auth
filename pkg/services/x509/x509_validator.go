@@ -28,8 +28,8 @@ type JwtX509Token struct {
 }
 
 type JwtX509Validator struct {
-	roots             *x509.CertPool
-	intermediates     *x509.CertPool
+	roots             []*x509.Certificate
+	intermediates     []*x509.Certificate
 	contractTemplates *contract.TemplateStore
 }
 
@@ -93,14 +93,7 @@ func (j JwtX509Token) Contract() contract.Contract {
 var _ services.SignedToken = (*JwtX509Token)(nil)
 var _ services.AuthenticationTokenService = (*JwtX509Validator)(nil)
 
-func NewJwtX509Validator(roots, intermediates *x509.CertPool, contractTemplates *contract.TemplateStore) *JwtX509Validator {
-	if roots == nil {
-		roots = x509.NewCertPool()
-	}
-
-	if intermediates == nil {
-		intermediates = x509.NewCertPool()
-	}
+func NewJwtX509Validator(roots, intermediates []*x509.Certificate, contractTemplates *contract.TemplateStore) *JwtX509Validator {
 	return &JwtX509Validator{
 		roots:             roots,
 		intermediates:     intermediates,
@@ -217,17 +210,27 @@ func (validator JwtX509Validator) Verify(signedToken services.SignedToken) error
 }
 
 func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x509.Certificate, [][]*x509.Certificate, error) {
+	rootsPool := x509.NewCertPool()
+	for _, cert := range validator.roots {
+		rootsPool.AddCert(cert)
+	}
+	intermediatesPool := x509.NewCertPool()
+	for _, cert := range validator.intermediates {
+		intermediatesPool.AddCert(cert)
+	}
 	verifyOpts := x509.VerifyOptions{
-		Intermediates: validator.intermediates,
-		Roots:         validator.roots,
+		Intermediates: intermediatesPool,
+		Roots:         rootsPool,
 		CurrentTime:   time.Now(),
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 	}
 
-	if len(x509Token.chain) > 1 {
-		for _, cert := range x509Token.chain[1:len(x509Token.chain)] {
-			verifyOpts.Intermediates.AddCert(cert)
-		}
+	if len(x509Token.chain) == 0 {
+		return nil, nil, fmt.Errorf("token does not have a certificate")
+	}
+
+	for _, cert := range x509Token.chain[1:len(x509Token.chain)] {
+		verifyOpts.Intermediates.AddCert(cert)
 	}
 
 	leafCert := x509Token.chain[0]
