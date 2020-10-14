@@ -15,7 +15,6 @@ import (
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 
 	test2 "github.com/nuts-foundation/nuts-auth/test"
-	"github.com/nuts-foundation/nuts-go-test/io"
 	"github.com/nuts-foundation/nuts-registry/test"
 
 	"github.com/labstack/echo/v4"
@@ -62,8 +61,7 @@ func Test_Integration(t *testing.T) {
 		t.Helper()
 		ctrl := gomock.NewController(t)
 
-		testDirectory := io.TestDirectory(t)
-		auth := pkg.NewTestAuthInstance(testDirectory)
+		auth := pkg.NewTestAuthInstance(t)
 
 		// Register a vendor
 		test2.RegisterVendor(t, "Awesomesoft", auth.Crypto, auth.Registry)
