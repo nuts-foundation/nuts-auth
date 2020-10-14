@@ -238,8 +238,8 @@ func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x50
 	}
 
 	rootCert := verifiedChains[0][len(verifiedChains[0])-1]
-	if !rootCert.IsCA || !bytes.Equal(rootCert.RawIssuer, rootCert.RawSubject) || rootCert.CheckSignatureFrom(rootCert) != nil {
-		return nil, nil, fmt.Errorf("root certificate is not a root CA")
+	if !bytes.Equal(rootCert.RawIssuer, rootCert.RawSubject) || rootCert.CheckSignatureFrom(rootCert) != nil {
+		return nil, nil, fmt.Errorf("certificate is not a root CA")
 	}
 
 	return leafCert, verifiedChains, err
