@@ -58,7 +58,7 @@ type MockContractValidator struct {
 	irmaResult services.ContractValidationResult
 }
 
-func (m MockAccessTokenHandler) CreateJwtBearerToken(request *services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
+func (m MockAccessTokenHandler) CreateJwtBearerToken(request *services.CreateJwtBearerTokenRequest, endpointId string) (*services.JwtBearerTokenResult, error) {
 	panic("implement me")
 }
 

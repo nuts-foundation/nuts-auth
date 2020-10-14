@@ -79,6 +79,10 @@ func Test_Integration(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		if _, err := auth.Registry.RegisterEndpoint(otherOrganizationID, "e-1", "url", "oauth", "active", nil); err != nil {
+			t.Fatal(err)
+		}
+
 		vendorIdentifierFromHeader = func(ctx echo.Context) string {
 			return "Demo EHR"
 		}
@@ -211,7 +215,6 @@ func Test_Integration(t *testing.T) {
 			assert.Equal(t, otherOrganizationID.String(), keyVals["iss"].(string))
 			assert.Equal(t, organizationID.String(), keyVals["sub"].(string))
 			assert.Equal(t, subjectBsn, keyVals["sid"].(string))
-			assert.Equal(t, "nuts-sso", keyVals["scope"].(string))
 			assert.Equal(t, "Bruijn", keyVals["family_name"].(string))
 			assert.Equal(t, "de", keyVals["prefix"].(string))
 			assert.Equal(t, "Willeke", keyVals["given_name"].(string))

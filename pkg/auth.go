@@ -305,7 +305,7 @@ func (auth *Auth) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	// Validate the AuthTokenContainer
 	res, err := auth.ContractValidator.ValidateJwt(jwtBearerToken.AuthTokenContainer, request.VendorIdentifier)
 	if err != nil {
-		return nil, fmt.Errorf("identity tokenen validation failed: %w", err)
+		return nil, fmt.Errorf("identity token validation failed: %w", err)
 	}
 	if res.ValidationResult == services.Invalid {
 		return nil, fmt.Errorf("identity validation failed")
@@ -321,7 +321,22 @@ func (auth *Auth) CreateAccessToken(request services.CreateAccessTokenRequest) (
 
 // CreateJwtBearerToken creates a JwtBearerToken from the given CreateJwtBearerTokenRequest
 func (auth *Auth) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
-	return auth.AccessTokenHandler.CreateJwtBearerToken(&request)
+	// todo add checks?
+	custodian, err := core.ParsePartyID(request.Custodian)
+	if err != nil {
+		return nil, err
+	}
+	endpointType := "oauth" // todo
+
+	epoints, err := auth.Registry.EndpointsByOrganizationAndType(custodian, &endpointType)
+	if err != nil {
+		return nil, err
+	}
+	if len(epoints) == 0 {
+		return nil, oauth.ErrMissingEndpoint
+	}
+
+	return auth.AccessTokenHandler.CreateJwtBearerToken(&request, string(epoints[0].Identifier))
 }
 
 // IntrospectAccessToken fills the fields in NutsAccessToken from the given Jwt Access Token

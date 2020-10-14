@@ -271,7 +271,6 @@ func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
 		Custodian:     requestBody.Custodian,
 		IdentityToken: requestBody.Identity,
 		Subject:       requestBody.Subject,
-		Scope:         requestBody.Scope,
 	}
 	response, err := api.Auth.CreateJwtBearerToken(request)
 	if err != nil {

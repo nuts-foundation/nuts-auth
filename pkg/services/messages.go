@@ -5,7 +5,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
-	"github.com/privacybydesign/irmago"
+	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 )
 
@@ -64,7 +64,6 @@ type CreateJwtBearerTokenRequest struct {
 	Custodian     string
 	IdentityToken string
 	Subject       string
-	Scope         string
 }
 
 // AccessTokenResult defines the return value back to the api for the CreateAccessToken method
