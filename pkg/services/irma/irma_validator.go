@@ -93,12 +93,13 @@ func (v IrmaService) ValidateJwt(token string, actingPartyCN string) (*services.
 		}
 
 		pk, err := org.CurrentPublicKey()
-
 		if err != nil {
 			return nil, err
 		}
 
-		return pk.Materialize()
+		var key interface{}
+		err = pk.Raw(&key)
+		return key, err
 	})
 
 	if err != nil {
