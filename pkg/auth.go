@@ -1,18 +1,11 @@
 package pkg
 
 import (
-	"errors"
 	"sync"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
-	"github.com/nuts-foundation/nuts-auth/pkg/services"
-	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
-	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/privacybydesign/irmago/server/irmaserver"
 )
 
 // ConfAddress is the config key for the address the http server listens on
@@ -31,23 +24,23 @@ const ConfActingPartyCN = "actingPartyCn"
 
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
-	ContractClient
-	OAuthClient
+	// OAuthClient returns an instance of OAuthClient
+	OAuthClient() OAuthClient
+	// ContractClient returns an instance of ContractClient
+	ContractClient() ContractClient
 }
 
 // Auth is the main struct of the Auth service
 type Auth struct {
-	Config                 AuthConfig
-	configOnce             sync.Once
-	configDone             bool
-	ContractSessionHandler services.ContractSessionHandler
-	ContractValidator      services.ContractValidator
-	AccessTokenHandler     services.AccessTokenHandler
-	IrmaServiceConfig      irmaService.IrmaServiceConfig
-	IrmaServer             *irmaserver.Server
-	Crypto                 nutscrypto.Client
-	Registry               registry.RegistryClient
-	ContractTemplates      contract.TemplateStore
+	Config              AuthConfig
+	configOnce          sync.Once
+	configDone          bool
+	OAuth               *OAuth
+	oneOauthInstance    sync.Once
+	Contract            *Contract
+	oneContractInstance sync.Once
+	Crypto              nutscrypto.Client
+	Registry            registry.RegistryClient
 }
 
 func DefaultAuthConfig() AuthConfig {
@@ -73,18 +66,33 @@ func AuthInstance() *Auth {
 
 func NewAuthInstance(config AuthConfig, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) *Auth {
 	return &Auth{
-		Config:            config,
-		Crypto:            cryptoClient,
-		Registry:          registryClient,
-		ContractTemplates: contract.StandardContractTemplates,
+		Config:   config,
+		Crypto:   cryptoClient,
+		Registry: registryClient,
 	}
 }
 
-// ErrMissingActingParty is returned when the actingPartyCn is missing from the config
-var ErrMissingActingParty = errors.New("missing actingPartyCn")
+// OAuthClient returns an instance of OAuthClient
+func (auth *Auth) OAuthClient() OAuthClient {
+	if auth.OAuth != nil {
+		return auth.OAuth
+	}
+	auth.oneOauthInstance.Do(func() {
+		auth.OAuth = NewOAuthInstance(core.NutsConfig().VendorID(), auth.Crypto, auth.Registry, auth.Contract.ContractValidator)
+	})
+	return auth.OAuth
+}
 
-// ErrMissingPublicURL is returned when the publicUrl is missing from the config
-var ErrMissingPublicURL = errors.New("missing publicUrl")
+// ContractClient returns an instance of ContractClient
+func (auth *Auth) ContractClient() ContractClient {
+	if auth.Contract != nil {
+		return auth.Contract
+	}
+	auth.oneContractInstance.Do(func() {
+		auth.Contract = NewContractInstance(auth.Config, auth.Crypto, auth.Registry)
+	})
+	return auth.Contract
+}
 
 // Configure the Auth struct by creating a validator and create an Irma server
 func (auth *Auth) Configure() (err error) {
@@ -92,82 +100,18 @@ func (auth *Auth) Configure() (err error) {
 		auth.Config.Mode = core.NutsConfig().GetEngineMode(auth.Config.Mode)
 		if auth.Config.Mode == core.ServerEngineMode {
 
-			if err = auth.configureContracts(); err != nil {
+			auth.ContractClient()
+			if err = auth.Contract.Configure(); err != nil {
 				return
 			}
 
-			auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
-				Mode:                      auth.Config.Mode,
-				Address:                   auth.Config.Address,
-				PublicUrl:                 auth.Config.PublicUrl,
-				IrmaConfigPath:            auth.Config.IrmaConfigPath,
-				IrmaSchemeManager:         auth.Config.IrmaSchemeManager,
-				SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,
-			}
-
-			var (
-				irmaConfig *irma.Configuration
-				irmaServer *irmaserver.Server
-			)
-
-			if irmaServer, irmaConfig, err = auth.configureIrma(); err != nil {
+			auth.OAuthClient()
+			if err = auth.OAuth.Configure(); err != nil {
 				return
 			}
-
-			irmaService := irmaService.IrmaService{
-				IrmaSessionHandler: &irmaService.DefaultIrmaSessionHandler{I: irmaServer},
-				IrmaConfig:         irmaConfig,
-				Registry:           auth.Registry,
-				Crypto:             auth.Crypto,
-				ContractTemplates:  auth.ContractTemplates,
-			}
-			auth.ContractSessionHandler = irmaService
-			auth.ContractValidator = irmaService
-
-			oauthService := &oauth.OAuthService{
-				VendorID: core.NutsConfig().VendorID(),
-				Crypto:   auth.Crypto,
-				Registry: auth.Registry,
-			}
-			if err = oauthService.Configure(); err != nil {
-				return
-			}
-			auth.AccessTokenHandler = oauthService
 			auth.configDone = true
 		}
 	})
 
 	return err
-}
-
-func (auth *Auth) configureContracts() (err error) {
-	if auth.Config.ActingPartyCn == "" {
-		err = ErrMissingActingParty
-		return
-	}
-	if auth.Config.PublicUrl == "" {
-		err = ErrMissingPublicURL
-		return
-	}
-	auth.ContractTemplates = contract.StandardContractTemplates
-	return
-}
-
-func (auth *Auth) configureIrma() (irmaServer *irmaserver.Server, irmaConfig *irma.Configuration, err error) {
-	auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
-		Mode:                      auth.Config.Mode,
-		Address:                   auth.Config.Address,
-		PublicUrl:                 auth.Config.PublicUrl,
-		IrmaConfigPath:            auth.Config.IrmaConfigPath,
-		IrmaSchemeManager:         auth.Config.IrmaSchemeManager,
-		SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,
-	}
-	if irmaConfig, err = irmaService.GetIrmaConfig(auth.IrmaServiceConfig); err != nil {
-		return
-	}
-	if irmaServer, err = irmaService.GetIrmaServer(auth.IrmaServiceConfig); err != nil {
-		return
-	}
-	auth.IrmaServer = irmaServer
-	return
 }

@@ -35,7 +35,7 @@ import (
 func TestAuth_CreateContractSession(t *testing.T) {
 	RegisterTestDependencies(t)
 	t.Run("Create a new session", func(t *testing.T) {
-		sut := Auth{
+		sut := Contract{
 			ContractSessionHandler: MockContractSessionHandler{},
 			ContractTemplates:      contract.StandardContractTemplates,
 			Config:                 AuthConfig{ActingPartyCn: "0001"},
@@ -56,7 +56,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 	})
 
 	t.Run("Unknown contract returns an error", func(t *testing.T) {
-		sut := Auth{
+		sut := Contract{
 			ContractSessionHandler: MockContractSessionHandler{},
 		}
 		request := services.CreateSessionRequest{Type: contract.Type("ShadyDeal"), Language: contract.Language("NL")}
@@ -70,7 +70,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 
 func TestAuth_ContractByType(t *testing.T) {
 	RegisterTestDependencies(t)
-	sut := Auth{ContractTemplates: contract.StandardContractTemplates}
+	sut := Contract{ContractTemplates: contract.StandardContractTemplates}
 	t.Run("get contract by type", func(t *testing.T) {
 		result, err := sut.ContractByType(contract.Type("BehandelaarLogin"), contract.Language("NL"), contract.Version("v1"))
 
@@ -95,7 +95,7 @@ func TestAuth_ContractByType(t *testing.T) {
 func TestAuth_ContractSessionStatus(t *testing.T) {
 	RegisterTestDependencies(t)
 	t.Run("returns err if session is not found", func(t *testing.T) {
-		i := &Auth{
+		i := &Contract{
 			ContractSessionHandler: MockContractSessionHandler{},
 		}
 
@@ -105,7 +105,7 @@ func TestAuth_ContractSessionStatus(t *testing.T) {
 	})
 
 	t.Run("returns session status when found", func(t *testing.T) {
-		i := &Auth{
+		i := &Contract{
 			ContractSessionHandler: MockContractSessionHandler{
 				SessionStatusResult: &services.SessionStatusResult{
 					NutsAuthToken: "token",
@@ -124,7 +124,7 @@ func TestAuth_ContractSessionStatus(t *testing.T) {
 func TestAuth_ValidateContract(t *testing.T) {
 	RegisterTestDependencies(t)
 	t.Run("Returns error on unknown constract type", func(t *testing.T) {
-		i := &Auth{
+		i := &Contract{
 			ContractValidator: MockContractValidator{},
 		}
 
@@ -134,7 +134,7 @@ func TestAuth_ValidateContract(t *testing.T) {
 	})
 
 	t.Run("Returns validation result for JWT", func(t *testing.T) {
-		i := &Auth{
+		i := &Contract{
 			ContractValidator: MockContractValidator{
 				jwtResult: services.ContractValidationResult{
 					ValidationResult: services.Valid,
@@ -150,7 +150,7 @@ func TestAuth_ValidateContract(t *testing.T) {
 	})
 
 	t.Run("Returns validation result for Irma", func(t *testing.T) {
-		i := &Auth{
+		i := &Contract{
 			ContractValidator: MockContractValidator{
 				irmaResult: services.ContractValidationResult{
 					ValidationResult: services.Valid,
@@ -171,7 +171,7 @@ func TestAuth_KeyExistsFor(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	cryptoMock := mock.NewMockClient(ctrl)
-	auth := &Auth{
+	auth := &Contract{
 		Crypto: cryptoMock,
 	}
 
@@ -194,7 +194,7 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	registry := registryMock.NewMockRegistryClient(ctrl)
-	auth := &Auth{
+	auth := &Contract{
 		Registry: registry,
 	}
 

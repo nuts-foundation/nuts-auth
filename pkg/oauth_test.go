@@ -29,7 +29,7 @@ import (
 func TestAuth_CreateAccessToken(t *testing.T) {
 	RegisterTestDependencies(t)
 	t.Run("invalid jwt", func(t *testing.T) {
-		i := &Auth{AccessTokenHandler: MockAccessTokenHandler{claims: nil, parseAndValidateAccessTokenJwtError: fmt.Errorf("validationError")}}
+		i := &OAuth{AccessTokenHandler: MockAccessTokenHandler{claims: nil, parseAndValidateAccessTokenJwtError: fmt.Errorf("validationError")}}
 		response, err := i.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: "foo"})
 		assert.Nil(t, response)
 		if assert.NotNil(t, err) {
@@ -38,7 +38,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 	})
 
 	t.Run("invalid identity", func(t *testing.T) {
-		i := &Auth{
+		i := &OAuth{
 			AccessTokenHandler: MockAccessTokenHandler{claims: &services.NutsJwtBearerToken{}},
 			ContractValidator: MockContractValidator{
 				jwtResult: services.ContractValidationResult{ValidationResult: services.Invalid},
@@ -53,7 +53,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 
 	t.Run("it creates a token", func(t *testing.T) {
 		expectedAT := "ac"
-		i := &Auth{
+		i := &OAuth{
 			ContractValidator: MockContractValidator{
 				jwtResult: services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}},
 			},

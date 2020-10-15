@@ -61,7 +61,7 @@ func TestAuth_Configure(t *testing.T) {
 
 		if assert.NoError(t, i.Configure()) {
 			// BUG: nuts-auth#23
-			assert.True(t, i.ContractValidator.IsInitialized())
+			assert.True(t, i.Contract.ContractValidator.IsInitialized())
 		}
 	})
 

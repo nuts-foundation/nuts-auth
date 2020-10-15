@@ -60,12 +60,12 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid value for param legalEntity: '%s', make sure its in the form 'urn:oid:1.2.3.4:foo'", params.LegalEntity))
 	}
 	// find legal entity in crypto
-	if !api.Auth.KeyExistsFor(orgID) {
+	if !api.Auth.ContractClient().KeyExistsFor(orgID) {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity, this Nuts node does not seem to be managing '%s'", orgID))
 	}
 
 	// translate legal entity to its name
-	orgName, err := api.Auth.OrganizationNameByID(orgID)
+	orgName, err := api.Auth.ContractClient().OrganizationNameByID(orgID)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No organization registered for legalEntity: %v", err))
 	}
@@ -81,7 +81,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	}
 
 	// Initiate the actual session
-	result, err := api.Auth.CreateContractSession(sessionRequest)
+	result, err := api.Auth.ContractClient().CreateContractSession(sessionRequest)
 	if err != nil {
 		if errors.Is(err, contract.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -103,7 +103,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 // it translates the result to the api format and returns it to the HTTP stack
 // If the session is not found it returns a 404
 func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) error {
-	sessionStatus, err := api.Auth.ContractSessionStatus(sessionID)
+	sessionStatus, err := api.Auth.ContractClient().ContractSessionStatus(sessionID)
 	if err != nil {
 		if errors.Is(err, services.ErrSessionNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, err.Error())
@@ -165,7 +165,7 @@ func (api *Wrapper) ValidateContract(ctx echo.Context) error {
 		ActingPartyCN:  params.ActingPartyCn,
 	}
 
-	validationResponse, err := api.Auth.ValidateContract(validationRequest)
+	validationResponse, err := api.Auth.ContractClient().ValidateContract(validationRequest)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -202,7 +202,7 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 	}
 
 	// get contract
-	authContract, err := api.Auth.ContractByType(contract.Type(contractType), contractLanguage, contractVersion)
+	authContract, err := api.Auth.ContractClient().ContractByType(contract.Type(contractType), contractLanguage, contractVersion)
 	if errors.Is(err, contract.ErrContractNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	} else if err != nil {
@@ -248,7 +248,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: vendorID}
-	acResponse, err := api.Auth.CreateAccessToken(catRequest)
+	acResponse, err := api.Auth.OAuthClient().CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()
 		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
@@ -272,7 +272,7 @@ func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
 		IdentityToken: requestBody.Identity,
 		Subject:       requestBody.Subject,
 	}
-	response, err := api.Auth.CreateJwtBearerToken(request)
+	response, err := api.Auth.OAuthClient().CreateJwtBearerToken(request)
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, err.Error())
 	}
@@ -292,7 +292,7 @@ func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
 		return ctx.JSON(http.StatusOK, introspectionResponse)
 	}
 
-	claims, err := api.Auth.IntrospectAccessToken(token)
+	claims, err := api.Auth.OAuthClient().IntrospectAccessToken(token)
 	if err != nil {
 		logrus.WithError(err).Debug("error while inspecting access token")
 		return ctx.JSON(http.StatusOK, introspectionResponse)

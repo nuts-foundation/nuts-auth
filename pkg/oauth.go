@@ -23,7 +23,9 @@ import (
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
+	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
+	registry "github.com/nuts-foundation/nuts-registry/pkg"
 )
 
 // this file contains OAuth related service logic previously part of the AuthClient.
@@ -36,8 +38,40 @@ type OAuthClient interface {
 	IntrospectAccessToken(token string) (*services.NutsAccessToken, error)
 }
 
+// OAuth is a temporary struct, contents to be migrated to oauth service/accessTokenHandler
+type OAuth struct {
+	VendorID           core.PartyID
+	Crypto             nutscrypto.Client
+	Registry           registry.RegistryClient
+	ContractValidator  services.ContractValidator
+	AccessTokenHandler services.AccessTokenHandler
+}
+
+func NewOAuthInstance(vendorID core.PartyID, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient, contractValidator services.ContractValidator) *OAuth {
+	return &OAuth{
+		VendorID:          vendorID,
+		Crypto:            cryptoClient,
+		Registry:          registryClient,
+		ContractValidator: contractValidator,
+	}
+}
+
+// Already a good candidate for removal
+func (auth *OAuth) Configure() (err error) {
+	oauthService := &oauth.OAuthService{
+		VendorID: auth.VendorID,
+		Crypto:   auth.Crypto,
+		Registry: auth.Registry,
+	}
+	if err = oauthService.Configure(); err != nil {
+		return
+	}
+	auth.AccessTokenHandler = oauthService
+	return
+}
+
 // CreateAccessToken extracts the claims out of the request, checks the validity and builds the access token
-func (auth *Auth) CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResult, error) {
+func (auth *OAuth) CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResult, error) {
 	// extract the JwtBearerToken
 	jwtBearerToken, err := auth.AccessTokenHandler.ParseAndValidateJwtBearerToken(request.RawJwtBearerToken)
 	if err != nil {
@@ -62,7 +96,7 @@ func (auth *Auth) CreateAccessToken(request services.CreateAccessTokenRequest) (
 }
 
 // CreateJwtBearerToken creates a JwtBearerToken from the given CreateJwtBearerTokenRequest
-func (auth *Auth) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
+func (auth *OAuth) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
 	// todo add checks?
 	custodian, err := core.ParsePartyID(request.Custodian)
 	if err != nil {
@@ -82,7 +116,7 @@ func (auth *Auth) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequ
 }
 
 // IntrospectAccessToken fills the fields in NutsAccessToken from the given Jwt Access Token
-func (auth *Auth) IntrospectAccessToken(token string) (*services.NutsAccessToken, error) {
+func (auth *OAuth) IntrospectAccessToken(token string) (*services.NutsAccessToken, error) {
 	acClaims, err := auth.AccessTokenHandler.ParseAndValidateAccessToken(token)
 	return acClaims, err
 }

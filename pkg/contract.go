@@ -20,6 +20,7 @@ package pkg
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -28,10 +29,14 @@ import (
 	"github.com/mdp/qrterminal"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
+	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
+	"github.com/privacybydesign/irmago/server/irmaserver"
 	"github.com/sirupsen/logrus"
 )
 
@@ -45,10 +50,95 @@ type ContractClient interface {
 	OrganizationNameByID(legalEntity core.PartyID) (string, error)
 }
 
+type Contract struct {
+	Config                 AuthConfig
+	ContractSessionHandler services.ContractSessionHandler
+	ContractValidator      services.ContractValidator
+	IrmaServiceConfig      irmaService.IrmaServiceConfig
+	IrmaServer             *irmaserver.Server
+	ContractTemplates      contract.TemplateStore
+	Crypto                 nutscrypto.Client
+	Registry               registry.RegistryClient
+	Contract               *Contract
+}
+
+func NewContractInstance(config AuthConfig, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) *Contract {
+	return &Contract{
+		Config:   config,
+		Crypto:   cryptoClient,
+		Registry: registryClient,
+	}
+}
+
+// Already a good candidate for removal
+func (auth *Contract) Configure() (err error) {
+	if err = auth.configureContracts(); err != nil {
+		return
+	}
+
+	var (
+		irmaConfig *irma.Configuration
+		irmaServer *irmaserver.Server
+	)
+
+	if irmaServer, irmaConfig, err = auth.configureIrma(auth.Config); err != nil {
+		return
+	}
+
+	irmaService := irmaService.IrmaService{
+		IrmaSessionHandler: &irmaService.DefaultIrmaSessionHandler{I: irmaServer},
+		IrmaConfig:         irmaConfig,
+		Registry:           auth.Registry,
+		Crypto:             auth.Crypto,
+		ContractTemplates:  auth.ContractTemplates,
+	}
+	auth.ContractSessionHandler = irmaService
+	auth.ContractValidator = irmaService
+	return
+}
+
+// ErrMissingActingParty is returned when the actingPartyCn is missing from the config
+var ErrMissingActingParty = errors.New("missing actingPartyCn")
+
+// ErrMissingPublicURL is returned when the publicUrl is missing from the config
+var ErrMissingPublicURL = errors.New("missing publicUrl")
+
+func (auth *Contract) configureContracts() (err error) {
+	if auth.Config.ActingPartyCn == "" {
+		err = ErrMissingActingParty
+		return
+	}
+	if auth.Config.PublicUrl == "" {
+		err = ErrMissingPublicURL
+		return
+	}
+	auth.ContractTemplates = contract.StandardContractTemplates
+	return
+}
+
+func (auth *Contract) configureIrma(config AuthConfig) (irmaServer *irmaserver.Server, irmaConfig *irma.Configuration, err error) {
+	auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
+		Mode:                      config.Mode,
+		Address:                   config.Address,
+		PublicUrl:                 config.PublicUrl,
+		IrmaConfigPath:            config.IrmaConfigPath,
+		IrmaSchemeManager:         config.IrmaSchemeManager,
+		SkipAutoUpdateIrmaSchemas: config.SkipAutoUpdateIrmaSchemas,
+	}
+	if irmaConfig, err = irmaService.GetIrmaConfig(auth.IrmaServiceConfig); err != nil {
+		return
+	}
+	if irmaServer, err = irmaService.GetIrmaServer(auth.IrmaServiceConfig); err != nil {
+		return
+	}
+	auth.IrmaServer = irmaServer
+	return
+}
+
 // CreateContractSession creates a session based on an IRMA contract. This allows the user to permit the application to
 // use the Nuts Network in its name. The user can limit the application in time and scope. By signing it with IRMA other
 // nodes in the network can verify the validity of the contract.
-func (auth *Auth) CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error) {
+func (auth *Contract) CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error) {
 
 	// Step 1: Find the correct template
 	template, err := auth.ContractTemplates.Find(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
@@ -120,13 +210,13 @@ func printQrCode(qrcode string) {
 
 // NewByType returns a Contract of a certain type, language and version.
 // If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
-func (auth *Auth) ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error) {
+func (auth *Contract) ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error) {
 	return auth.ContractTemplates.Find(contractType, language, version)
 }
 
 // ContractSessionStatus returns the current session status for a given sessionID.
 // If the session is not found, the error is an ErrSessionNotFound and SessionStatusResult is nil
-func (auth *Auth) ContractSessionStatus(sessionID string) (*services.SessionStatusResult, error) {
+func (auth *Contract) ContractSessionStatus(sessionID string) (*services.SessionStatusResult, error) {
 	sessionStatus, err := auth.ContractSessionHandler.SessionStatus(services.SessionID(sessionID))
 
 	if err != nil {
@@ -142,7 +232,7 @@ func (auth *Auth) ContractSessionStatus(sessionID string) (*services.SessionStat
 
 // ValidateContract validates a given contract. Currently two Type's are accepted: Irma and Jwt.
 // Both types should be passed as a base64 encoded string in the ContractString of the request paramContractString of the request param
-func (auth *Auth) ValidateContract(request services.ValidationRequest) (*services.ContractValidationResult, error) {
+func (auth *Contract) ValidateContract(request services.ValidationRequest) (*services.ContractValidationResult, error) {
 	if request.ContractFormat == services.IrmaFormat {
 		return auth.ContractValidator.ValidateContract(request.ContractString, services.IrmaFormat, request.ActingPartyCN)
 	} else if request.ContractFormat == services.JwtFormat {
@@ -152,12 +242,12 @@ func (auth *Auth) ValidateContract(request services.ValidationRequest) (*service
 }
 
 // KeyExistsFor check if the private key exists on this node by calling the same function on the CryptoClient
-func (auth *Auth) KeyExistsFor(legalEntity core.PartyID) bool {
+func (auth *Contract) KeyExistsFor(legalEntity core.PartyID) bool {
 	return auth.Crypto.PrivateKeyExists(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: legalEntity.String()}))
 }
 
 // OrganizationNameByID returns the name of an organisation from the registry
-func (auth *Auth) OrganizationNameByID(legalEntity core.PartyID) (string, error) {
+func (auth *Contract) OrganizationNameByID(legalEntity core.PartyID) (string, error) {
 	org, err := auth.Registry.OrganizationById(legalEntity)
 	if err != nil {
 		return "", err

@@ -30,22 +30,18 @@ import (
 
 var careOrgID = test.OrganizationID("987")
 var careOrgName = "care organization"
-var otherOrganizationID = test.OrganizationID("123")
 
 func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 	t.Run("with valid params", func(t *testing.T) {
-
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		echoMock := coreMock.NewMockContext(ctrl)
-		authMock := mock.NewMockAuthClient(ctrl)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
 		tt := time.Now().Truncate(time.Second)
 
-		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		authMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
+		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
+		ctx.contractMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
 
-		authMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
+		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
 			Type:        "BehandelaarLogin",
 			Version:     "v1",
 			Language:    "NL",
@@ -59,7 +55,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			SessionID: "abc-sessionid",
 		}, nil)
 
-		wrapper := Wrapper{Auth: authMock}
+		wrapper := Wrapper{Auth: ctx.authMock}
 		vf := tt.Format("2006-01-02T15:04:05-07:00")
 		vt := tt.Add(time.Hour * 13).Format("2006-01-02T15:04:05-07:00")
 		params := ContractSigningRequest{
@@ -73,32 +69,31 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 
 		jsonData, _ := json.Marshal(params)
 
-		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
 			_ = json.Unmarshal(jsonData, f)
 		})
-		echoMock.EXPECT().JSON(http.StatusCreated, CreateSessionResult{
+		ctx.echoMock.EXPECT().JSON(http.StatusCreated, CreateSessionResult{
 			QrCodeInfo: IrmaQR{U: "http://example.com" + irmaService.IrmaMountPath + "/123",
 				Irmaqr: "signing",
 			}, SessionId: "abc-sessionid"})
 
-		err := wrapper.CreateSession(echoMock)
+		err := wrapper.CreateSession(ctx.echoMock)
 
 		assert.Nil(t, err)
 	})
 
 	t.Run("with malformed time period", func(t *testing.T) {
 		wrapper := Wrapper{}
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		echoMock := coreMock.NewMockContext(ctrl)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
 		jsonData := `{"language":"NL","legalEntity":"legalEntity","type":"BehandelaarLogin","valid_from":"invalid time in valid_from","valid_to":"2020-03-26T00:16:57+01:00","version":"v1"}`
 
-		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
 			_ = json.Unmarshal([]byte(jsonData), f)
 		})
 
-		err := wrapper.CreateSession(echoMock)
+		err := wrapper.CreateSession(ctx.echoMock)
 		assert.Error(t, err)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
@@ -107,11 +102,11 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 
 		jsonData = `{"language":"NL","legalEntity":"legalEntity","type":"BehandelaarLogin","valid_from":"2020-03-26T00:16:57+01:00","valid_to":"invalid time in validTo","version":"v1"}`
 
-		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
 			_ = json.Unmarshal([]byte(jsonData), f)
 		})
 
-		err = wrapper.CreateSession(echoMock)
+		err = wrapper.CreateSession(ctx.echoMock)
 		assert.Error(t, err)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError = err.(*echo.HTTPError)
@@ -121,12 +116,11 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 
 	t.Run("with invalid params", func(t *testing.T) {
 		wrapper := Wrapper{}
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		echoMock := coreMock.NewMockContext(ctrl)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
-		echoMock.EXPECT().Bind(gomock.Any()).Return(errors.New("unable to parse body"))
-		err := wrapper.CreateSession(echoMock)
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Return(errors.New("unable to parse body"))
+		err := wrapper.CreateSession(ctx.echoMock)
 		assert.Error(t, err)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
@@ -134,10 +128,8 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 	})
 
 	t.Run("with an unknown contract", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		echoMock := coreMock.NewMockContext(ctrl)
-		authMock := mock.NewMockAuthClient(ctrl)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
 		params := ContractSigningRequest{
 			Type:        "UnknownContract",
@@ -146,10 +138,10 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		authMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
+		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
+		ctx.contractMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
 
-		authMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
+		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
 			Type:        contract2.Type(params.Type),
 			Version:     "v1",
 			Language:    "NL",
@@ -157,24 +149,22 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		}).Return(
 			nil, contract2.ErrContractNotFound)
 
-		wrapper := Wrapper{Auth: authMock}
+		wrapper := Wrapper{Auth: ctx.authMock}
 
 		jsonData, _ := json.Marshal(params)
-		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 
-		err := wrapper.CreateSession(echoMock)
+		err := wrapper.CreateSession(ctx.echoMock)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
 	})
 
 	t.Run("for an unknown legalEntity", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		echoMock := coreMock.NewMockContext(ctrl)
-		authMock := mock.NewMockAuthClient(ctrl)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
 		params := ContractSigningRequest{
 			Type:        "UnknownContract",
@@ -183,26 +173,24 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(false)
+		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(false)
 
-		wrapper := Wrapper{Auth: authMock}
+		wrapper := Wrapper{Auth: ctx.authMock}
 
 		jsonData, _ := json.Marshal(params)
-		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 
-		err := wrapper.CreateSession(echoMock)
+		err := wrapper.CreateSession(ctx.echoMock)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
 	})
 
 	t.Run("for an unregistered legal entity", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		echoMock := coreMock.NewMockContext(ctrl)
-		authMock := mock.NewMockAuthClient(ctrl)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
 		params := ContractSigningRequest{
 			Type:        "UnknownContract",
@@ -211,17 +199,17 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		authMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		authMock.EXPECT().OrganizationNameByID(careOrgID).Return("", errors.New("error"))
+		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
+		ctx.contractMock.EXPECT().OrganizationNameByID(careOrgID).Return("", errors.New("error"))
 
-		wrapper := Wrapper{Auth: authMock}
+		wrapper := Wrapper{Auth: ctx.authMock}
 
 		jsonData, _ := json.Marshal(params)
-		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 
-		err := wrapper.CreateSession(echoMock)
+		err := wrapper.CreateSession(ctx.echoMock)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
@@ -230,16 +218,14 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 
 func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 	t.Run("get status of a known session", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		echoMock := coreMock.NewMockContext(ctrl)
-		authMock := mock.NewMockAuthClient(ctrl)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
 		sessionID := "123"
 		nutsAuthToken := "123.456.123"
 		proofStatus := "VALID"
 
-		authMock.EXPECT().ContractSessionStatus(sessionID).Return(&services.SessionStatusResult{
+		ctx.contractMock.EXPECT().ContractSessionStatus(sessionID).Return(&services.SessionStatusResult{
 			SessionResult: server.SessionResult{
 				Status: "INITIALIZED",
 				Token:  "YRnWbPJ7ffKCnf9cP51e",
@@ -259,7 +245,7 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 				},
 			},
 		}
-		echoMock.EXPECT().JSON(http.StatusOK, SessionResult{
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, SessionResult{
 			Status:        "INITIALIZED",
 			Token:         "YRnWbPJ7ffKCnf9cP51e",
 			Type:          "signing",
@@ -267,23 +253,21 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 			NutsAuthToken: &nutsAuthToken,
 			ProofStatus:   &proofStatus,
 		})
-		wrapper := Wrapper{Auth: authMock}
-		err := wrapper.SessionRequestStatus(echoMock, sessionID)
+		wrapper := Wrapper{Auth: ctx.authMock}
+		err := wrapper.SessionRequestStatus(ctx.echoMock, sessionID)
 		assert.Nil(t, err)
 	})
 
 	t.Run("try to get a status of an unknown session", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		echoMock := coreMock.NewMockContext(ctrl)
-		authMock := mock.NewMockAuthClient(ctrl)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
 		sessionID := "123"
 
-		authMock.EXPECT().ContractSessionStatus(sessionID).Return(nil, services.ErrSessionNotFound)
-		wrapper := Wrapper{Auth: authMock}
+		ctx.contractMock.EXPECT().ContractSessionStatus(sessionID).Return(nil, services.ErrSessionNotFound)
+		wrapper := Wrapper{Auth: ctx.authMock}
 
-		err := wrapper.SessionRequestStatus(echoMock, sessionID)
+		err := wrapper.SessionRequestStatus(ctx.echoMock, sessionID)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusNotFound, httpError.Code)
@@ -292,10 +276,8 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 
 func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 	t.Run("ValidateContract", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		echoMock := coreMock.NewMockContext(ctrl)
-		authMock := mock.NewMockAuthClient(ctrl)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
 		params := ValidationRequest{
 			ActingPartyCn:  "DemoEHR",
@@ -304,18 +286,18 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 		}
 
 		jsonData, _ := json.Marshal(params)
-		echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 
 		sa := ValidationResult_SignerAttributes{AdditionalProperties: map[string]string{"nl": "00000007"}}
-		echoMock.EXPECT().JSON(http.StatusOK, ValidationResult{
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, ValidationResult{
 			ContractFormat:   string(services.JwtFormat),
 			ValidationResult: "VALID",
 			SignerAttributes: sa,
 		})
 
-		authMock.EXPECT().ValidateContract(services.ValidationRequest{
+		ctx.contractMock.EXPECT().ValidateContract(services.ValidationRequest{
 			ActingPartyCN:  "DemoEHR",
 			ContractFormat: services.JwtFormat,
 			ContractString: "base64encodedContractString",
@@ -325,8 +307,8 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 			DisclosedAttributes: map[string]string{"nl": "00000007"},
 		}, nil)
 
-		wrapper := Wrapper{Auth: authMock}
-		err := wrapper.ValidateContract(echoMock)
+		wrapper := Wrapper{Auth: ctx.authMock}
+		err := wrapper.ValidateContract(ctx.echoMock)
 
 		assert.Nil(t, err)
 	})
@@ -335,10 +317,8 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 
 func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 	t.Run("get known contact", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		echoMock := coreMock.NewMockContext(ctrl)
-		authMock := mock.NewMockAuthClient(ctrl)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
 		cType := "KnownContract"
 		cVersion := "v1"
@@ -365,28 +345,26 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 			Language:           Language(cLanguage),
 		}
 
-		authMock.EXPECT().ContractByType(contract2.Type(cType), contract2.Language(cLanguage), contract2.Version(cVersion)).Return(&contract, nil)
-		echoMock.EXPECT().JSON(http.StatusOK, answer)
+		ctx.contractMock.EXPECT().ContractByType(contract2.Type(cType), contract2.Language(cLanguage), contract2.Version(cVersion)).Return(&contract, nil)
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, answer)
 
-		wrapper := Wrapper{Auth: authMock}
-		err := wrapper.GetContractByType(echoMock, cType, params)
+		wrapper := Wrapper{Auth: ctx.authMock}
+		err := wrapper.GetContractByType(ctx.echoMock, cType, params)
 
 		assert.Nil(t, err)
 	})
 
 	t.Run("get an unknown contract", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		echoMock := coreMock.NewMockContext(ctrl)
-		authMock := mock.NewMockAuthClient(ctrl)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
 		cType := "UnknownContract"
 		params := GetContractByTypeParams{}
 
-		authMock.EXPECT().ContractByType(contract2.Type(cType), contract2.Language(""), contract2.Version("")).Return(nil, contract2.ErrContractNotFound)
+		ctx.contractMock.EXPECT().ContractByType(contract2.Type(cType), contract2.Language(""), contract2.Version("")).Return(nil, contract2.ErrContractNotFound)
 
-		wrapper := Wrapper{Auth: authMock}
-		err := wrapper.GetContractByType(echoMock, cType, params)
+		wrapper := Wrapper{Auth: ctx.authMock}
+		err := wrapper.GetContractByType(ctx.echoMock, cType, params)
 
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
@@ -412,35 +390,43 @@ func (e OAuthErrorMatcher) String() string {
 	return fmt.Sprintf("is equal to {%v, %v}", e.x.Error, e.x.ErrorDescription)
 }
 
+type TestContext struct {
+	ctrl         *gomock.Controller
+	echoMock     *coreMock.MockContext
+	authMock     *mock.MockAuthClient
+	oauthMock    *mock.MockOAuthClient
+	contractMock *mock.MockContractClient
+	wrapper      Wrapper
+}
+
+var createContext = func(t *testing.T) *TestContext {
+	ctrl := gomock.NewController(t)
+	authMock := mock.NewMockAuthClient(ctrl)
+	oauthMock := mock.NewMockOAuthClient(ctrl)
+	authMock.EXPECT().OAuthClient().AnyTimes().Return(oauthMock)
+	contractMock := mock.NewMockContractClient(ctrl)
+	authMock.EXPECT().ContractClient().AnyTimes().Return(contractMock)
+	return &TestContext{
+		ctrl:         ctrl,
+		echoMock:     coreMock.NewMockContext(ctrl),
+		authMock:     authMock,
+		oauthMock:    oauthMock,
+		contractMock: contractMock,
+		wrapper:      Wrapper{Auth: authMock},
+	}
+}
+
 func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
-	type CreateAccessTokenTestContext struct {
-		ctrl     *gomock.Controller
-		echoMock *coreMock.MockContext
-		authMock *mock.MockAuthClient
-		wrapper  Wrapper
-	}
-
-	createContext := func(t *testing.T) *CreateAccessTokenTestContext {
-		ctrl := gomock.NewController(t)
-		authMock := mock.NewMockAuthClient(ctrl)
-		return &CreateAccessTokenTestContext{
-			ctrl:     ctrl,
-			echoMock: coreMock.NewMockContext(ctrl),
-			authMock: authMock,
-			wrapper:  Wrapper{Auth: authMock},
-		}
-	}
-
-	bindPostBody := func(ctx *CreateAccessTokenTestContext, body CreateAccessTokenRequest) {
+	bindPostBody := func(ctx *TestContext, body CreateAccessTokenRequest) {
 		ctx.echoMock.EXPECT().FormValue("assertion").Return(body.Assertion)
 		ctx.echoMock.EXPECT().FormValue("grant_type").Return(body.GrantType)
 	}
 
-	expectError := func(ctx *CreateAccessTokenTestContext, err AccessTokenRequestFailedResponse) {
+	expectError := func(ctx *TestContext, err AccessTokenRequestFailedResponse) {
 		ctx.echoMock.EXPECT().JSON(http.StatusBadRequest, OAuthErrorMatcher{x: err})
 	}
 
-	expectStatusOK := func(ctx *CreateAccessTokenTestContext, response AccessTokenResponse) {
+	expectStatusOK := func(ctx *TestContext, response AccessTokenResponse) {
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, gomock.Eq(response))
 	}
 
@@ -496,7 +482,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
-		ctx.authMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(nil, fmt.Errorf("oh boy"))
+		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(nil, fmt.Errorf("oh boy"))
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
 
 		assert.Nil(t, err)
@@ -537,7 +523,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		bindPostBody(ctx, params)
 
 		pkgResponse := &services.AccessTokenResult{AccessToken: "foo"}
-		ctx.authMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(pkgResponse, nil)
+		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(pkgResponse, nil)
 
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
 		expectStatusOK(ctx, apiResponse)
@@ -551,32 +537,14 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 }
 
 func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
-	type CreateJwtBearerTokenContext struct {
-		ctrl     *gomock.Controller
-		echoMock *coreMock.MockContext
-		authMock *mock.MockAuthClient
-		wrapper  Wrapper
-	}
-
-	createContext := func(t *testing.T) *CreateJwtBearerTokenContext {
-		ctrl := gomock.NewController(t)
-		authMock := mock.NewMockAuthClient(ctrl)
-		return &CreateJwtBearerTokenContext{
-			ctrl:     ctrl,
-			echoMock: coreMock.NewMockContext(ctrl),
-			authMock: authMock,
-			wrapper:  Wrapper{Auth: authMock},
-		}
-	}
-
-	bindPostBody := func(ctx *CreateJwtBearerTokenContext, body CreateJwtBearerTokenRequest) {
+	bindPostBody := func(ctx *TestContext, body CreateJwtBearerTokenRequest) {
 		jsonData, _ := json.Marshal(body)
 		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 	}
 
-	expectStatusOK := func(ctx *CreateJwtBearerTokenContext, response JwtBearerTokenResponse) {
+	expectStatusOK := func(ctx *TestContext, response JwtBearerTokenResponse) {
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, response)
 	}
 
@@ -603,7 +571,7 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 			Subject:       body.Subject,
 		}
 
-		ctx.authMock.EXPECT().CreateJwtBearerToken(expectedRequest).Return(&services.JwtBearerTokenResult{BearerToken: response.BearerToken}, nil)
+		ctx.oauthMock.EXPECT().CreateJwtBearerToken(expectedRequest).Return(&services.JwtBearerTokenResult{BearerToken: response.BearerToken}, nil)
 		expectStatusOK(ctx, response)
 
 		if !assert.Nil(t, ctx.wrapper.CreateJwtBearerToken(ctx.echoMock)) {
@@ -613,29 +581,11 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 }
 
 func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
-	type IntrospectAccessTokenContext struct {
-		ctrl     *gomock.Controller
-		echoMock *coreMock.MockContext
-		authMock *mock.MockAuthClient
-		wrapper  Wrapper
-	}
-
-	createContext := func(t *testing.T) *IntrospectAccessTokenContext {
-		ctrl := gomock.NewController(t)
-		authMock := mock.NewMockAuthClient(ctrl)
-		return &IntrospectAccessTokenContext{
-			ctrl:     ctrl,
-			echoMock: coreMock.NewMockContext(ctrl),
-			authMock: authMock,
-			wrapper:  Wrapper{Auth: authMock},
-		}
-	}
-
-	bindPostBody := func(ctx *IntrospectAccessTokenContext, body TokenIntrospectionRequest) {
+	bindPostBody := func(ctx *TestContext, body TokenIntrospectionRequest) {
 		ctx.echoMock.EXPECT().FormValue("token").Return(body.Token)
 	}
 
-	expectStatusOK := func(ctx *IntrospectAccessTokenContext, response TokenIntrospectionResponse) {
+	expectStatusOK := func(ctx *TestContext, response TokenIntrospectionResponse) {
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, gomock.Eq(response))
 	}
 
@@ -667,7 +617,7 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 		sid := "urn:oid:2.16.840.1.113883.2.4.6.3:999999990"
 		scope := "nuts-sso"
 
-		ctx.authMock.EXPECT().IntrospectAccessToken(request.Token).Return(
+		ctx.oauthMock.EXPECT().IntrospectAccessToken(request.Token).Return(
 			&services.NutsAccessToken{
 				StandardClaims: jwt.StandardClaims{
 					Audience:  aud,
