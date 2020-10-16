@@ -281,7 +281,7 @@ type TestContext struct {
 	cryptoMock            *cryptoMock.MockClient
 	registryMock          *registryMock.MockRegistryClient
 	contractValidatorMock *servicesMock.MockContractValidator
-	oauthService          *OAuthService
+	oauthService          *service
 }
 
 var createContext = func(t *testing.T) *TestContext {
@@ -294,12 +294,12 @@ var createContext = func(t *testing.T) *TestContext {
 		cryptoMock:            cryptoMock,
 		registryMock:          registryMock,
 		contractValidatorMock: contractValidatorMock,
-		oauthService: &OAuthService{
-			VendorID:          vendorID,
-			Crypto:            cryptoMock,
-			Registry:          registryMock,
+		oauthService: &service{
+			vendorID:          vendorID,
+			crypto:            cryptoMock,
+			registry:          registryMock,
 			oauthKeyEntity:    oauthKeyEntity,
-			ContractValidator: contractValidatorMock,
+			contractValidator: contractValidatorMock,
 		},
 	}
 }

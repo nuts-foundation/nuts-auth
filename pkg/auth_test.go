@@ -75,7 +75,7 @@ const vendorID = "urn:oid:1.3.6.1.4.1.54851.4:vendorId"
 
 // RegisterTestDependencies registers minimal dependencies
 func registerTestDependencies(t *testing.T) {
-	// This makes sure instances of Auth use test instances of Crypto and Registry which write their data to a temp dir
+	// This makes sure instances of Auth use test instances of crypto and registry which write their data to a temp dir
 	testDirectory := testIo.TestDirectory(t)
 	_ = os.Setenv("NUTS_IDENTITY", vendorID)
 	_ = core.NutsConfig().Load(&cobra.Command{})

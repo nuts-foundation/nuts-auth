@@ -36,6 +36,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// todo this test requires access to internals of other packages. Without this test some fields could be made private.
 func Test_Integration(t *testing.T) {
 	var organizationID = test.OrganizationID("00000003")
 	var otherOrganizationID = test.OrganizationID("00000004")

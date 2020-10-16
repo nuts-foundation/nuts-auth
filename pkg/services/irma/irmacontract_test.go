@@ -27,15 +27,15 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		return irmaConfig
 	}
 
-	irmaContractVerifier := func(t *testing.T) *IrmaContractVerifier {
+	irmaContractVerifier := func(t *testing.T) *contractVerifier {
 		t.Helper()
-		return &IrmaContractVerifier{irmaConfig(t), contract.StandardContractTemplates}
+		return &contractVerifier{irmaConfig(t), contract.StandardContractTemplates}
 	}
 
 	t.Run("an empty contract is Invalid", func(t *testing.T) {
 		sic := &SignedIrmaContract{}
 		cv := irmaContractVerifier(t)
-		res, err := cv.VerifySignature(sic)
+		res, err := cv.verifySignature(sic)
 		res, err = cv.verifyRequiredAttributes(sic, res)
 		if !assert.NoError(t, err) {
 			t.FailNow()
@@ -47,11 +47,11 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		validJsonContract := testdata.ValidIrmaContract
 		cv := irmaContractVerifier(t)
 
-		sic, err := cv.ParseSignedIrmaContract(validJsonContract)
+		sic, err := cv.parseSignedIrmaContract(validJsonContract)
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
-		res, err := cv.VerifySignature(sic)
+		res, err := cv.verifySignature(sic)
 		res, err = cv.verifyRequiredAttributes(sic, res)
 		assert.NoError(t, err)
 		assert.Equal(t, services.Valid, res.ValidationResult)
@@ -71,14 +71,14 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 				},
 			}}}
 
-		cv := &IrmaContractVerifier{irmaConfig(t), validTestContracts}
+		cv := &contractVerifier{irmaConfig(t), validTestContracts}
 
 		validJsonContract := testdata.ValidIrmaContract2
-		sic, err := cv.ParseSignedIrmaContract(validJsonContract)
+		sic, err := cv.parseSignedIrmaContract(validJsonContract)
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
-		res, err := cv.VerifySignature(sic)
+		res, err := cv.verifySignature(sic)
 		res, err = cv.verifyRequiredAttributes(sic, res)
 		assert.NoError(t, err)
 		assert.Equal(t, services.Invalid, res.ValidationResult)

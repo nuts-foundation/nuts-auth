@@ -23,60 +23,51 @@ import (
 
 const oauthKeyQualifier = "oauth"
 
-var ErrMissingVendorID = errors.New("missing VendorID")
+var errMissingVendorID = errors.New("missing vendorID")
 
-// ErrMissingEndpoint is returned when no endpoints are found of type oauth
-var ErrMissingEndpoint = errors.New("missing oauth endpoint in registry")
+// errMissingEndpoint is returned when no endpoints are found of type oauth
+var errMissingEndpoint = errors.New("missing oauth endpoint in registry")
 
-// ErrMissingCertificate is returned when the x5c header is missing in the JWT
-var ErrMissingCertificate = errors.New("missing x5c header")
+// errMissingCertificate is returned when the x5c header is missing in the JWT
+var errMissingCertificate = errors.New("missing x5c header")
 
-// ErrInvalidX5cHeader is returned when the x5c header is not a slice of strings
-var ErrInvalidX5cHeader = errors.New("invalid x5c header")
+// errInvalidX5cHeader is returned when the x5c header is not a slice of strings
+var errInvalidX5cHeader = errors.New("invalid x5c header")
 
-var ValidOAuthJWTAlg = []string{
-	jwt.SigningMethodPS256.Name,
-	jwt.SigningMethodPS384.Name,
-	jwt.SigningMethodPS512.Name,
-	jwt.SigningMethodES256.Name,
-	jwt.SigningMethodES384.Name,
-	jwt.SigningMethodES512.Name,
-}
-
-type OAuthService struct {
-	VendorID          core.PartyID
-	Crypto            nutsCrypto.Client
-	Registry          nutsRegistry.RegistryClient
+type service struct {
+	vendorID          core.PartyID
+	crypto            nutsCrypto.Client
+	registry          nutsRegistry.RegistryClient
 	oauthKeyEntity    nutsCryptoTypes.KeyIdentifier
-	ContractValidator services.ContractValidator
+	contractValidator services.ContractValidator
 }
 
 func NewOAuthService(vendorID core.PartyID, cryptoClient nutsCrypto.Client, registryClient nutsRegistry.RegistryClient, contractValidator services.ContractValidator) services.OAuthClient {
-	return &OAuthService{
-		VendorID:          vendorID,
-		Crypto:            cryptoClient,
-		Registry:          registryClient,
-		ContractValidator: contractValidator,
+	return &service{
+		vendorID:          vendorID,
+		crypto:            cryptoClient,
+		registry:          registryClient,
+		contractValidator: contractValidator,
 	}
 }
 
-func (s *OAuthService) Configure() (err error) {
-	if s.VendorID.IsZero() {
-		err = ErrMissingVendorID
+func (s *service) Configure() (err error) {
+	if s.vendorID.IsZero() {
+		err = errMissingVendorID
 		return
 	}
 
-	s.oauthKeyEntity = nutsCryptoTypes.KeyForEntity(nutsCryptoTypes.LegalEntity{URI: s.VendorID.String()}).WithQualifier(oauthKeyQualifier)
+	s.oauthKeyEntity = nutsCryptoTypes.KeyForEntity(nutsCryptoTypes.LegalEntity{URI: s.vendorID.String()}).WithQualifier(oauthKeyQualifier)
 
-	if !s.Crypto.PrivateKeyExists(s.oauthKeyEntity) {
+	if !s.crypto.PrivateKeyExists(s.oauthKeyEntity) {
 		logrus.Info("Missing OAuth JWT signing key, generating new one")
-		s.Crypto.GenerateKeyPair(s.oauthKeyEntity, false)
+		s.crypto.GenerateKeyPair(s.oauthKeyEntity, false)
 	}
 	return
 }
 
 // CreateAccessToken extracts the claims out of the request, checks the validity and builds the access token
-func (s *OAuthService) CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResult, error) {
+func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResult, error) {
 	// extract the JwtBearerToken
 	jwtBearerToken, err := s.parseAndValidateJwtBearerToken(request.RawJwtBearerToken)
 	if err != nil {
@@ -84,7 +75,7 @@ func (s *OAuthService) CreateAccessToken(request services.CreateAccessTokenReque
 	}
 
 	// Validate the AuthTokenContainer
-	res, err := s.ContractValidator.ValidateJwt(jwtBearerToken.AuthTokenContainer, request.VendorIdentifier)
+	res, err := s.contractValidator.ValidateJwt(jwtBearerToken.AuthTokenContainer, request.VendorIdentifier)
 	if err != nil {
 		return nil, fmt.Errorf("identity token validation failed: %w", err)
 	}
@@ -101,7 +92,7 @@ func (s *OAuthService) CreateAccessToken(request services.CreateAccessTokenReque
 }
 
 // CreateJwtBearerToken creates a JwtBearerToken from the given CreateJwtBearerTokenRequest
-func (s *OAuthService) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
+func (s *service) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
 	// todo add checks?
 	custodian, err := core.ParsePartyID(request.Custodian)
 	if err != nil {
@@ -109,25 +100,25 @@ func (s *OAuthService) CreateJwtBearerToken(request services.CreateJwtBearerToke
 	}
 	endpointType := "oauth" // todo
 
-	epoints, err := s.Registry.EndpointsByOrganizationAndType(custodian, &endpointType)
+	epoints, err := s.registry.EndpointsByOrganizationAndType(custodian, &endpointType)
 	if err != nil {
 		return nil, err
 	}
 	if len(epoints) == 0 {
-		return nil, ErrMissingEndpoint
+		return nil, errMissingEndpoint
 	}
 
 	return s.createJwtBearerToken(&request, string(epoints[0].Identifier))
 }
 
 // IntrospectAccessToken fills the fields in NutsAccessToken from the given Jwt Access Token
-func (s *OAuthService) IntrospectAccessToken(token string) (*services.NutsAccessToken, error) {
+func (s *service) IntrospectAccessToken(token string) (*services.NutsAccessToken, error) {
 	acClaims, err := s.parseAndValidateAccessToken(token)
 	return acClaims, err
 }
 
 // CreateJwtBearerToken creates a JwtBearerTokenResult containing a jwtBearerToken from a CreateJwtBearerTokenRequest.
-func (s *OAuthService) createJwtBearerToken(request *services.CreateJwtBearerTokenRequest, endpointIdentifier string) (*services.JwtBearerTokenResult, error) {
+func (s *service) createJwtBearerToken(request *services.CreateJwtBearerTokenRequest, endpointIdentifier string) (*services.JwtBearerTokenResult, error) {
 	jti, err := uuid.NewRandom()
 	if err != nil {
 		return nil, err
@@ -153,7 +144,7 @@ func (s *OAuthService) createJwtBearerToken(request *services.CreateJwtBearerTok
 		return nil, err
 	}
 
-	signingString, err := s.Crypto.SignJWTRFC003(keyVals)
+	signingString, err := s.crypto.SignJWTRFC003(keyVals)
 	if err != nil {
 		return nil, err
 	}
@@ -162,8 +153,8 @@ func (s *OAuthService) createJwtBearerToken(request *services.CreateJwtBearerTok
 }
 
 // ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
-func (s *OAuthService) parseAndValidateJwtBearerToken(acString string) (*services.NutsJwtBearerToken, error) {
-	parser := &jwt.Parser{ValidMethods: ValidOAuthJWTAlg}
+func (s *service) parseAndValidateJwtBearerToken(acString string) (*services.NutsJwtBearerToken, error) {
+	parser := &jwt.Parser{ValidMethods: services.ValidJWTAlg}
 	token, err := parser.ParseWithClaims(acString, &services.NutsJwtBearerToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		// get public key from x5c header
 		certificate, err := getCertificateFromHeaders(token)
@@ -186,37 +177,37 @@ func (s *OAuthService) parseAndValidateJwtBearerToken(acString string) (*service
 func getCertificateFromHeaders(token *jwt.Token) (*x509.Certificate, error) {
 	h, ok := token.Header["x5c"]
 	if !ok {
-		return nil, ErrMissingCertificate
+		return nil, errMissingCertificate
 	}
 	i, ok := h.([]interface{})
 	if !ok {
-		return nil, ErrInvalidX5cHeader
+		return nil, errInvalidX5cHeader
 	}
 	if len(i) != 1 {
-		return nil, ErrInvalidX5cHeader
+		return nil, errInvalidX5cHeader
 	}
 	c, ok := i[0].(string)
 	if !ok {
-		return nil, ErrInvalidX5cHeader
+		return nil, errInvalidX5cHeader
 	}
 	bytes, err := base64.StdEncoding.DecodeString(c)
 	if err != nil {
-		return nil, errors2.Wrap(err, ErrInvalidX5cHeader.Error())
+		return nil, errors2.Wrap(err, errInvalidX5cHeader.Error())
 	}
 	return x509.ParseCertificate(bytes)
 }
 
 // ParseAndValidateAccessToken parses and validates an accesstoken string and returns a filled in NutsAccessToken.
-func (s *OAuthService) parseAndValidateAccessToken(accessToken string) (*services.NutsAccessToken, error) {
-	parser := &jwt.Parser{ValidMethods: ValidOAuthJWTAlg}
+func (s *service) parseAndValidateAccessToken(accessToken string) (*services.NutsAccessToken, error) {
+	parser := &jwt.Parser{ValidMethods: services.ValidJWTAlg}
 	token, err := parser.ParseWithClaims(accessToken, &services.NutsAccessToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		// Check if the care provider which signed the token is managed by this node
-		if !s.Crypto.PrivateKeyExists(s.oauthKeyEntity) {
+		if !s.crypto.PrivateKeyExists(s.oauthKeyEntity) {
 			return nil, errors.New("invalid signature")
 		}
 
 		var sk crypto.Signer
-		if sk, e = s.Crypto.GetPrivateKey(s.oauthKeyEntity); e != nil {
+		if sk, e = s.crypto.GetPrivateKey(s.oauthKeyEntity); e != nil {
 			return
 		}
 
@@ -236,7 +227,7 @@ func (s *OAuthService) parseAndValidateAccessToken(accessToken string) (*service
 // todo split this func for easier testing
 // BuildAccessToken builds an access token based on the oauth claims and the identity of the user provided by the identityValidationResult
 // The token gets signed with the custodians private key and returned as a string.
-func (s *OAuthService) buildAccessToken(jwtBearerToken *services.NutsJwtBearerToken, identityValidationResult *services.ContractValidationResult) (string, error) {
+func (s *service) buildAccessToken(jwtBearerToken *services.NutsJwtBearerToken, identityValidationResult *services.ContractValidationResult) (string, error) {
 
 	if identityValidationResult.ValidationResult != services.Valid {
 		return "", fmt.Errorf("could not build accessToken: %w", errors.New("invalid contract"))
@@ -276,12 +267,10 @@ func (s *OAuthService) buildAccessToken(jwtBearerToken *services.NutsJwtBearerTo
 	}
 
 	// Sign with the private key of the issuer
-	token, err := s.Crypto.SignJWT(keyVals, s.oauthKeyEntity)
+	token, err := s.crypto.SignJWT(keyVals, s.oauthKeyEntity)
 	if err != nil {
 		return token, fmt.Errorf("could not build accessToken: %w", err)
 	}
 
 	return token, err
 }
-
-var ErrLegalEntityNotProvided = errors.New("legalEntity not provided")
