@@ -7,6 +7,7 @@ require (
 	github.com/cbroglie/mustache v1.2.0
 	github.com/deepmap/oapi-codegen v1.3.13
 	github.com/dgrijalva/jwt-go v3.2.1-0.20200107013213-dc14462fd587+incompatible
+	github.com/gbrlsnchs/jwt v1.1.0 // indirect
 	github.com/golang/mock v1.4.4
 	github.com/goodsign/monday v0.0.0-20190708072354-9bcb46af8546
 	github.com/google/uuid v1.1.2

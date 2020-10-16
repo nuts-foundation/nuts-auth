@@ -1,248 +1,161 @@
 package oauth
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
 	"encoding/json"
-	"os"
-	"strings"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/google/uuid"
-	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	"github.com/golang/mock/gomock"
+	servicesMock "github.com/nuts-foundation/nuts-auth/mock/services"
+	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
+	"github.com/nuts-foundation/nuts-crypto/test"
+	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
 	core "github.com/nuts-foundation/nuts-go-core"
-	"github.com/nuts-foundation/nuts-go-test/io"
-	registry "github.com/nuts-foundation/nuts-registry/pkg"
+	registryMock "github.com/nuts-foundation/nuts-registry/mock"
 	registryTest "github.com/nuts-foundation/nuts-registry/test"
-	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
-	"github.com/nuts-foundation/nuts-auth/test"
 )
 
-func TestDefaultValidator_ParseAndValidateJwtBearerToken(t *testing.T) {
-	t.Run("malformed access tokens", func(t *testing.T) {
-		validator := defaultValidator(t)
+func TestAuth_CreateAccessToken(t *testing.T) {
+	t.Run("invalid jwt", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
-		response, err := validator.ParseAndValidateJwtBearerToken("foo")
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: "foo"})
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "jwt bearer token validation failed")
+		}
+	})
+
+	t.Run("invalid identity", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(nil, errors.New("identity validation failed"))
+
+		token := validBearerToken()
+		JWT := signToken(token)
+
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "identity validation failed")
+		}
+	})
+
+	t.Run("it creates a token", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(&services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
+		ctx.cryptoMock.EXPECT().SignJWT(gomock.Any(), gomock.Any()).Return("expectedAT", nil)
+
+		token := validBearerToken()
+		JWT := signToken(token)
+
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		assert.Nil(t, err)
+		if assert.NotNil(t, response) {
+			assert.Equal(t, "expectedAT", response.AccessToken)
+		}
+	})
+}
+
+func TestOAuthService_parseAndValidateJwtBearerToken(t *testing.T) {
+	ctx := createContext(t)
+	defer ctx.ctrl.Finish()
+
+	t.Run("malformed access tokens", func(t *testing.T) {
+		response, err := ctx.oauthService.parseAndValidateJwtBearerToken("foo")
 		assert.Nil(t, response)
 		assert.Equal(t, "token contains an invalid number of segments", err.Error())
 
-		response, err = validator.ParseAndValidateJwtBearerToken("123.456.787")
+		response, err = ctx.oauthService.parseAndValidateJwtBearerToken("123.456.787")
 		assert.Nil(t, response)
 		assert.Equal(t, "invalid character '×' looking for beginning of value", err.Error())
 	})
 
 	t.Run("wrong signing algorithm", func(t *testing.T) {
-		validator := defaultValidator(t)
 		// alg: HS256
 		const invalidJwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjo0MDcwOTA4ODAwLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.2_4bxKKsVspQ4QxXRG8m2mOnLbl-fFgSkEq_h8N9sNE"
-		response, err := validator.ParseAndValidateJwtBearerToken(invalidJwt)
+		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(invalidJwt)
 		assert.Nil(t, response)
 		assert.Equal(t, "signing method HS256 is invalid", err.Error())
 	})
 
-	t.Run("missing issuer", func(t *testing.T) {
-		t.Skip("will be picked up by #99")
-		validator := defaultValidator(t)
-		claims := map[string]interface{}{
-			"iss": "",
-			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
-			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
-			"aud": "https://target_token_endpoint",
-			"usi": "base64 encoded signature",
-			"exp": 4070908800,
-			"iat": 1578910481,
-			"jti": "123-456-789",
-		}
-		validJwt, err := validator.Crypto.SignJWTRFC003(claims)
+	t.Run("valid token", func(t *testing.T) {
+		token := validBearerToken()
+		jwt := signToken(token)
+
+		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(jwt)
 		assert.Nil(t, err)
-		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
-		assert.Nil(t, response)
-		assert.Equal(t, "legalEntity not provided", err.Error())
-	})
-
-	t.Run("unknown issuer", func(t *testing.T) {
-		t.Skip("will be picked up by #99")
-		validator := defaultValidator(t)
-		claims := map[string]interface{}{
-			"iss": "urn:oid:2.16.840.1.113883.2.4.6.1:10000001",
-			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
-			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
-			"aud": "https://target_token_endpoint",
-			"usi": "base64 encoded signature",
-			"exp": 4070908800,
-			"iat": 1578910481,
-			"jti": "123-456-789",
-		}
-		validJwt, err := validator.Crypto.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: organizationID.String()}))
-		assert.Nil(t, err)
-		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
-		assert.Nil(t, response)
-		assert.Equal(t, "urn:oid:2.16.840.1.113883.2.4.6.1:10000001: organization not found", err.Error())
-	})
-
-	t.Run("token not signed by issuer", func(t *testing.T) {
-		t.Skip("will be picked up by #99")
-		validator := defaultValidator(t)
-
-		claims := map[string]interface{}{
-			"iss": otherOrganizationID,
-			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
-			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
-			"aud": "https://target_token_endpoint",
-			"usi": "base64 encoded signature",
-			"exp": 4070908800,
-			"iat": 1578910481,
-			"jti": "123-456-789",
-		}
-
-		validJwt, err := validator.Crypto.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: organizationID.String()}))
-		if !assert.Nil(t, err) {
-			t.FailNow()
-		}
-		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
-		assert.Nil(t, response)
-		assert.Equal(t, "crypto/rsa: verification error", err.Error())
-	})
-
-	t.Run("token expired", func(t *testing.T) {
-		validator := defaultValidator(t)
-
-		claims := map[string]interface{}{
-			"iss": organizationID,
-			"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
-			"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
-			"aud": "https://target_token_endpoint",
-			"usi": "base64 encoded signature",
-			"exp": 1578910481,
-			"iat": 1578910481,
-			"jti": "123-456-789",
-		}
-
-		validJwt, err := validator.Crypto.SignJWTRFC003(claims)
-		assert.Nil(t, err)
-		response, err := validator.ParseAndValidateJwtBearerToken(validJwt)
-		assert.Nil(t, response)
-		assert.Contains(t, err.Error(), "token is expired by")
-	})
-
-	t.Run("valid jwt", func(t *testing.T) {
-		validator := defaultValidator(t)
-
-		//claims := map[string]interface{}{
-		//	"iss": organizationID,
-		//	"sub": "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
-		//	"sid": "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
-		//	"aud": "https://target_token_endpoint",
-		//	"usi": "base64 encoded signature",
-		//	"exp": 4070908800,
-		//	"iat": 1578910481,
-		//	"jti": "123-456-789",
-		//}
-		claims := services.NutsJwtBearerToken{
-			StandardClaims: jwt.StandardClaims{
-				Audience:  "https://target_token_endpoint",
-				ExpiresAt: 4070908800,
-				Id:        "123-456-789",
-				IssuedAt:  1578910481,
-				Issuer:    organizationID.String(),
-				Subject:   otherOrganizationID.String(),
-			},
-			AuthTokenContainer: "base64 encoded signature",
-			SubjectID:          "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
-			Scope:              "nuts-sso",
-		}
-
-		var inInterface map[string]interface{}
-		inrec, _ := json.Marshal(claims)
-		_ = json.Unmarshal(inrec, &inInterface)
-
-		//_ = validator.crypto.GenerateKeyPairFor(cryptoTypes.LegalEntity{URI: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"})
-		validAccessToken, err := validator.Crypto.SignJWTRFC003(inInterface)
-		if !assert.NoError(t, err) {
-			t.FailNow()
-		}
-		response, err := validator.ParseAndValidateJwtBearerToken(validAccessToken)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, response)
+		assert.Equal(t, "actor", response.Issuer)
 	})
 }
 
-func TestDefaultValidator_BuildAccessToken(t *testing.T) {
+func TestOAuthService_buildAccessToken(t *testing.T) {
 	t.Run("missing subject", func(t *testing.T) {
-		v := defaultValidator(t)
-		v.Configure()
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
 		claims := &services.NutsJwtBearerToken{}
 		identityValidationResult := &services.ContractValidationResult{ValidationResult: services.Valid}
-		token, err := v.BuildAccessToken(claims, identityValidationResult)
+
+		token, err := ctx.oauthService.buildAccessToken(claims, identityValidationResult)
 		assert.Empty(t, token)
 		assert.EqualError(t, err, "could not build accessToken: subject is missing")
 	})
 
 	t.Run("build an access token", func(t *testing.T) {
-		v := defaultValidator(t)
-		v.Configure()
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().SignJWT(gomock.Any(), gomock.Any()).Return("expectedAT", nil)
+
 		claims := &services.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}}
 		identityValidationResult := &services.ContractValidationResult{ValidationResult: services.Valid}
-		token, err := v.BuildAccessToken(claims, identityValidationResult)
-		if assert.NotEmpty(t, token) {
-			subject, _ := core.ParsePartyID(claims.Subject)
-			token, err := jwt.Parse(token, func(token *jwt.Token) (i interface{}, err error) {
-				sk, _ := v.Crypto.GetPrivateKey(v.oauthKeyEntity)
-				i = sk.Public()
-				return
-			})
-			if assert.Nil(t, err) {
-				if assert.True(t, token.Valid) {
-					if tokenClaims, ok := token.Claims.(jwt.MapClaims); ok {
-						assert.Equal(t, subject.String(), tokenClaims["iss"])
-						assert.InDelta(t, tokenClaims["iat"].(float64), time.Now().Unix(), float64(time.Second*2))
-						assert.InDelta(t, tokenClaims["exp"].(float64), time.Now().Add(15*time.Minute).Unix(), float64(time.Second*2))
-					}
-				}
-			}
-		}
+		token, err := ctx.oauthService.buildAccessToken(claims, identityValidationResult)
 
 		assert.Nil(t, err)
+		assert.Equal(t, "expectedAT", token)
 	})
 
+	// todo some extra tests needed for claims generation
 }
 
-func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
+func TestOAuthService_createJwtBearerToken(t *testing.T) {
 	t.Run("create a JwtBearerToken", func(t *testing.T) {
-		v := defaultValidator(t)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().SignJWTRFC003(gomock.Any()).Return("token", nil)
+
 		request := services.CreateJwtBearerTokenRequest{
 			Custodian:     otherOrganizationID.String(),
 			Actor:         organizationID.String(),
 			Subject:       "789",
 			IdentityToken: "irma identity token",
 		}
-		token, err := v.CreateJwtBearerToken(&request, "")
+		token, err := ctx.oauthService.createJwtBearerToken(&request, "")
 
 		if !assert.Nil(t, err) || !assert.NotEmpty(t, token.BearerToken) {
 			t.FailNow()
 		}
-		parts := strings.Split(token.BearerToken, ".")
-		bytes, _ := jwt.DecodeSegment(parts[1])
-		var claims map[string]interface{}
-		if !assert.Nil(t, json.Unmarshal(bytes, &claims)) {
-			t.FailNow()
-		}
-
-		assert.Equal(t, organizationID.String(), claims["iss"])
-		assert.Equal(t, otherOrganizationID.String(), claims["sub"])
-		assert.Equal(t, request.Subject, claims["sid"])
-		// audience check is disabled since the relationship between endpoints, scopes and bolts is not yet defined
-		//assert.Equal(t, "1f7d4ea7-c1cf-4c14-ba23-7e1fddc31ad1", claims["aud"])
-		assert.Equal(t, request.IdentityToken, claims["usi"])
+		assert.Equal(t, "token", token.BearerToken)
 	})
 
 	t.Run("custodian without endpoint", func(t *testing.T) {
 		t.Skip("Disabled for now since the relation between scope, custodians and endpoints is not yet clear.")
-		v := defaultValidator(t)
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
 		request := services.CreateJwtBearerTokenRequest{
 			Custodian:     organizationID.String(),
@@ -251,7 +164,7 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 			IdentityToken: "irma identity token",
 		}
 
-		token, err := v.CreateJwtBearerToken(&request, "")
+		token, err := ctx.oauthService.createJwtBearerToken(&request, "")
 
 		assert.Empty(t, token)
 		if !assert.NotNil(t, err) {
@@ -261,90 +174,132 @@ func TestDefaultValidator_CreateJwtBearerToken(t *testing.T) {
 	})
 }
 
-func TestDefaultValidator_ValidateAccessToken(t *testing.T) {
-	tokenID, _ := uuid.NewRandom()
-	buildClaims := services.NutsJwtBearerToken{
-		StandardClaims: jwt.StandardClaims{
-			Audience:  "",
-			Id:        tokenID.String(),
-			IssuedAt:  time.Now().Unix(),
-			Issuer:    otherOrganizationID.String(),
-			NotBefore: time.Now().Unix(),
-			ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
-			Subject:   organizationID.String(),
-		},
-		SubjectID:          "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
-		AuthTokenContainer: "base64 encoded identity ",
-		Scope:              "nuts-sso",
-	}
+func TestOAuthService_validateAccessToken(t *testing.T) {
 
-	userIdentityValidationResult := services.ContractValidationResult{
-		ValidationResult:    services.Valid,
-		ContractFormat:      "",
-		DisclosedAttributes: map[string]string{"nuts.agb.agbcode": "1234"},
-	}
-
-	// Other organization sends access token to Organization in a request.
-	// Validate the Access Token
-	// Everything should be fine
 	t.Run("validate access token", func(t *testing.T) {
-		v := defaultValidator(t)
-		v.Configure()
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().PrivateKeyExists(oauthKeyEntity).Return(true)
+		ctx.cryptoMock.EXPECT().GetPrivateKey(oauthKeyEntity).Return(key, nil)
+
 		// First build an access token
-		token, err := v.BuildAccessToken(&buildClaims, &userIdentityValidationResult)
-		if !assert.NoError(t, err) {
-			t.FailNow()
-		}
+		token := validBearerToken()
+		jwt := signToken(token)
+
 		// Then validate it
-		claims, err := v.ParseAndValidateAccessToken(token)
+		claims, err := ctx.oauthService.parseAndValidateAccessToken(jwt)
 		if !assert.NoError(t, err) || !assert.NotNil(t, claims) {
 			t.FailNow()
 		}
+	})
 
-		// Check this organization signed the access token
-		assert.Equal(t, organizationID.String(), claims.Issuer)
-		// Check the other organization is the subject
-		assert.Equal(t, otherOrganizationID.String(), claims.Subject)
-		// Check the if SubjectID contains the citizen service number
-		assert.Equal(t, buildClaims.SubjectID, claims.SubjectID)
-		assert.Equal(t, "nuts-sso", claims.Scope)
+	t.Run("missing key", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().PrivateKeyExists(oauthKeyEntity).Return(false)
+
+		// First build an access token
+		token := validBearerToken()
+		jwt := signToken(token)
+
+		// Then validate it
+		_, err := ctx.oauthService.parseAndValidateAccessToken(jwt)
+		assert.Error(t, err)
 	})
 }
 
 func TestAuth_Configure(t *testing.T) {
 	t.Run("ok - config valid", func(t *testing.T) {
-		v := defaultValidator(t)
-		assert.NoError(t, v.Configure())
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().PrivateKeyExists(oauthKeyEntity).Return(true)
+
+		assert.NoError(t, ctx.oauthService.Configure())
+	})
+
+	t.Run("missing private key", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().PrivateKeyExists(oauthKeyEntity).Return(false)
+		ctx.cryptoMock.EXPECT().GenerateKeyPair(oauthKeyEntity, false)
+
+		assert.NoError(t, ctx.oauthService.Configure())
 	})
 }
 
 var organizationID = registryTest.OrganizationID("00000001")
 var otherOrganizationID = registryTest.OrganizationID("00000002")
 
-// defaultValidator sets up a validator with a registry containing a single test organization.
-// The method is a singleton and always returns the same instance
-func defaultValidator(t *testing.T) OAuthService {
-	t.Helper()
-	os.Setenv("NUTS_IDENTITY", registryTest.VendorID("1234").String())
-	core.NutsConfig().Load(&cobra.Command{})
-	testDirectory := io.TestDirectory(t)
-	testCrypto := crypto.NewTestCryptoInstance(testDirectory)
-	testRegistry := registry.NewTestRegistryInstance(testDirectory)
+var vendorID, _ = core.ParsePartyID("urn:oid:1.3.6.1.4.1.54851.4:vendorId")
+var key, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+var certBytes = test.GenerateCertificate(time.Now(), 2, key)
+var oauthKeyEntity = cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: vendorID.String()}).WithQualifier(oauthKeyQualifier)
 
-	// Register a vendor
-	test.RegisterVendor(t, "Awesomesoft", testCrypto, testRegistry)
+func validBearerToken() services.NutsJwtBearerToken {
+	return services.NutsJwtBearerToken{
+		StandardClaims: jwt.StandardClaims{
+			Audience:  "endpoint",
+			ExpiresAt: time.Now().Add(5 * time.Second).Unix(),
+			Id:        "a005e81c-6749-4967-b01c-495228fcafb4",
+			IssuedAt:  time.Now().Unix(),
+			Issuer:    "actor",
+			NotBefore: 0,
+			Subject:   "custodian",
+		},
+		AuthTokenContainer: "authToken",
+		SubjectID:          "subject",
+	}
+}
 
-	// Add Organization to registry
-	if _, err := testRegistry.VendorClaim(organizationID, "Zorggroep Nuts", nil); err != nil {
-		t.Fatal(err)
+func signToken(jwtBearerToken services.NutsJwtBearerToken) string {
+	var keyVals map[string]interface{}
+	inrec, _ := json.Marshal(jwtBearerToken)
+	if err := json.Unmarshal(inrec, &keyVals); err != nil {
+		return ""
 	}
 
-	if _, err := testRegistry.VendorClaim(otherOrganizationID, "verpleeghuis De nootjes", nil); err != nil {
-		t.Fatal(err)
+	c := jwt.MapClaims{}
+	for k, v := range keyVals {
+		c[k] = v
 	}
-	return OAuthService{
-		VendorID: core.NutsConfig().VendorID(),
-		Registry: testRegistry,
-		Crypto:   testCrypto,
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, c)
+	certificate, _ := x509.ParseCertificate(certBytes)
+	chain := cert.MarshalX509CertChain([]*x509.Certificate{certificate})
+	token.Header["x5c"] = chain
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, _ := token.SignedString(key)
+	return tokenString
+}
+
+type TestContext struct {
+	ctrl                  *gomock.Controller
+	cryptoMock            *cryptoMock.MockClient
+	registryMock          *registryMock.MockRegistryClient
+	contractValidatorMock *servicesMock.MockContractValidator
+	oauthService          *OAuthService
+}
+
+var createContext = func(t *testing.T) *TestContext {
+	ctrl := gomock.NewController(t)
+	cryptoMock := cryptoMock.NewMockClient(ctrl)
+	registryMock := registryMock.NewMockRegistryClient(ctrl)
+	contractValidatorMock := servicesMock.NewMockContractValidator(ctrl)
+	return &TestContext{
+		ctrl:                  ctrl,
+		cryptoMock:            cryptoMock,
+		registryMock:          registryMock,
+		contractValidatorMock: contractValidatorMock,
+		oauthService: &OAuthService{
+			VendorID:          vendorID,
+			Crypto:            cryptoMock,
+			Registry:          registryMock,
+			oauthKeyEntity:    oauthKeyEntity,
+			ContractValidator: contractValidatorMock,
+		},
 	}
 }

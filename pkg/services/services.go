@@ -18,22 +18,10 @@ type ContractSessionHandler interface {
 	StartSession(request interface{}, handler server.SessionHandler) (*irma.Qr, string, error)
 }
 
-// AccessTokenHandler interface must be implemented by Access token handlers. It defines the interface to handle all
-// logic concerning creating and introspecting OAuth 2.0 Access tokens
-type AccessTokenHandler interface {
-	// CreateJwtBearerToken from a JwtBearerTokenRequest. Returns a signed JWT string.
-	CreateJwtBearerToken(request *CreateJwtBearerTokenRequest, endpointIdentifier string) (token *JwtBearerTokenResult, err error)
-
-	// ParseAndValidateJwtBearerToken accepts a jwt encoded bearer token as string and returns the NutsJwtBearerToken object if valid.
-	// it returns a ErrLegalEntityNotProvided if the issuer does not contain an legal entity
-	// it returns a ErrOrganizationNotFound if the organization in the issuer could not be found in the registry
-	ParseAndValidateJwtBearerToken(token string) (*NutsJwtBearerToken, error)
-
-	// BuildAccessToken create a jwt encoded access token from a NutsJwtBearerToken and a ContractValidationResult.
-	BuildAccessToken(jwtClaims *NutsJwtBearerToken, identityValidationResult *ContractValidationResult) (token string, err error)
-
-	// ParseAndValidateAccessToken parses and validates an AccessToken and returns a filled NutsAccessToken as result.
-	// it returns a ErrLegalEntityNotProvided if the issuer does not contain an legal entity
-	// it returns a ErrOrganizationNotFound if the organization in the issuer could not be found in the registry
-	ParseAndValidateAccessToken(accessToken string) (*NutsAccessToken, error)
+// OAuthClient is the client interface for the OAuth service
+type OAuthClient interface {
+	CreateAccessToken(request CreateAccessTokenRequest) (*AccessTokenResult, error)
+	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResult, error)
+	IntrospectAccessToken(token string) (*NutsAccessToken, error)
+	Configure() error
 }
