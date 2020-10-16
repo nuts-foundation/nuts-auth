@@ -531,6 +531,7 @@ github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443 h1:+2OJrU8cmOs
 github.com/nightlyone/lockfile v0.0.0-20180618180623-0ad87eef1443/go.mod h1:JbxfV1Iifij2yhRjXai0oFrbpxszXHRx1E5RuM26o4Y=
 github.com/nishanths/exhaustive v0.0.0-20200525081945-8e46705b6132 h1:NjznefjSrral0MiR4KlB41io/d3OklvhcgQUdfZTqJE=
 github.com/nishanths/exhaustive v0.0.0-20200525081945-8e46705b6132/go.mod h1:wBEpHwM2OdmeNpdCvRPUlkEbBuaFmcK4Wv8Q7FuGW3c=
+github.com/nuts-foundation/nuts-crypto v0.15.0 h1:C3E2NSXD1t3G1pPBOWtIr/V2r+y638Q7twOq+qPXb1w=
 github.com/nuts-foundation/nuts-crypto v0.15.0/go.mod h1:xz02sBTLi8w38xAGCpEV1jxhSd8r0/SviELIS3Ety0s=
 github.com/nuts-foundation/nuts-crypto v0.15.1-0.20200930083956-e83303c41716 h1:F246RXfAnUi5lqhGP4LJ3hVv6XE8vcwoA8sScQzcGug=
 github.com/nuts-foundation/nuts-crypto v0.15.1-0.20200930083956-e83303c41716/go.mod h1:8Q6c33DldilQbUzw8UEeL6bwCxTGSxxRlrTMF9BntGg=

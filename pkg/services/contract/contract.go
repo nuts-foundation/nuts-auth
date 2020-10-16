@@ -16,12 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package pkg
+package contract
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -40,18 +41,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ContractClient defines functions for creating and validating signed contracts
-type ContractClient interface {
-	CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error)
-	ContractSessionStatus(sessionID string) (*services.SessionStatusResult, error)
-	ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error)
-	ValidateContract(request services.ValidationRequest) (*services.ContractValidationResult, error)
-	KeyExistsFor(legalEntity core.PartyID) bool
-	OrganizationNameByID(legalEntity core.PartyID) (string, error)
+// ContractConfig holds all the configuration params
+type Config struct {
+	Mode                      string
+	Address                   string
+	PublicUrl                 string
+	IrmaConfigPath            string
+	IrmaSchemeManager         string
+	SkipAutoUpdateIrmaSchemas bool
+	ActingPartyCn             string
 }
 
 type Contract struct {
-	Config                 AuthConfig
+	config                 Config
 	ContractSessionHandler services.ContractSessionHandler
 	ContractValidator      services.ContractValidator
 	IrmaServiceConfig      irmaService.IrmaServiceConfig
@@ -59,12 +61,11 @@ type Contract struct {
 	ContractTemplates      contract.TemplateStore
 	Crypto                 nutscrypto.Client
 	Registry               registry.RegistryClient
-	Contract               *Contract
 }
 
-func NewContractInstance(config AuthConfig, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) *Contract {
+func NewContractInstance(config Config, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) *Contract {
 	return &Contract{
-		Config:   config,
+		config:   config,
 		Crypto:   cryptoClient,
 		Registry: registryClient,
 	}
@@ -81,7 +82,7 @@ func (auth *Contract) Configure() (err error) {
 		irmaServer *irmaserver.Server
 	)
 
-	if irmaServer, irmaConfig, err = auth.configureIrma(auth.Config); err != nil {
+	if irmaServer, irmaConfig, err = auth.configureIrma(auth.config); err != nil {
 		return
 	}
 
@@ -97,6 +98,10 @@ func (auth *Contract) Configure() (err error) {
 	return
 }
 
+func (auth *Contract) ContractValidatorInstance() services.ContractValidator {
+	return auth.ContractValidator
+}
+
 // ErrMissingActingParty is returned when the actingPartyCn is missing from the config
 var ErrMissingActingParty = errors.New("missing actingPartyCn")
 
@@ -104,11 +109,11 @@ var ErrMissingActingParty = errors.New("missing actingPartyCn")
 var ErrMissingPublicURL = errors.New("missing publicUrl")
 
 func (auth *Contract) configureContracts() (err error) {
-	if auth.Config.ActingPartyCn == "" {
+	if auth.config.ActingPartyCn == "" {
 		err = ErrMissingActingParty
 		return
 	}
-	if auth.Config.PublicUrl == "" {
+	if auth.config.PublicUrl == "" {
 		err = ErrMissingPublicURL
 		return
 	}
@@ -116,7 +121,7 @@ func (auth *Contract) configureContracts() (err error) {
 	return
 }
 
-func (auth *Contract) configureIrma(config AuthConfig) (irmaServer *irmaserver.Server, irmaConfig *irma.Configuration, err error) {
+func (auth *Contract) configureIrma(config Config) (irmaServer *irmaserver.Server, irmaConfig *irma.Configuration, err error) {
 	auth.IrmaServiceConfig = irmaService.IrmaServiceConfig{
 		Mode:                      config.Mode,
 		Address:                   config.Address,
@@ -135,6 +140,11 @@ func (auth *Contract) configureIrma(config AuthConfig) (irmaServer *irmaserver.S
 	return
 }
 
+// HandlerFunc returns the Irma server handler func
+func (auth *Contract) HandlerFunc() http.HandlerFunc {
+	return auth.IrmaServer.HandlerFunc()
+}
+
 // CreateContractSession creates a session based on an IRMA contract. This allows the user to permit the application to
 // use the Nuts Network in its name. The user can limit the application in time and scope. By signing it with IRMA other
 // nodes in the network can verify the validity of the contract.
@@ -148,7 +158,7 @@ func (auth *Contract) CreateContractSession(sessionRequest services.CreateSessio
 
 	// Step 2: Render the template template with all the correct values
 	renderedContract, err := template.Render(map[string]string{
-		contract.ActingPartyAttr: auth.Config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
+		contract.ActingPartyAttr: auth.config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
 		contract.LegalEntityAttr: sessionRequest.LegalEntity,
 	}, 0, 60*time.Minute)
 	if err != nil {
@@ -161,7 +171,7 @@ func (auth *Contract) CreateContractSession(sessionRequest services.CreateSessio
 
 	// Step 3: Put the template in an IMRA envelope
 	signatureRequest := irma.NewSignatureRequest(renderedContract.RawContractText)
-	schemeManager := auth.Config.IrmaSchemeManager
+	schemeManager := auth.config.IrmaSchemeManager
 
 	var attributes irma.AttributeCon
 	for _, att := range template.SignerAttributes {
