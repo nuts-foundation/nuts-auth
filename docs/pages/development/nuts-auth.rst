@@ -35,7 +35,9 @@ When making changes to the client interface run the following command to regener
 
 .. code-block:: shell
 
-    mockgen -destination=mock/mock_client.go -package=mock -source=pkg/auth.go
+    mockgen -destination=mock/mock_auth_client.go -package=mock -source=pkg/auth.go
+    mockgen -destination=mock/mock_oauth_client.go -package=mock -source=pkg/oauth.go
+    mockgen -destination=mock/mock_contract_client.go -package=mock -source=pkg/contract.go
 
 
 Building
