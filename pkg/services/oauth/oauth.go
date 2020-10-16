@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/google/uuid"
 	nutsCrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	nutsCryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -24,14 +23,8 @@ import (
 const oauthKeyQualifier = "oauth"
 
 var errMissingVendorID = errors.New("missing vendorID")
-
-// errMissingEndpoint is returned when no endpoints are found of type oauth
-var errMissingEndpoint = errors.New("missing oauth endpoint in registry")
-
-// errMissingCertificate is returned when the x5c header is missing in the JWT
+var errIncorrectNumberOfEndpoints = errors.New("none or multiple registered endpoints found")
 var errMissingCertificate = errors.New("missing x5c header")
-
-// errInvalidX5cHeader is returned when the x5c header is not a slice of strings
 var errInvalidX5cHeader = errors.New("invalid x5c header")
 
 type service struct {
@@ -93,54 +86,25 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 
 // CreateJwtBearerToken creates a JwtBearerToken from the given CreateJwtBearerTokenRequest
 func (s *service) CreateJwtBearerToken(request services.CreateJwtBearerTokenRequest) (*services.JwtBearerTokenResult, error) {
-	// todo add checks?
+	// todo add checks for missing values?
 	custodian, err := core.ParsePartyID(request.Custodian)
 	if err != nil {
 		return nil, err
 	}
-	endpointType := "oauth" // todo
 
+	endpointType := services.OAuthEndpointType
 	epoints, err := s.registry.EndpointsByOrganizationAndType(custodian, &endpointType)
 	if err != nil {
 		return nil, err
 	}
-	if len(epoints) == 0 {
-		return nil, errMissingEndpoint
+	if len(epoints) != 1 {
+		return nil, errIncorrectNumberOfEndpoints
 	}
 
-	return s.createJwtBearerToken(&request, string(epoints[0].Identifier))
-}
+	jwtBearerToken := claimsFromRequest(request, string(epoints[0].Identifier))
 
-// IntrospectAccessToken fills the fields in NutsAccessToken from the given Jwt Access Token
-func (s *service) IntrospectAccessToken(token string) (*services.NutsAccessToken, error) {
-	acClaims, err := s.parseAndValidateAccessToken(token)
-	return acClaims, err
-}
-
-// CreateJwtBearerToken creates a JwtBearerTokenResult containing a jwtBearerToken from a CreateJwtBearerTokenRequest.
-func (s *service) createJwtBearerToken(request *services.CreateJwtBearerTokenRequest, endpointIdentifier string) (*services.JwtBearerTokenResult, error) {
-	jti, err := uuid.NewRandom()
+	keyVals, err := jwtBearerToken.AsMap()
 	if err != nil {
-		return nil, err
-	}
-
-	jwtBearerToken := services.NutsJwtBearerToken{
-		StandardClaims: jwt.StandardClaims{
-			Audience:  endpointIdentifier,
-			ExpiresAt: time.Now().Add(5 * time.Second).Unix(),
-			Id:        jti.String(),
-			IssuedAt:  time.Now().Unix(),
-			Issuer:    request.Actor,
-			NotBefore: 0,
-			Subject:   request.Custodian,
-		},
-		AuthTokenContainer: request.IdentityToken,
-		SubjectID:          request.Subject,
-	}
-
-	var keyVals map[string]interface{}
-	inrec, _ := json.Marshal(jwtBearerToken)
-	if err := json.Unmarshal(inrec, &keyVals); err != nil {
 		return nil, err
 	}
 
@@ -150,6 +114,30 @@ func (s *service) createJwtBearerToken(request *services.CreateJwtBearerTokenReq
 	}
 
 	return &services.JwtBearerTokenResult{BearerToken: signingString}, nil
+}
+
+var timeFunc = time.Now
+
+// standalone func for easier testing
+func claimsFromRequest(request services.CreateJwtBearerTokenRequest, audience string) services.NutsJwtBearerToken {
+	return services.NutsJwtBearerToken{
+		StandardClaims: jwt.StandardClaims{
+			Audience:  audience,
+			ExpiresAt: timeFunc().Add(5 * time.Second).Unix(),
+			IssuedAt:  timeFunc().Unix(),
+			Issuer:    request.Actor,
+			NotBefore: 0,
+			Subject:   request.Custodian,
+		},
+		AuthTokenContainer: request.IdentityToken,
+		SubjectID:          request.Subject,
+	}
+}
+
+// IntrospectAccessToken fills the fields in NutsAccessToken from the given Jwt Access Token
+func (s *service) IntrospectAccessToken(token string) (*services.NutsAccessToken, error) {
+	acClaims, err := s.parseAndValidateAccessToken(token)
+	return acClaims, err
 }
 
 // ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims

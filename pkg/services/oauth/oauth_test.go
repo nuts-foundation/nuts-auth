@@ -19,6 +19,7 @@ import (
 	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
+	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	registryTest "github.com/nuts-foundation/nuts-registry/test"
 	"github.com/stretchr/testify/assert"
 
@@ -131,20 +132,22 @@ func TestOAuthService_buildAccessToken(t *testing.T) {
 	// todo some extra tests needed for claims generation
 }
 
-func TestOAuthService_createJwtBearerToken(t *testing.T) {
+func TestOAuthService_CreateJwtBearerToken(t *testing.T) {
+	request := services.CreateJwtBearerTokenRequest{
+		Custodian:     otherOrganizationID.String(),
+		Actor:         organizationID.String(),
+		Subject:       "789",
+		IdentityToken: "irma identity token",
+	}
+
 	t.Run("create a JwtBearerToken", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
 		ctx.cryptoMock.EXPECT().SignJWTRFC003(gomock.Any()).Return("token", nil)
+		ctx.registryMock.EXPECT().EndpointsByOrganizationAndType(gomock.Any(), gomock.Any()).Return([]db.Endpoint{{Identifier: "id"}}, nil)
 
-		request := services.CreateJwtBearerTokenRequest{
-			Custodian:     otherOrganizationID.String(),
-			Actor:         organizationID.String(),
-			Subject:       "789",
-			IdentityToken: "irma identity token",
-		}
-		token, err := ctx.oauthService.createJwtBearerToken(&request, "")
+		token, err := ctx.oauthService.CreateJwtBearerToken(request)
 
 		if !assert.Nil(t, err) || !assert.NotEmpty(t, token.BearerToken) {
 			t.FailNow()
@@ -153,24 +156,77 @@ func TestOAuthService_createJwtBearerToken(t *testing.T) {
 	})
 
 	t.Run("custodian without endpoint", func(t *testing.T) {
-		t.Skip("Disabled for now since the relation between scope, custodians and endpoints is not yet clear.")
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.registryMock.EXPECT().EndpointsByOrganizationAndType(gomock.Any(), gomock.Any()).Return([]db.Endpoint{}, nil)
+
+		token, err := ctx.oauthService.CreateJwtBearerToken(request)
+
+		assert.Empty(t, token)
+		assert.True(t, errors.Is(err, errIncorrectNumberOfEndpoints))
+	})
+
+	t.Run("request without custodian", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
 		request := services.CreateJwtBearerTokenRequest{
-			Custodian:     organizationID.String(),
-			Actor:         "456",
+			Actor:         organizationID.String(),
 			Subject:       "789",
 			IdentityToken: "irma identity token",
 		}
 
-		token, err := ctx.oauthService.createJwtBearerToken(&request, "")
+		token, err := ctx.oauthService.CreateJwtBearerToken(request)
 
 		assert.Empty(t, token)
-		if !assert.NotNil(t, err) {
-			t.Fail()
+		assert.NotNil(t, err)
+	})
+
+	t.Run("signing error", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().SignJWTRFC003(gomock.Any()).Return("", errors.New("boom!"))
+		ctx.registryMock.EXPECT().EndpointsByOrganizationAndType(gomock.Any(), gomock.Any()).Return([]db.Endpoint{{Identifier: "id"}}, nil)
+
+		token, err := ctx.oauthService.CreateJwtBearerToken(request)
+
+		assert.Error(t, err)
+		assert.Empty(t, token)
+	})
+
+}
+
+func Test_claimsFromRequest(t *testing.T) {
+	ctx := createContext(t)
+	defer ctx.ctrl.Finish()
+
+	t.Run("ok", func(t *testing.T) {
+		request := services.CreateJwtBearerTokenRequest{
+			Custodian:     otherOrganizationID.String(),
+			Actor:         organizationID.String(),
+			Subject:       "789",
+			IdentityToken: "irma identity token",
 		}
-		assert.Contains(t, err.Error(), "none or multiple registred sso endpoints found")
+		audience := "aud"
+		timeFunc = func() time.Time {
+			return time.Unix(10, 0)
+		}
+		defer func() {
+			timeFunc = time.Now
+		}()
+
+		claims := claimsFromRequest(request, audience)
+
+		assert.Equal(t, audience, claims.Audience)
+		assert.Equal(t, int64(15), claims.ExpiresAt)
+		assert.Equal(t, int64(10), claims.IssuedAt)
+		assert.Equal(t, request.Actor, claims.Issuer)
+		assert.Equal(t, int64(0), claims.NotBefore)
+		assert.Equal(t, request.Custodian, claims.Subject)
+		assert.Equal(t, request.IdentityToken, claims.AuthTokenContainer)
+		assert.Equal(t, request.Subject, claims.SubjectID)
 	})
 }
 
@@ -276,7 +332,7 @@ func signToken(jwtBearerToken services.NutsJwtBearerToken) string {
 	return tokenString
 }
 
-type TestContext struct {
+type testContext struct {
 	ctrl                  *gomock.Controller
 	cryptoMock            *cryptoMock.MockClient
 	registryMock          *registryMock.MockRegistryClient
@@ -284,12 +340,12 @@ type TestContext struct {
 	oauthService          *service
 }
 
-var createContext = func(t *testing.T) *TestContext {
+var createContext = func(t *testing.T) *testContext {
 	ctrl := gomock.NewController(t)
 	cryptoMock := cryptoMock.NewMockClient(ctrl)
 	registryMock := registryMock.NewMockRegistryClient(ctrl)
 	contractValidatorMock := servicesMock.NewMockContractValidator(ctrl)
-	return &TestContext{
+	return &testContext{
 		ctrl:                  ctrl,
 		cryptoMock:            cryptoMock,
 		registryMock:          registryMock,

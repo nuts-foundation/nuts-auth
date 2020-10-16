@@ -49,3 +49,6 @@ var ValidJWTAlg = []string{
 	jwt.SigningMethodES384.Name,
 	jwt.SigningMethodES512.Name,
 }
+
+// OAuthEndpointType defines the type identifier for oauth endpoints (RFCtodo)
+const OAuthEndpointType = "oauth"
