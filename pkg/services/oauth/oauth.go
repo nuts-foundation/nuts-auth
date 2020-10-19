@@ -163,7 +163,7 @@ func (s *OAuthService) createJwtBearerToken(request *services.CreateJwtBearerTok
 
 // parseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
 func (s *OAuthService) parseAndValidateJwtBearerToken(acString string) (*services.NutsJwtBearerToken, error) {
-	parser := &jwt.Parser{ValidMethods: []string{jwt.SigningMethodRS256.Name, jwt.SigningMethodPS256.Name}}
+	parser := &jwt.Parser{ValidMethods: ValidOAuthJWTAlg}
 	token, err := parser.ParseWithClaims(acString, &services.NutsJwtBearerToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		// get public key from x5c header
 		certificate, err := getCertificateFromHeaders(token)
