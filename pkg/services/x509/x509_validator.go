@@ -280,10 +280,6 @@ func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Cert
 	return nil
 }
 
-func (JwtX509Validator) Encode(token services.SignedToken) (string, error) {
-	panic("implement me")
-}
-
 // fetchCRL fetches and parses a CRL.
 func fetchCRL(url string) (*pkix.CertificateList, error) {
 	resp, err := http.Get(url)

@@ -49,7 +49,4 @@ type AuthenticationTokenService interface {
 
 	// Verify the signature of the SignedToken using the crypto of the Authentication service
 	Verify(token SignedToken) error
-
-	// Encode the token to base64
-	Encode(token SignedToken) (string, error)
 }

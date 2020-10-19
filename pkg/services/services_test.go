@@ -43,15 +43,6 @@ func (e ExampleAuthenticationTokenService) Verify(token SignedToken) error {
 	panic("implement me")
 }
 
-func (e ExampleAuthenticationTokenService) Encode(token SignedToken) (string, error) {
-	attrs := token.SignerAttributes()
-	var res string
-	for key, val := range attrs {
-		res = res + strings.Join([]string{key, val}, ":")
-	}
-	return base64.StdEncoding.EncodeToString([]byte(res)), nil
-}
-
 func TestExampleAuthenticationTokenService_Parse(t *testing.T) {
 	token := "foo:bar"
 	rawToken := base64.StdEncoding.EncodeToString([]byte(token))
@@ -60,8 +51,4 @@ func TestExampleAuthenticationTokenService_Parse(t *testing.T) {
 	signedToken, err := tokenService.Parse(rawToken)
 	assert.NoError(t, err)
 	assert.Equal(t, signedToken.SignerAttributes(), map[string]string{"foo": "bar"})
-
-	tokenString, err := tokenService.Encode(signedToken)
-	assert.NoError(t, err)
-	assert.Equal(t, rawToken, tokenString)
 }
