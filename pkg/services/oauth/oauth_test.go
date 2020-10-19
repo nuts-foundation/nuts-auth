@@ -25,20 +25,25 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/golang/mock/gomock"
 	servicesMock "github.com/nuts-foundation/nuts-auth/mock/services"
+	"github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
+	"github.com/nuts-foundation/nuts-crypto/pkg/storage"
 	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	"github.com/nuts-foundation/nuts-crypto/test"
 	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
 	core "github.com/nuts-foundation/nuts-go-core"
+	"github.com/nuts-foundation/nuts-go-test/io"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
 	"github.com/nuts-foundation/nuts-registry/pkg/db"
 	registryTest "github.com/nuts-foundation/nuts-registry/test"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
@@ -56,9 +61,77 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid identity", func(t *testing.T) {
+	t.Run("invalid issuer format", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
+
+		token := validBearerToken()
+		token.Issuer = "not a urn"
+		JWT := signToken(token)
+
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "invalid jwt.issuer: invalid PartyID: not a urn")
+		}
+	})
+
+	t.Run("unknown actor", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, db.ErrOrganizationNotFound)
+
+		token := validBearerToken()
+		JWT := signToken(token)
+
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "invalid jwt.issuer: organization not found")
+		}
+	})
+
+	t.Run("invalid signing certificate", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{err: errors.New("x509 verify error")})
+
+		token := validBearerToken()
+		JWT := signToken(token)
+
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "x509 verify error")
+		}
+	})
+
+	t.Run("actor no sibling of x5c signing certificate", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		fakeVendor, _ := core.NewPartyID("q", "v")
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: fakeVendor}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
+
+		token := validBearerToken()
+		JWT := signToken(token)
+
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "certificate from x5c is no sibling of actor signing certificate")
+		}
+	})
+
+	t.Run("broken identity token", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
 		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(nil, errors.New("identity validation failed"))
 
 		token := validBearerToken()
@@ -72,10 +145,46 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		}
 	})
 
+	t.Run("JWT validity to long", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
+
+		token := validBearerToken()
+		token.ExpiresAt = time.Now().Add(10 * time.Second).Unix()
+		JWT := signToken(token)
+
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "JWT validity to long")
+		}
+	})
+
+	t.Run("invalid identity token", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(&services.ContractValidationResult{ValidationResult: services.Invalid, DisclosedAttributes: map[string]string{}}, nil)
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
+
+		token := validBearerToken()
+		JWT := signToken(token)
+
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "identity validation failed")
+		}
+	})
+
 	t.Run("it creates a token", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(&services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
 		ctx.cryptoMock.EXPECT().SignJWT(gomock.Any(), gomock.Any()).Return("expectedAT", nil)
 
 		token := validBearerToken()
@@ -111,13 +220,40 @@ func TestOAuthService_parseAndValidateJwtBearerToken(t *testing.T) {
 		assert.Equal(t, "signing method HS256 is invalid", err.Error())
 	})
 
+	t.Run("missing x5c header", func(t *testing.T) {
+		token := validBearerToken()
+		jwt := signTokenWithHeader(token, []string{})
+
+		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(jwt)
+		assert.Nil(t, response)
+		assert.Equal(t, "invalid x5c header", err.Error())
+	})
+
+	t.Run("x5c header to large", func(t *testing.T) {
+		token := validBearerToken()
+		jwt := signTokenWithHeader(token, []string{"a", "b"})
+
+		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(jwt)
+		assert.Nil(t, response)
+		assert.Equal(t, "invalid x5c header", err.Error())
+	})
+
+	t.Run("x5c header wrong format", func(t *testing.T) {
+		token := validBearerToken()
+		jwt := signTokenWithHeader(token, []string{"a"})
+
+		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(jwt)
+		assert.Nil(t, response)
+		assert.Equal(t, "invalid x5c header: illegal base64 data at input byte 0", err.Error())
+	})
+
 	t.Run("valid token", func(t *testing.T) {
 		token := validBearerToken()
 		jwt := signToken(token)
 
 		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(jwt)
 		assert.Nil(t, err)
-		assert.Equal(t, "actor", response.Issuer)
+		assert.Equal(t, "urn:oid:2.16.840.1.113883.2.4.6.1:actor", response.Issuer)
 
 	})
 }
@@ -321,9 +457,9 @@ func validBearerToken() services.NutsJwtBearerToken {
 			ExpiresAt: time.Now().Add(5 * time.Second).Unix(),
 			Id:        "a005e81c-6749-4967-b01c-495228fcafb4",
 			IssuedAt:  time.Now().Unix(),
-			Issuer:    "actor",
+			Issuer:    "urn:oid:2.16.840.1.113883.2.4.6.1:actor",
 			NotBefore: 0,
-			Subject:   "custodian",
+			Subject:   "urn:oid:2.16.840.1.113883.2.4.6.1:custodian",
 		},
 		AuthTokenContainer: "authToken",
 		SubjectID:          "subject",
@@ -331,6 +467,14 @@ func validBearerToken() services.NutsJwtBearerToken {
 }
 
 func signToken(jwtBearerToken services.NutsJwtBearerToken) string {
+	certificate, _ := x509.ParseCertificate(certBytes)
+	chain := cert.MarshalX509CertChain([]*x509.Certificate{certificate})
+
+	// Sign and get the complete encoded token as a string using the secret
+	return signTokenWithHeader(jwtBearerToken, chain)
+}
+
+func signTokenWithHeader(jwtBearerToken services.NutsJwtBearerToken, chain []string) string {
 	var keyVals map[string]interface{}
 	inrec, _ := json.Marshal(jwtBearerToken)
 	if err := json.Unmarshal(inrec, &keyVals); err != nil {
@@ -342,8 +486,6 @@ func signToken(jwtBearerToken services.NutsJwtBearerToken) string {
 		c[k] = v
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, c)
-	certificate, _ := x509.ParseCertificate(certBytes)
-	chain := cert.MarshalX509CertChain([]*x509.Certificate{certificate})
 	token.Header["x5c"] = chain
 
 	// Sign and get the complete encoded token as a string using the secret
@@ -377,4 +519,55 @@ var createContext = func(t *testing.T) *testContext {
 			contractValidator: contractValidatorMock,
 		},
 	}
+}
+
+type testTrustStore struct{
+	err error
+	ca *x509.Certificate
+}
+
+func (tss testTrustStore) Verify(certificate *x509.Certificate, t time.Time) error {
+	return tss.err
+}
+
+func (tss testTrustStore) VerifiedChain(certificate *x509.Certificate, t time.Time) ([][]*x509.Certificate, error) {
+	if tss.err != nil {
+		return nil, tss.err
+	}
+
+	return [][]*x509.Certificate{{tss.ca, tss.ca}}, nil
+}
+
+func (tss testTrustStore) Pool() *x509.CertPool {
+	panic("implement me")
+}
+
+func (tss testTrustStore) AddCertificate(certificate *x509.Certificate) error {
+	panic("implement me")
+}
+
+func (tss testTrustStore) GetRoots(t time.Time) []*x509.Certificate {
+	panic("implement me")
+}
+
+func (tss testTrustStore) GetCertificates(i [][]*x509.Certificate, t time.Time, b bool) [][]*x509.Certificate {
+	panic("implement me")
+}
+
+func vendorCA(t *testing.T) *x509.Certificate {
+	os.Setenv("NUTS_IDENTITY", vendorID.String())
+	if err := core.NutsConfig().Load(&cobra.Command{}); err != nil {
+		panic(err)
+	}
+	dir := io.TestDirectory(t)
+	backend, _ := storage.NewFileSystemBackend(dir)
+	crypto := pkg.Crypto{
+		Storage:    backend,
+		Config:     pkg.TestCryptoConfig(dir),
+	}
+	crypto.Config.Keysize = 1024
+
+	c, _ := crypto.SelfSignVendorCACertificate("test")
+
+	return c
 }
