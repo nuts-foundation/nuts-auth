@@ -50,6 +50,7 @@ var errMissingCertificate = errors.New("missing x5c header")
 var errInvalidX5cHeader = errors.New("invalid x5c header")
 
 const errInvalidIssuerFmt = "invalid jwt.issuer: %w"
+const errInvalidSubjectFmt = "invalid jwt.subject: %w"
 
 type service struct {
 	vendorID          core.PartyID
@@ -100,16 +101,29 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 		return nil, fmt.Errorf("jwt bearer token validation failed: %w", err)
 	}
 
+	// check if the custodian is registered by this vendor, according to RFC003 §5.2.1.8
+	custPartyID, err := core.ParsePartyID(jwtBearerToken.Subject)
+	if err != nil {
+		return nil, fmt.Errorf(errInvalidSubjectFmt, err)
+	}
+	custodian, err := s.registry.OrganizationById(custPartyID)
+	if err != nil {
+		return nil, fmt.Errorf(errInvalidSubjectFmt, err)
+	}
+	if custodian.Vendor.String() != core.NutsConfig().VendorID().String() {
+		return nil, fmt.Errorf(errInvalidSubjectFmt, errors.New("organisation.vendor doesn't match with vendorID of this node"))
+	}
+
 	validationTime := time.Unix(jwtBearerToken.IssuedAt, 0)
 
 	// check the actor against the registry, according to RFC003 §5.2.1.3
 	// we do this by getting the validation chain for the certificate in the x5c header and check the vendorID SAN from the root
 	// with the vendorId of the actor
-	partyID, err := core.ParsePartyID(jwtBearerToken.Issuer)
+	actorPartyID, err := core.ParsePartyID(jwtBearerToken.Issuer)
 	if err != nil {
 		return nil, fmt.Errorf(errInvalidIssuerFmt, err)
 	}
-	actor, err := s.registry.OrganizationById(partyID)
+	actor, err := s.registry.OrganizationById(actorPartyID)
 	if err != nil {
 		return nil, fmt.Errorf(errInvalidIssuerFmt, err)
 	}
