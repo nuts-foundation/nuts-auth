@@ -1,15 +1,20 @@
 package x509
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/base64"
+	"math/big"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 )
-
-var encodedJwt = `eyJ4NWMiOlsiTUlJSGN6Q0NCVnVnQXdJQkFnSVVIUFU4cVZYS3FEZXByWUhDQ1dLQmkrdkp0Vll3RFFZSktvWklodmNOQVFFTEJRQXdhakVMTUFrR0ExVUVCaE1DVGt3eERUQUxCZ05WQkFvTUJFTkpRa2N4RnpBVkJnTlZCR0VNRGs1VVVrNU1MVFV3TURBd05UTTFNVE13TVFZRFZRUUREQ3BVUlZOVUlGVmFTUzF5WldkcGMzUmxjaUJOWldSbGQyVnlhMlZ5SUc5d0lHNWhZVzBnUTBFZ1J6TXdIaGNOTWpBd056RTNNVEl6TkRFNVdoY05Nak13TnpFM01USXpOREU1V2pDQmhURUxNQWtHQTFVRUJoTUNUa3d4SURBZUJnTlZCQW9NRjFURHFYTjBJRnB2Y21kcGJuTjBaV3hzYVc1bklEQXpNUll3RkFZRFZRUUVEQTEwWlhOMExUa3dNREUzT1RRek1Rd3dDZ1lEVlFRcURBTktZVzR4RWpBUUJnTlZCQVVUQ1Rrd01EQXlNVEl4T1RFYU1CZ0dBMVVFQXd3UlNtRnVJSFJsYzNRdE9UQXdNVGM1TkRNd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUJEd0F3Z2dFS0FvSUJBUUNoVFloUEE3WDBTNWNWQnhHYzdHWi81RHZxSWVzaWowYUpadllMcVhrRmkzOU5EQjRLSDM4c3JIbHRGVWYyOVF3YlBSUm9KOEJJYXpFTnhkdTg4WUQvZXBKSGhmOUhpMkx1UGhoZmdSU3FjSnp4dDNPYStKME91YzdnZzBZaytnV01USkJ5R2ZSYlRQR3V5eVFFMnJOUFJteDRoOUNLSDZiNHVZam1ESDJWdXlhM3BtY0UrR2wxbmUvQnJjYnRsSmpCa2d6Vkw2cmVTYzdPUXhvbi9ZbmFRanhvakJpZ2xhT0hub2JESU9tczluQkZFQ29uUzVKNGZvb1VRVTg3anFMSGlHckJNL2xNdHlaOUVrblhGQ3U2U3VRb3ZDNlR1eUZ2c0JnT0MyNzNGZ0JaR2VybHkzbTFEVXczTlROUG15dlJEUXREWEJHTi9BVkVJLzR4VGdGL0FnTUJBQUdqZ2dMek1JSUM3ekJSQmdOVkhSRUVTakJJb0VZR0ExVUZCYUEvRmoweUxqRTJMalV5T0M0eExqRXdNRGN1T1RrdU1qRTRMVEV0T1RBd01ESXhNakU1TFU0dE9UQXdNREF6T0RJdE1EQXVNREF3TFRBd01EQXdNREF3TUF3R0ExVWRFd0VCL3dRQ01BQXdId1lEVlIwakJCZ3dGb0FVeWZBR0RwTGZOaThJZFRpODMrNUJlYkpkd0Y4d2dhc0dDQ3NHQVFVRkJ3RUJCSUdlTUlHYk1Hc0dDQ3NHQVFVRkJ6QUNobDlvZEhSd09pOHZkM2QzTG5WNmFTMXlaV2RwYzNSbGNpMTBaWE4wTG01c0wyTmhZMlZ5ZEhNdk1qQXhPVEExTURGZmRHVnpkRjkxZW1rdGNtVm5hWE4wWlhKZmJXVmtaWGRsY210bGNsOXZjRjl1WVdGdFgyTmhYMmN6TG1ObGNqQXNCZ2dyQmdFRkJRY3dBWVlnYUhSMGNEb3ZMMjlqYzNBdWRYcHBMWEpsWjJsemRHVnlMWFJsYzNRdWJtd3dnZ0VHQmdOVkhTQUVnZjR3Z2Zzd2dmZ0dDV0NFRUFHSGIyT0JWRENCNmpBL0JnZ3JCZ0VGQlFjQ0FSWXphSFIwY0hNNkx5OWhZMk5sY0hSaGRHbGxMbnB2Y21kamMzQXVibXd2WTNCekwzVjZhUzF5WldkcGMzUmxjaTVvZEcxc01JR21CZ2dyQmdFRkJRY0NBakNCbVF5QmxrTmxjblJwWm1sallXRjBJSFZwZEhOc2RXbDBaVzVrSUdkbFluSjFhV3RsYmlCMFpXNGdZbVZvYjJWMlpTQjJZVzRnWkdVZ1ZFVlRWQ0IyWVc0Z2FHVjBJRlZhU1MxeVpXZHBjM1JsY2k0Z1NHVjBJRlZhU1MxeVpXZHBjM1JsY2lCcGN5QnBiaUJuWldWdUlHZGxkbUZzSUdGaGJuTndjbUZyWld4cGFtc2dkbTl2Y2lCbGRtVnVkSFZsYkdVZ2MyTm9ZV1JsTGpBZkJnTlZIU1VFR0RBV0JnZ3JCZ0VGQlFjREJBWUtLd1lCQkFHQ053b0REREJqQmdOVkhSOEVYREJhTUZpZ1ZxQlVobEpvZEhSd09pOHZkM2QzTG5WNmFTMXlaV2RwYzNSbGNpMTBaWE4wTG01c0wyTmtjQzkwWlhOMFgzVjZhUzF5WldkcGMzUmxjbDl0WldSbGQyVnlhMlZ5WDI5d1gyNWhZVzFmWTJGZlp6TXVZM0pzTUIwR0ExVWREZ1FXQkJTWTBkclhRMEpINmhIdi9zejFTK3lyakVoU1F6QU9CZ05WSFE4QkFmOEVCQU1DQmtBd0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dJQkFGMDdXWmhoNkx5ZWdjMjJscDIwb0x5K2tnUlB3Ti9TL0lTdkxGVEY0RFBBSTY2RmtVSnNGUmFmbXVhMFpsL0JPZ2U1SXZwMHM5dEVqaHBaMTZYNGVZQm1qOE1VMHhBTjM0OC9PakFtSUZTR0l1d2kxU2RyendIUnF2VUxmMHNWcXZUOEpEVTZkMHEvaVBPRThEYU9OWXppbUlkZ1dFOXBOODhBb1ptT3VkSDQzSjk3WkRnMXYrWnU3NnMwdFI4WXpXSElUVDEvbmJRbDUzeU9mR3dER1RSdk42T1hkelBMVXpUbGhmdEdYZUZPRmNrb0Q4c2NRTGFaV1loQTVaVDRxLzlncE02WXU1TTMzWVJ0empGek4yTWVWaFpsUmV5NUY1NmVWcDV6MkM0U3NnM2FCemkyandnRzExY3pvMVBGdldod21zckNTTFpJUHdhWFduQ3hnYW5FZkxzeXVKcmpuVXYyUXdaeldCT1VoRjhSN2FtUk9xUHN6VGJwNE9yZWUyWmFyc04wYzNSLzdYdmJvcVdhb3NRa3Q1MFlxOHpCQ0Z4clFMZkZKN1pUcEhHWENEQmtzcVg4WWVrZ2RxdDhIMmdSS2p2OVNLY2RjejA0a2VJUEIyRU85K2ZQTHcwckZqRGVLdFFjYmRXTDlFSHRNOHAwcXBmTHNLcUdqbXdSdHhYbVRYUHNVS0FKQ1RKdWI4cnVRZVpsQlhZVC91YjNEMER1RzB2YUlNcjE3aDZydEdYR1hDWFV2VUxYMzBnczFyS3VUVkZkR0xFRUdid3JHbFVUZUdHRXFQbU4xdWFmNWpEdkR1UDE5R2RTV0VZMW4xTjYvV1paODhVS2ZnZHpxSVlKemt1RzV6bGZLUWdEREJvZXNyd3BCZXlkTXo0M0diZEZieS8zUm9MNSJdLCJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiSmFuIHRlc3QifQ.gs2Xe5uGLT8IzV6h9DDic_QilTj3CcPl4mefUSP_pwbPiyWsRL4pwKmfznmpltl_3_9Op6z4aOS4OdZQGPhHbDuuroZrZqq46uULU2LRBv7YkjhRQGQDoNPoC7otozxcKkOx6pl9nDTNaE5iOAgF-F_Ae6WYk5pNGgWmH3d4wZhVsqCdsokL-ATm_1ZSjIbxQ4LUVNY2Fnfc08ihT6gvN5cmbGWvMSeMCqd8reqffTnoYz02_Szy_hCYtvAjrUIpVzQYjdzYXNmxsTOYbXBAAFDJf8Zh_idn9PR7Gq8lWqcTR3DSgYU25CeC63afUasZvW3c78SUqr2nwN3n3T1bdw`
 
 func TestNewJwtX509Validator(t *testing.T) {
 	rootCert, rootCertKey, err := createTestRootCert()
@@ -109,43 +114,80 @@ func TestNewJwtX509Validator(t *testing.T) {
 }
 
 func TestJwtX509Validator_Parse(t *testing.T) {
-	pathPrefix := "../../../testdata/certs/uzi-test/"
-	rootCert, err := readCertFromFile(pathPrefix + "test_zorg_csp_root_ca_g3.cer")
-	if !assert.NoError(t, err) {
-		return
-	}
-	intermediate1, err := readCertFromFile(pathPrefix + "test_zorg_csp_level_2_persoon_ca_g3.cer")
-	if !assert.NoError(t, err) {
-		return
-	}
-	intermediate2, err := readCertFromFile(pathPrefix + "test_uzi-register_medewerker_op_naam_ca_g3.cer")
-	if !assert.NoError(t, err) {
-		return
-	}
+}
 
-	validator := JwtX509Validator{
-		roots:         []*x509.Certificate{rootCert},
-		intermediates: []*x509.Certificate{intermediate1, intermediate2},
-	}
+func TestJwtX509Validator_SubjectAltNameOtherName(t *testing.T) {
+	t.Run("ok - parse an UZI signature", func(t *testing.T) {
+		// prepare token with leaf cert from uzi card:
+		b64EncodedCert := "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\n"
+		rawCert, err := base64.StdEncoding.DecodeString(b64EncodedCert)
+		if !assert.NoError(t, err) {
+			return
+		}
+		leaf, err := x509.ParseCertificate(rawCert)
+		if !assert.NoError(t, err) {
+			return
+		}
+		token := JwtX509Token{
+			chain: []*x509.Certificate{leaf},
+		}
 
-	t.Skip("the current test token does not contain a token field")
-	signedContract, err := validator.Parse(encodedJwt)
-	if !assert.NoError(t, err) {
-		return
-	}
+		san, err := token.SubjectAltNameOtherName()
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, "2.16.528.1.1007.99.218-1-900021219-N-90000382-00.000-00000000", san)
+	})
 
-	expected := map[string]string{
-		"agbCode":  "00000000",
-		"cardType": "N",
-		"oidCa":    "2.16.528.1.1007.99.218",
-		"orgID":    "90000382",
-		"rollCode": "00.000",
-		"uziNr":    "900021219",
-		"version":  "1",
-	}
+	t.Run("ok - no san in cert", func(t *testing.T) {
+		rootCert, _, err := createTestRootCert()
+		if !assert.NoError(t, err) {
+			return
+		}
+		token := JwtX509Token{
+			chain: []*x509.Certificate{rootCert},
+		}
 
-	assert.Equal(t, expected, signedContract.SignerAttributes())
+		san, err := token.SubjectAltNameOtherName()
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, "", san)
+	})
 
-	err = validator.Verify(signedContract)
-	assert.NoError(t, err)
+	t.Run("ok - own certificate", func(t *testing.T) {
+		// Create the extension
+		otherNameValue, err := asn1.Marshal("foo:bar")
+		othernameExt, err := asn1.Marshal(generalNames{
+			OtherName: otherName{
+				OID:   asn1.ObjectIdentifier{2, 5, 5, 5},
+				Value: asn1.RawValue{Class: 2, Tag: 0, IsCompound: true, Bytes: otherNameValue},
+			}})
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		// assemble the certificate template with the extension
+		template := &x509.Certificate{
+			SerialNumber:    big.NewInt(1),
+			NotBefore:       time.Now().Add(-10 * time.Second),
+			NotAfter:        time.Now().Add(24 * time.Hour),
+			ExtraExtensions: []pkix.Extension{{Id: subjectAltNameID, Value: othernameExt}},
+		}
+
+		// generate a private key and create the self signed certificate
+		priv, err := rsa.GenerateKey(rand.Reader, 1024)
+		if !assert.NoError(t, err) {
+			return
+		}
+		cert, err := createTestCert(nil, template, &priv.PublicKey, priv)
+
+		token := JwtX509Token{chain: []*x509.Certificate{cert}}
+		san, err := token.SubjectAltNameOtherName()
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, "foo:bar", san)
+
+	})
 }

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -18,19 +17,17 @@ import (
 	"github.com/lestrrat-go/jwx/jwt"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
-	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
 type JwtX509Token struct {
-	chain    []*x509.Certificate
-	contract contract.Contract
-	rawToken string
+	chain []*x509.Certificate
+	token jwt.Token
+	raw   string
 }
 
 type JwtX509Validator struct {
-	roots             []*x509.Certificate
-	intermediates     []*x509.Certificate
-	contractTemplates *contract.TemplateStore
+	roots         []*x509.Certificate
+	intermediates []*x509.Certificate
 }
 
 // generalNames defines the asn1 data structure of the generalNames as defined in rfc5280#section-4.2.1.6
@@ -40,24 +37,14 @@ type generalNames struct {
 
 // otherName defines the asn1 data structure of the othername as defined in rfc5280#section-4.2.1.6
 type otherName struct {
-	TypeID asn1.ObjectIdentifier
-	Value  asn1.RawValue `asn1:"tag:0"`
+	OID   asn1.ObjectIdentifier
+	Value asn1.RawValue `asn1:"tag:0"`
 }
 
 // is the object identifier of the subjectAltName (id-ce 17)
 var subjectAltNameID = asn1.ObjectIdentifier{2, 5, 29, 17}
 
-var UziAttributes = []string{
-	"oidCa",
-	"version",
-	"uziNr",
-	"cardType",
-	"orgID",
-	"rollCode",
-	"agbCode",
-}
-
-func (j JwtX509Token) SignerAttributes() map[string]string {
+func (j JwtX509Token) SubjectAltNameOtherName() (string, error) {
 	leaf := j.chain[0]
 	var subjAltName pkix.Extension
 	for _, ext := range leaf.Extensions {
@@ -66,45 +53,32 @@ func (j JwtX509Token) SignerAttributes() map[string]string {
 		}
 		break
 	}
+	if len(subjAltName.Value) == 0 {
+		return "", nil
+	}
 
 	var otherNames generalNames
 	if _, err := asn1.Unmarshal(subjAltName.Value, &otherNames); err != nil {
-		return nil
+		return "", err
 	}
-
-	var subjectID string
-	if _, err := asn1.Unmarshal(otherNames.OtherName.Value.Bytes, &subjectID); err != nil {
-		return nil
+	var otherNameStr string
+	if _, err := asn1.Unmarshal(otherNames.OtherName.Value.Bytes, &otherNameStr); err != nil {
+		return "", err
 	}
-
-	parts := strings.Split(subjectID, "-")
-
-	res := map[string]string{}
-	for idx, name := range UziAttributes {
-		res[name] = parts[idx]
-	}
-	return res
+	return otherNameStr, nil
 }
-
-func (j JwtX509Token) Contract() contract.Contract {
-	return j.contract
-}
-
-var _ services.SignedToken = (*JwtX509Token)(nil)
-var _ services.AuthenticationTokenService = (*JwtX509Validator)(nil)
 
 func NewJwtX509Validator(roots, intermediates []*x509.Certificate, contractTemplates *contract.TemplateStore) *JwtX509Validator {
 	return &JwtX509Validator{
-		roots:             roots,
-		intermediates:     intermediates,
-		contractTemplates: contractTemplates,
+		roots:         roots,
+		intermediates: intermediates,
 	}
 }
 
 // Parse attempts to parse a string as a jws. It checks if the x5c header contains at least 1 certificate.
 // The signature should be signed with the private key of the leaf certificate.
 // No other validations are performed. Call Verify to verify the auth token.
-func (validator JwtX509Validator) Parse(rawAuthToken string) (services.SignedToken, error) {
+func (validator JwtX509Validator) Parse(rawAuthToken string) (*JwtX509Token, error) {
 	// check the cert chain in the jwt
 	rawHeader, _, _, err := jws.SplitCompact(bytes.NewReader([]byte(rawAuthToken)))
 	if err != nil {
@@ -142,21 +116,10 @@ func (validator JwtX509Validator) Parse(rawAuthToken string) (services.SignedTok
 		return nil, fmt.Errorf("could not parse jwt payload: %w", err)
 	}
 
-	tokenField, ok := parsedJwt.Get("token")
-	if !ok {
-		return nil, fmt.Errorf("jwt did not contain token field")
-	}
-	contractText, ok := tokenField.(string)
-	if !ok {
-		return nil, fmt.Errorf("token field should contain a string")
-	}
-
-	c, err := contract.ParseContractString(contractText, *validator.contractTemplates)
-
 	return &JwtX509Token{
-		chain:    chain,
-		rawToken: rawAuthToken,
-		contract: *c,
+		chain: chain,
+		token: parsedJwt,
+		raw:   rawAuthToken,
 	}, nil
 }
 
@@ -178,11 +141,7 @@ func (validator JwtX509Validator) parseCertsFromHeader(certsFromHeader []string)
 	return chain, nil
 }
 
-func (validator JwtX509Validator) Verify(signedToken services.SignedToken) error {
-	x509Token, ok := signedToken.(*JwtX509Token)
-	if !ok {
-		return fmt.Errorf("signedToken is not a X509 signedToken")
-	}
+func (validator JwtX509Validator) Verify(x509Token *JwtX509Token) error {
 
 	leafCert, verifiedChains, err := validator.verifyCertChain(x509Token)
 	if err != nil {
@@ -196,7 +155,7 @@ func (validator JwtX509Validator) Verify(signedToken services.SignedToken) error
 	}
 
 	// parse the jwt and verify the jwt signature
-	token, err := jwt.ParseString(x509Token.rawToken, jwt.WithVerify(jwa.RS512, leafCert.PublicKey))
+	token, err := jwt.ParseString(x509Token.raw, jwt.WithVerify(jwa.RS512, leafCert.PublicKey))
 	if err != nil {
 		return err
 	}
