@@ -233,7 +233,7 @@ func Test_Integration(t *testing.T) {
 
 // NewTestAuthInstance returns a fully configured Auth instance
 func newTestAuthInstance(t *testing.T) *pkg.Auth {
-	testDirectory := strings.ToLower(testIo.TestDirectory(t))
+	testDirectory := testIo.TestDirectory(t)
 
 	// init consent store in server mode
 	cs := pkg2.ConsentStoreInstance()
