@@ -6,7 +6,6 @@ package mock
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	pkg "github.com/nuts-foundation/nuts-auth/pkg"
 	services "github.com/nuts-foundation/nuts-auth/pkg/services"
 	reflect "reflect"
 )
@@ -49,10 +48,10 @@ func (mr *MockAuthClientMockRecorder) OAuthClient() *gomock.Call {
 }
 
 // ContractClient mocks base method
-func (m *MockAuthClient) ContractClient() pkg.ContractClient {
+func (m *MockAuthClient) ContractClient() services.ContractClient {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContractClient")
-	ret0, _ := ret[0].(pkg.ContractClient)
+	ret0, _ := ret[0].(services.ContractClient)
 	return ret0
 }
 

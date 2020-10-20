@@ -1,6 +1,10 @@
 package services
 
 import (
+	"net/http"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 )
@@ -24,4 +28,18 @@ type OAuthClient interface {
 	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResult, error)
 	IntrospectAccessToken(token string) (*NutsAccessToken, error)
 	Configure() error
+}
+
+// ContractClient defines functions for creating and validating signed contracts
+type ContractClient interface {
+	CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error)
+	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
+	ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error)
+	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
+	KeyExistsFor(legalEntity core.PartyID) bool
+	OrganizationNameByID(legalEntity core.PartyID) (string, error)
+	Configure() error
+	ContractValidatorInstance() ContractValidator
+	// HandlerFunc returns the Irma server handler func
+	HandlerFunc() http.HandlerFunc
 }

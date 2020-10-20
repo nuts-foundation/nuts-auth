@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -29,7 +30,7 @@ type AuthClient interface {
 	// OAuthClient returns an instance of OAuthClient
 	OAuthClient() services.OAuthClient
 	// ContractClient returns an instance of ContractClient
-	ContractClient() ContractClient
+	ContractClient() services.ContractClient
 }
 
 // Auth is the main struct of the Auth service
@@ -39,7 +40,7 @@ type Auth struct {
 	configDone          bool
 	OAuth               services.OAuthClient
 	oneOauthInstance    sync.Once
-	Contract            *Contract
+	Contract            services.ContractClient
 	oneContractInstance sync.Once
 	Crypto              nutscrypto.Client
 	Registry            registry.RegistryClient
@@ -80,18 +81,27 @@ func (auth *Auth) OAuthClient() services.OAuthClient {
 		return auth.OAuth
 	}
 	auth.oneOauthInstance.Do(func() {
-		auth.OAuth = oauth.NewOAuthService(core.NutsConfig().VendorID(), auth.Crypto, auth.Registry, auth.Contract.ContractValidator)
+		auth.OAuth = oauth.NewOAuthService(core.NutsConfig().VendorID(), auth.Crypto, auth.Registry, auth.Contract.ContractValidatorInstance())
 	})
 	return auth.OAuth
 }
 
 // ContractClient returns an instance of ContractClient
-func (auth *Auth) ContractClient() ContractClient {
+func (auth *Auth) ContractClient() services.ContractClient {
 	if auth.Contract != nil {
 		return auth.Contract
 	}
 	auth.oneContractInstance.Do(func() {
-		auth.Contract = NewContractInstance(auth.Config, auth.Crypto, auth.Registry)
+		cfg := contract.Config{
+			Mode:                      auth.Config.Mode,
+			Address:                   auth.Config.Address,
+			PublicUrl:                 auth.Config.PublicUrl,
+			IrmaConfigPath:            auth.Config.IrmaConfigPath,
+			IrmaSchemeManager:         auth.Config.IrmaSchemeManager,
+			SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,
+			ActingPartyCn:             auth.Config.ActingPartyCn,
+		}
+		auth.Contract = contract.NewContractInstance(cfg, auth.Crypto, auth.Registry)
 	})
 	return auth.Contract
 }
