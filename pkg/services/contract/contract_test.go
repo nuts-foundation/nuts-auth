@@ -38,7 +38,7 @@ import (
 
 const qrURL = "https://api.nuts-test.example" + irmaService.IrmaMountPath + "/123-session-ref-123"
 
-func TestAuth_CreateContractSession(t *testing.T) {
+func TestService_CreateContractSession(t *testing.T) {
 	t.Run("Create a new session", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
@@ -73,7 +73,7 @@ func TestAuth_CreateContractSession(t *testing.T) {
 	})
 }
 
-func TestAuth_ContractByType(t *testing.T) {
+func TestService_ContractByType(t *testing.T) {
 	ctx := createContext(t)
 	defer ctx.ctrl.Finish()
 
@@ -98,7 +98,7 @@ func TestAuth_ContractByType(t *testing.T) {
 	})
 }
 
-func TestAuth_ContractSessionStatus(t *testing.T) {
+func TestService_ContractSessionStatus(t *testing.T) {
 	ctx := createContext(t)
 	defer ctx.ctrl.Finish()
 
@@ -121,7 +121,7 @@ func TestAuth_ContractSessionStatus(t *testing.T) {
 	})
 }
 
-func TestAuth_ValidateContract(t *testing.T) {
+func TestService_ValidateContract(t *testing.T) {
 	ctx := createContext(t)
 	defer ctx.ctrl.Finish()
 
@@ -156,7 +156,7 @@ func TestAuth_ValidateContract(t *testing.T) {
 	})
 }
 
-func TestAuth_KeyExistsFor(t *testing.T) {
+func TestService_KeyExistsFor(t *testing.T) {
 	ctx := createContext(t)
 	defer ctx.ctrl.Finish()
 
@@ -174,7 +174,7 @@ func TestAuth_KeyExistsFor(t *testing.T) {
 	})
 }
 
-func TestAuth_OrganizationNameById(t *testing.T) {
+func TestService_OrganizationNameById(t *testing.T) {
 	ctx := createContext(t)
 	defer ctx.ctrl.Finish()
 
@@ -197,7 +197,7 @@ func TestAuth_OrganizationNameById(t *testing.T) {
 
 func TestContract_Configure(t *testing.T) {
 	t.Run("ok - config valid", func(t *testing.T) {
-		c := Contract{
+		c := service{
 			config: Config{
 				Mode:                      core.ServerEngineMode,
 				PublicUrl:                 "url",
@@ -209,14 +209,12 @@ func TestContract_Configure(t *testing.T) {
 
 		if assert.NoError(t, c.Configure()) {
 			// BUG: nuts-auth#23
-			assert.True(t, c.ContractValidator.IsInitialized())
+			assert.True(t, c.contractValidator.IsInitialized())
 		}
 	})
 }
 
 var organizationID = test.OrganizationID("00000001")
-
-//const vendorID = "urn:oid:1.3.6.1.4.1.54851.4:vendorId"
 
 type testContext struct {
 	ctrl                   *gomock.Controller
@@ -224,7 +222,7 @@ type testContext struct {
 	registryMock           *registryMock.MockRegistryClient
 	contractValidatorMock  *servicesMock.MockContractValidator
 	contractSessionHandler *servicesMock.MockContractSessionHandler
-	contractService        *Contract
+	contractService        *service
 }
 
 func createContext(t *testing.T) *testContext {
@@ -239,17 +237,15 @@ func createContext(t *testing.T) *testContext {
 		registryMock:           registryMock,
 		contractValidatorMock:  contractValidatorMock,
 		contractSessionHandler: contractSessionHandler,
-		contractService: &Contract{
+		contractService: &service{
 			config: Config{
 				ActingPartyCn: "actingPartyCn",
 			},
-			ContractSessionHandler: contractSessionHandler,
-			ContractValidator:      contractValidatorMock,
-			//IrmaServiceConfig:      irmaService.IrmaServiceConfig{},
-			//IrmaServer:             nil,
-			ContractTemplates: contract.StandardContractTemplates,
-			Crypto:            cryptoMock,
-			Registry:          registryMock,
+			contractSessionHandler: contractSessionHandler,
+			contractValidator:      contractValidatorMock,
+			contractTemplates:      contract.StandardContractTemplates,
+			crypto:                 cryptoMock,
+			registry:               registryMock,
 		},
 	}
 }

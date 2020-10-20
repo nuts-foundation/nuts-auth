@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -97,6 +98,16 @@ type NutsAccessToken struct {
 	Prefix     string `json:"prefix"`
 	FamilyName string `json:"family_name"`
 	Email      string `json:"email"`
+}
+
+// AsMap returns the claims from a NutsJwtBearerToken as a map with the json names as keys
+func (token NutsJwtBearerToken) AsMap() (map[string]interface{}, error) {
+	var keyVals map[string]interface{}
+	inrec, _ := json.Marshal(token)
+	if err := json.Unmarshal(inrec, &keyVals); err != nil {
+		return nil, err
+	}
+	return keyVals, nil
 }
 
 // ContractValidationResult contains the result of a contract validation

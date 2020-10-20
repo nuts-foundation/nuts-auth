@@ -7,8 +7,6 @@ import (
 	"fmt"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
-	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
-
 	irmaserver2 "github.com/privacybydesign/irmago/server/irmaserver"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
@@ -23,9 +21,6 @@ import (
 	irmaserver "github.com/privacybydesign/irmago/server"
 	"github.com/sirupsen/logrus"
 )
-
-var _ services.ContractSessionHandler = (*IrmaService)(nil)
-var _ services.ContractValidator = (*IrmaService)(nil)
 
 // IrmaService validates contracts using the irma logic.
 type IrmaService struct {
@@ -67,19 +62,19 @@ func (v IrmaService) ValidateContract(b64EncodedContract string, format services
 			return nil, fmt.Errorf("could not base64-decode contract: %w", err)
 		}
 		// Create the irma contract validator
-		contractValidator := IrmaContractVerifier{v.IrmaConfig, v.ContractTemplates}
-		signedContract, err := contractValidator.ParseSignedIrmaContract(string(contract))
+		contractValidator := contractVerifier{v.IrmaConfig, v.ContractTemplates}
+		signedContract, err := contractValidator.parseSignedIrmaContract(string(contract))
 		if err != nil {
 			return nil, err
 		}
-		return contractValidator.VerifyAll(signedContract, actingPartyCN)
+		return contractValidator.verifyAll(signedContract, actingPartyCN)
 	}
 	return nil, contract.ErrUnknownContractFormat
 }
 
 // ValidateJwt validates a JWT formatted identity token
 func (v IrmaService) ValidateJwt(token string, actingPartyCN string) (*services.ContractValidationResult, error) {
-	parser := &jwt.Parser{ValidMethods: oauth.ValidOAuthJWTAlg}
+	parser := &jwt.Parser{ValidMethods: services.ValidJWTAlg}
 	parsedToken, err := parser.ParseWithClaims(token, &services.NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity, err := parseTokenIssuer(token.Claims.(*services.NutsIdentityToken).Issuer)
 		if err != nil {
@@ -117,9 +112,9 @@ func (v IrmaService) ValidateJwt(token string, actingPartyCN string) (*services.
 	}
 
 	// Create the irma contract validator
-	contractValidator := IrmaContractVerifier{v.IrmaConfig, v.ContractTemplates}
-	signedContract, err := contractValidator.ParseSignedIrmaContract(string(contractStr))
-	return contractValidator.VerifyAll(signedContract, actingPartyCN)
+	contractValidator := contractVerifier{v.IrmaConfig, v.ContractTemplates}
+	signedContract, err := contractValidator.parseSignedIrmaContract(string(contractStr))
+	return contractValidator.verifyAll(signedContract, actingPartyCN)
 }
 
 // SessionStatus returns the current status of a certain session.
