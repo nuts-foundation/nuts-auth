@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/lestrrat-go/jwx/jwa"
+
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
@@ -61,7 +63,7 @@ func NewUziValidator(env UziEnv, contractTemplates *contract.TemplateStore) *Uzi
 	intermediates := []*x509.Certificate{}
 
 	validator := &UziValidator{
-		validator:         NewJwtX509Validator(roots, intermediates, contractTemplates),
+		validator:         NewJwtX509Validator(roots, intermediates, []jwa.SignatureAlgorithm{jwa.RS256}),
 		contractTemplates: contractTemplates,
 	}
 

@@ -71,10 +71,10 @@ func createIntermediateCert(parent *x509.Certificate, caKey *rsa.PrivateKey) (*x
 	cert, err := createTestCert(parent, template, &priv.PublicKey, caKey)
 	return cert, priv, err
 }
-func createLeafCert(parent *x509.Certificate, caKey *rsa.PrivateKey) (*x509.Certificate, error) {
+func createLeafCert(parent *x509.Certificate, caKey *rsa.PrivateKey) (*x509.Certificate, *rsa.PrivateKey, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
-		return nil, nil
+		return nil, nil, err
 	}
 
 	template := &x509.Certificate{
@@ -86,5 +86,6 @@ func createLeafCert(parent *x509.Certificate, caKey *rsa.PrivateKey) (*x509.Cert
 			CommonName: "Henk de Vries",
 		},
 	}
-	return createTestCert(parent, template, &priv.PublicKey, caKey)
+	cert, err := createTestCert(parent, template, &priv.PublicKey, caKey)
+	return cert, priv, err
 }

@@ -15,19 +15,19 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/lestrrat-go/jwx/jwt"
-
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 )
 
 type JwtX509Token struct {
-	chain []*x509.Certificate
-	token jwt.Token
-	raw   string
+	chain  []*x509.Certificate
+	token  jwt.Token
+	raw    string
+	sigAlg jwa.SignatureAlgorithm
 }
 
 type JwtX509Validator struct {
-	roots         []*x509.Certificate
-	intermediates []*x509.Certificate
+	roots              []*x509.Certificate
+	intermediates      []*x509.Certificate
+	allowedSigningAlgs []jwa.SignatureAlgorithm
 }
 
 // generalNames defines the asn1 data structure of the generalNames as defined in rfc5280#section-4.2.1.6
@@ -68,10 +68,11 @@ func (j JwtX509Token) SubjectAltNameOtherName() (string, error) {
 	return otherNameStr, nil
 }
 
-func NewJwtX509Validator(roots, intermediates []*x509.Certificate, contractTemplates *contract.TemplateStore) *JwtX509Validator {
+func NewJwtX509Validator(roots, intermediates []*x509.Certificate, allowedSigAlgs []jwa.SignatureAlgorithm) *JwtX509Validator {
 	return &JwtX509Validator{
-		roots:         roots,
-		intermediates: intermediates,
+		roots:              roots,
+		intermediates:      intermediates,
+		allowedSigningAlgs: allowedSigAlgs,
 	}
 }
 
@@ -114,9 +115,10 @@ func (validator JwtX509Validator) Parse(rawAuthToken string) (*JwtX509Token, err
 	}
 
 	return &JwtX509Token{
-		chain: chain,
-		token: parsedJwt,
-		raw:   rawAuthToken,
+		chain:  chain,
+		token:  parsedJwt,
+		raw:    rawAuthToken,
+		sigAlg: headers.Algorithm(),
 	}, nil
 }
 
@@ -139,6 +141,16 @@ func (validator JwtX509Validator) parseCertsFromHeader(certsFromHeader []string)
 }
 
 func (validator JwtX509Validator) Verify(x509Token *JwtX509Token) error {
+	var sigAlgAllowed bool
+	for _, allowedAlg := range validator.allowedSigningAlgs {
+		if allowedAlg == x509Token.sigAlg {
+			sigAlgAllowed = true
+			break
+		}
+	}
+	if !sigAlgAllowed {
+		return fmt.Errorf("signature algorithm %s is not allows", x509Token.sigAlg)
+	}
 
 	leafCert, verifiedChains, err := validator.verifyCertChain(x509Token)
 	if err != nil {
@@ -152,7 +164,7 @@ func (validator JwtX509Validator) Verify(x509Token *JwtX509Token) error {
 	}
 
 	// parse the jwt and verify the jwt signature
-	token, err := jwt.ParseString(x509Token.raw, jwt.WithVerify(jwa.RS512, leafCert.PublicKey))
+	token, err := jwt.ParseString(x509Token.raw, jwt.WithVerify(x509Token.sigAlg, leafCert.PublicKey))
 	if err != nil {
 		return err
 	}
@@ -205,12 +217,12 @@ func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x50
 }
 
 func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Certificate) error {
-	fmt.Println("Checking CRLs for:")
+	//fmt.Println("Checking CRLs for:")
 	for i, certToCheck := range verifiedChain[0 : len(verifiedChain)-1] {
-		fmt.Printf("\t%s\n:", certToCheck.Subject.CommonName)
+		//fmt.Printf("\t%s\n:", certToCheck.Subject.CommonName)
 		issuer := verifiedChain[i+1]
 		for _, crlPoint := range certToCheck.CRLDistributionPoints {
-			fmt.Printf("\t\tChecking agains crl: %s\n", crlPoint)
+			//fmt.Printf("\t\tChecking agains crl: %s\n", crlPoint)
 			crl, err := fetchCRL(crlPoint)
 			if err != nil {
 				return fmt.Errorf("could not fetch the crl: %w", err)
@@ -218,19 +230,19 @@ func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Cert
 			if crl.HasExpired(time.Now()) {
 				return fmt.Errorf("crl has been expired")
 			}
-			fmt.Printf("\t\tcrl is not expired\n")
+			//fmt.Printf("\t\tcrl is not expired\n")
 			if err := issuer.CheckCRLSignature(crl); err != nil {
 				return fmt.Errorf("could not check cert agains CRL: %w", err)
 			}
-			fmt.Printf("\t\tcrl has valid signature\n")
+			//fmt.Printf("\t\tcrl has valid signature\n")
 			revokedCerts := crl.TBSCertList.RevokedCertificates
 			for _, revoked := range revokedCerts {
 				if certToCheck.SerialNumber == revoked.SerialNumber {
 					return fmt.Errorf("cert with serial " + certToCheck.SerialNumber.String() + "is revoked")
 				}
 			}
-			fmt.Printf("\t\tnot on revokation list\n")
-			fmt.Printf("\tok\n")
+			//fmt.Printf("\t\tnot on revokation list\n")
+			//fmt.Println("ok")
 		}
 	}
 	return nil

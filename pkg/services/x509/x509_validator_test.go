@@ -18,8 +18,6 @@ import (
 	"github.com/lestrrat-go/jwx/jws/sign"
 	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 )
 
 func TestNewJwtX509Validator(t *testing.T) {
@@ -33,13 +31,13 @@ func TestNewJwtX509Validator(t *testing.T) {
 		return
 	}
 
-	leafCert, err := createLeafCert(intermediateCert, intermediateCerKey)
+	leafCert, _, err := createLeafCert(intermediateCert, intermediateCerKey)
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	t.Run("validator with only a root", func(t *testing.T) {
-		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, nil, &contract.TemplateStore{})
+		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, nil, nil)
 		assert.NotNil(t, validator)
 
 		t.Run("ok - leaf and intermediate in token", func(t *testing.T) {
@@ -64,7 +62,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 
 		t.Run("nok - complete chain in token, but not part of roots", func(t *testing.T) {
 			otherRootCert, _, _ := createTestRootCert()
-			validator := NewJwtX509Validator([]*x509.Certificate{otherRootCert}, nil, &contract.TemplateStore{})
+			validator := NewJwtX509Validator([]*x509.Certificate{otherRootCert}, nil, nil)
 			token := &JwtX509Token{chain: []*x509.Certificate{leafCert, intermediateCert, rootCert}}
 			_, _, err := validator.verifyCertChain(token)
 			assert.Error(t, err)
@@ -74,7 +72,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 	})
 
 	t.Run("nok - root is not a root", func(t *testing.T) {
-		validator := NewJwtX509Validator([]*x509.Certificate{intermediateCert}, nil, &contract.TemplateStore{})
+		validator := NewJwtX509Validator([]*x509.Certificate{intermediateCert}, nil, nil)
 		token := &JwtX509Token{chain: []*x509.Certificate{leafCert}}
 		leaf, chain, err := validator.verifyCertChain(token)
 		assert.Nil(t, leaf)
@@ -85,7 +83,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 	})
 
 	t.Run("validator with root and intermediates", func(t *testing.T) {
-		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, &contract.TemplateStore{})
+		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, nil)
 		assert.NotNil(t, validator)
 
 		t.Run("ok - valid chain", func(t *testing.T) {
@@ -110,7 +108,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 
 	})
 	t.Run("nok - validator without roots", func(t *testing.T) {
-		validator := NewJwtX509Validator(nil, []*x509.Certificate{rootCert, intermediateCert}, &contract.TemplateStore{})
+		validator := NewJwtX509Validator(nil, []*x509.Certificate{rootCert, intermediateCert}, nil)
 		token := &JwtX509Token{chain: []*x509.Certificate{leafCert, intermediateCert}}
 		_, _, err := validator.verifyCertChain(token)
 		if assert.Error(t, err) {
@@ -121,6 +119,22 @@ func TestNewJwtX509Validator(t *testing.T) {
 
 func TestJwtX509Validator_Parse(t *testing.T) {
 	validator := NewJwtX509Validator(nil, nil, nil)
+	cert, privKey, err := createTestRootCert()
+	if !assert.NoError(t, err) {
+		return
+	}
+	t.Run("ok - a valid jwt", func(t *testing.T) {
+		theJwt := jwt.New()
+		headers := jws.NewHeaders()
+		headers.Set(jws.X509CertChainKey, []string{base64.StdEncoding.EncodeToString(cert.Raw)})
+		rawToken, err := jwt.Sign(theJwt, jwa.RS256, privKey, jws.WithHeaders(headers))
+		if !assert.NoError(t, err) {
+			return
+		}
+		token, err := validator.Parse(string(rawToken))
+		assert.NotNil(t, token)
+		assert.NoError(t, err)
+	})
 
 	t.Run("nok - empty jwt", func(t *testing.T) {
 		token, err := validator.Parse("")
@@ -189,10 +203,6 @@ func TestJwtX509Validator_Parse(t *testing.T) {
 	})
 
 	t.Run("nok - alg header different from actual signing algorithm", func(t *testing.T) {
-		cert, privKey, err := createTestRootCert()
-		if !assert.NoError(t, err) {
-			return
-		}
 		b64Cert := base64.StdEncoding.EncodeToString(cert.Raw)
 		theJwt := jwt.New()
 		headers := jws.NewHeaders()
@@ -304,6 +314,56 @@ func TestJwtX509Validator_SubjectAltNameOtherName(t *testing.T) {
 			return
 		}
 		assert.Equal(t, "foo:bar", san)
+
+	})
+}
+
+func TestJwtX509Validator_Verify(t *testing.T) {
+	rootCert, rootKey, err := createTestRootCert()
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	intermediateCert, intermediateKey, err := createIntermediateCert(rootCert, rootKey)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	leafCert, leafKey, err := createLeafCert(intermediateCert, intermediateKey)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	t.Run("ok - valid jwt", func(t *testing.T) {
+		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256})
+
+		theJwt := jwt.New()
+		headers := jws.NewHeaders()
+		assert.NoError(t, headers.Set(jws.X509CertChainKey, []string{base64.StdEncoding.EncodeToString(leafCert.Raw)}))
+		rawJwt, err := jwt.Sign(theJwt, jwa.RS256, leafKey, jwt.WithHeaders(headers))
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		x509Token := &JwtX509Token{
+			chain:  []*x509.Certificate{leafCert},
+			token:  theJwt,
+			raw:    string(rawJwt),
+			sigAlg: jwa.RS256,
+		}
+		err = validator.Verify(x509Token)
+		assert.NoError(t, err)
+	})
+
+	t.Run("nok - signing algorithm not on allowed", func(t *testing.T) {
+		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256})
+		x509Token := &JwtX509Token{
+			sigAlg: jwa.RS512,
+		}
+		err = validator.Verify(x509Token)
+		if assert.Error(t, err) {
+			assert.Equal(t, "signature algorithm RS512 is not allows", err.Error())
+		}
 
 	})
 }
