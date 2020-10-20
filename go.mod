@@ -10,11 +10,10 @@ require (
 	github.com/gbrlsnchs/jwt v1.1.0 // indirect
 	github.com/golang/mock v1.4.4
 	github.com/goodsign/monday v0.0.0-20190708072354-9bcb46af8546
-	github.com/google/uuid v1.1.2
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
 	github.com/labstack/echo/v4 v4.1.17
-	github.com/mdp/qrterminal v1.0.1
 	github.com/mdp/qrterminal/v3 v3.0.0
+	github.com/nuts-foundation/nuts-consent-store v0.15.1-0.20200929093957-21ccf5e25c74
 	github.com/nuts-foundation/nuts-crypto v0.15.1-0.20201009062953-f3b551897b53
 	github.com/nuts-foundation/nuts-go-core v0.15.0
 	github.com/nuts-foundation/nuts-go-test v0.15.0

@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mdp/qrterminal"
+	"github.com/mdp/qrterminal/v3"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"

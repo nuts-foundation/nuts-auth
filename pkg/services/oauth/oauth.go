@@ -19,6 +19,7 @@
 package oauth
 
 import (
+	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/base64"
@@ -28,6 +29,8 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	nutsConsentClient "github.com/nuts-foundation/nuts-consent-store/client"
+	nutsConsent "github.com/nuts-foundation/nuts-consent-store/pkg"
 	nutsCrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	nutsCryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
@@ -52,6 +55,7 @@ type service struct {
 	vendorID          core.PartyID
 	crypto            nutsCrypto.Client
 	registry          nutsRegistry.RegistryClient
+	consent           nutsConsent.ConsentStoreClient
 	oauthKeyEntity    nutsCryptoTypes.KeyIdentifier
 	contractValidator services.ContractValidator
 }
@@ -80,6 +84,9 @@ func (s *service) Configure() (err error) {
 		logrus.Info("Missing OAuth JWT signing key, generating new one")
 		s.crypto.GenerateKeyPair(s.oauthKeyEntity, false)
 	}
+
+	s.consent = nutsConsentClient.NewConsentStoreClient()
+
 	return
 }
 
@@ -142,9 +149,21 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 
 	// validate the endpoint in aud, according to RFC003 §5.2.1.6
 	// the aud field must have the identifier of the endpoint registered by the vendor of this node!
+	// this is needed to prevent relay attacks.
+	// todo: implement when services and endpoints in registry have been implemented (https://github.com/nuts-foundation/nuts-registry/issues/156)
 
 	// validate the legal base, according to RFC003 §5.2.1.7 is sid is present
 	// use consent store
+	// todo: scope design is not completed, a valid consent record is enough for this flow, change to consentAuth call in future.
+	if jwtBearerToken.SubjectID != "" {
+		legalBase, err := s.consent.QueryConsent(context.Background(), &jwtBearerToken.Issuer, &jwtBearerToken.Subject, &jwtBearerToken.SubjectID, &validationTime)
+		if err != nil {
+			return nil, fmt.Errorf("legal base validation failed: %w", err)
+		}
+		if len(legalBase) == 0 {
+			return nil, errors.New("subject scope requested but no legal base present")
+		}
+	}
 
 	accessToken, err := s.buildAccessToken(jwtBearerToken, res)
 	if err != nil {

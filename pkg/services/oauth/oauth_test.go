@@ -32,6 +32,8 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/golang/mock/gomock"
 	servicesMock "github.com/nuts-foundation/nuts-auth/mock/services"
+	consentMock "github.com/nuts-foundation/nuts-consent-store/mock"
+	pkg2 "github.com/nuts-foundation/nuts-consent-store/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg/cert"
 	"github.com/nuts-foundation/nuts-crypto/pkg/storage"
@@ -179,12 +181,50 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		}
 	})
 
-	t.Run("it creates a token", func(t *testing.T) {
+	t.Run("no legal base present", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(&services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
+		ctx.consentMock.EXPECT().QueryConsent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]pkg2.PatientConsent{}, nil)
+
+		token := validBearerToken()
+		JWT := signToken(token)
+
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "subject scope requested but no legal base present")
+		}
+	})
+
+	t.Run("valid - no legal base and no sid", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(&services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
+		ctx.cryptoMock.EXPECT().SignJWT(gomock.Any(), gomock.Any()).Return("expectedAT", nil)
+
+		token := validBearerToken()
+		token.SubjectID = ""
+		JWT := signToken(token)
+
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		assert.Nil(t, err)
+		if assert.NotNil(t, response) {
+			assert.Equal(t, "expectedAT", response.AccessToken)
+		}
+	})
+
+	t.Run("valid - with legal base", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(&services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
+		ctx.consentMock.EXPECT().QueryConsent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]pkg2.PatientConsent{{}}, nil)
 		ctx.cryptoMock.EXPECT().SignJWT(gomock.Any(), gomock.Any()).Return("expectedAT", nil)
 
 		token := validBearerToken()
@@ -498,6 +538,7 @@ type testContext struct {
 	cryptoMock            *cryptoMock.MockClient
 	registryMock          *registryMock.MockRegistryClient
 	contractValidatorMock *servicesMock.MockContractValidator
+	consentMock 		  *consentMock.MockConsentStoreClient
 	oauthService          *service
 }
 
@@ -506,17 +547,20 @@ var createContext = func(t *testing.T) *testContext {
 	cryptoMock := cryptoMock.NewMockClient(ctrl)
 	registryMock := registryMock.NewMockRegistryClient(ctrl)
 	contractValidatorMock := servicesMock.NewMockContractValidator(ctrl)
+	consentMock := consentMock.NewMockConsentStoreClient(ctrl)
 	return &testContext{
 		ctrl:                  ctrl,
 		cryptoMock:            cryptoMock,
 		registryMock:          registryMock,
 		contractValidatorMock: contractValidatorMock,
+		consentMock: 		   consentMock,
 		oauthService: &service{
 			vendorID:          vendorID,
 			crypto:            cryptoMock,
 			registry:          registryMock,
 			oauthKeyEntity:    oauthKeyEntity,
 			contractValidator: contractValidatorMock,
+			consent: 		   consentMock,
 		},
 	}
 }

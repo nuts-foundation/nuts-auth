@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+	pkg2 "github.com/nuts-foundation/nuts-consent-store/pkg"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	testIo "github.com/nuts-foundation/nuts-go-test/io"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
@@ -36,10 +39,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var organizationID = test.OrganizationID("00000003")
+var otherOrganizationID = test.OrganizationID("00000004")
+var subjectBsn, _ = core.NewPartyID("2.16.840.1.113883.2.4.6.3", "99999990")
+
 // todo this test requires access to internals of other packages. Without this test some fields could be made private.
 func Test_Integration(t *testing.T) {
-	var organizationID = test.OrganizationID("00000003")
-	var otherOrganizationID = test.OrganizationID("00000004")
 
 	type IntegrationTestContext struct {
 		auth     *pkg.Auth
@@ -161,7 +166,6 @@ func Test_Integration(t *testing.T) {
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}
-			subjectBsn := "99999990"
 
 			// build a request to create the jwt bearer token
 			jwtBearerTokenRequest := CreateJwtBearerTokenRequest{
@@ -169,7 +173,7 @@ func Test_Integration(t *testing.T) {
 				Custodian: otherOrganizationID.String(),
 				Identity:  idToken,
 				Scope:     "nuts-sso",
-				Subject:   subjectBsn,
+				Subject:   subjectBsn.String(),
 			}
 			bindPostBody(ctx, jwtBearerTokenRequest)
 
@@ -218,7 +222,7 @@ func Test_Integration(t *testing.T) {
 			assert.True(t, keyVals["active"].(bool))
 			assert.Equal(t, otherOrganizationID.String(), keyVals["iss"].(string))
 			assert.Equal(t, organizationID.String(), keyVals["sub"].(string))
-			assert.Equal(t, subjectBsn, keyVals["sid"].(string))
+			assert.Equal(t, subjectBsn.String(), keyVals["sid"].(string))
 			assert.Equal(t, "Bruijn", keyVals["family_name"].(string))
 			assert.Equal(t, "de", keyVals["prefix"].(string))
 			assert.Equal(t, "Willeke", keyVals["given_name"].(string))
@@ -230,6 +234,40 @@ func Test_Integration(t *testing.T) {
 // NewTestAuthInstance returns a fully configured Auth instance
 func newTestAuthInstance(t *testing.T) *pkg.Auth {
 	testDirectory := testIo.TestDirectory(t)
+
+	// init consent store in server mode
+	cs := pkg2.ConsentStoreInstance()
+	cs.Config.Connectionstring = fmt.Sprintf("file://%s/consent.db", testDirectory)
+	if err := cs.Configure(); err != nil {
+		logrus.Fatal(err)
+	}
+	if err := cs.Start(); err != nil {
+		logrus.Fatal(err)
+	}
+	if err := cs.RecordConsent(context.Background(), []pkg2.PatientConsent{
+		{
+			ID:        "patient-uuid",
+			Actor:     organizationID.String(),
+			Custodian: otherOrganizationID.String(),
+			Records: []pkg2.ConsentRecord{
+				{
+					ValidFrom: time.Now(),
+					Hash:      "hash",
+					Version:   0,
+					UUID:      "uuid",
+					DataClasses: []pkg2.DataClass{
+						{
+							Code: "test",
+						},
+					},
+				},
+			},
+			Subject: subjectBsn.String(),
+		},
+	}); err != nil {
+		logrus.Fatal(err)
+	}
+
 	config := pkg.DefaultAuthConfig()
 	config.SkipAutoUpdateIrmaSchemas = true
 	config.IrmaConfigPath = path.Join(testDirectory, "auth", "irma")
