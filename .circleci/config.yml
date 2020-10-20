@@ -7,7 +7,7 @@ jobs:
       - image: circleci/golang:1.14
 
     environment:
-      TMPDIR: "/root"
+      TMPDIR: "/home/circleci"
 
     steps:
       - checkout
