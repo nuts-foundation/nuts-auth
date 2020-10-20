@@ -553,7 +553,7 @@ type testContext struct {
 	cryptoMock            *cryptoMock.MockClient
 	registryMock          *registryMock.MockRegistryClient
 	contractValidatorMock *servicesMock.MockContractValidator
-	consentMock 		  *consentMock.MockConsentStoreClient
+	consentMock           *consentMock.MockConsentStoreClient
 	oauthService          *service
 }
 
@@ -573,21 +573,21 @@ var createContext = func(t *testing.T) *testContext {
 		cryptoMock:            cryptoMock,
 		registryMock:          registryMock,
 		contractValidatorMock: contractValidatorMock,
-		consentMock: 		   consentMock,
+		consentMock:           consentMock,
 		oauthService: &service{
 			vendorID:          vendorID,
 			crypto:            cryptoMock,
 			registry:          registryMock,
 			oauthKeyEntity:    oauthKeyEntity,
 			contractValidator: contractValidatorMock,
-			consent: 		   consentMock,
+			consent:           consentMock,
 		},
 	}
 }
 
-type testTrustStore struct{
+type testTrustStore struct {
 	err error
-	ca *x509.Certificate
+	ca  *x509.Certificate
 }
 
 func (tss testTrustStore) Verify(certificate *x509.Certificate, t time.Time) error {
@@ -622,8 +622,8 @@ func vendorCA(t *testing.T) *x509.Certificate {
 	dir := io.TestDirectory(t)
 	backend, _ := storage.NewFileSystemBackend(dir)
 	crypto := pkg.Crypto{
-		Storage:    backend,
-		Config:     pkg.TestCryptoConfig(dir),
+		Storage: backend,
+		Config:  pkg.TestCryptoConfig(dir),
 	}
 	crypto.Config.Keysize = 1024
 
