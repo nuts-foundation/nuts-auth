@@ -63,107 +63,6 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid subject format", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-
-		token := validBearerToken()
-		token.Subject = "not a urn"
-		JWT := signToken(token)
-
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
-		assert.Nil(t, response)
-		if assert.NotNil(t, err) {
-			assert.Contains(t, err.Error(), "invalid jwt.subject: invalid PartyID: not a urn")
-		}
-	})
-
-	t.Run("unknown subject", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, db.ErrOrganizationNotFound)
-
-		token := validBearerToken()
-		JWT := signToken(token)
-
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
-		assert.Nil(t, response)
-		if assert.NotNil(t, err) {
-			assert.Contains(t, err.Error(), "invalid jwt.subject: organization not found")
-		}
-	})
-
-	t.Run("invalid issuer format", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-
-		token := validBearerToken()
-		token.Issuer = "not a urn"
-		JWT := signToken(token)
-
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
-		assert.Nil(t, response)
-		if assert.NotNil(t, err) {
-			assert.Contains(t, err.Error(), "invalid jwt.issuer: invalid PartyID: not a urn")
-		}
-	})
-
-	t.Run("unknown actor", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, db.ErrOrganizationNotFound)
-
-		token := validBearerToken()
-		JWT := signToken(token)
-
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
-		assert.Nil(t, response)
-		if assert.NotNil(t, err) {
-			assert.Contains(t, err.Error(), "invalid jwt.issuer: organization not found")
-		}
-	})
-
-	t.Run("invalid signing certificate", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{err: errors.New("x509 verify error")})
-
-		token := validBearerToken()
-		JWT := signToken(token)
-
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
-
-		assert.Nil(t, response)
-		if assert.NotNil(t, err) {
-			assert.Contains(t, err.Error(), "x509 verify error")
-		}
-	})
-
-	t.Run("actor no sibling of x5c signing certificate", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-
-		fakeVendor, _ := core.NewPartyID("q", "v")
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: fakeVendor}, nil)
-		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
-
-		token := validBearerToken()
-		JWT := signToken(token)
-
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
-
-		assert.Nil(t, response)
-		if assert.NotNil(t, err) {
-			assert.Contains(t, err.Error(), "certificate from x5c is no sibling of actor signing certificate")
-		}
-	})
-
 	t.Run("broken identity token", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
@@ -219,45 +118,6 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		}
 	})
 
-	t.Run("no legal base present", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(&services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
-		ctx.consentMock.EXPECT().QueryConsent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]pkg2.PatientConsent{}, nil)
-
-		token := validBearerToken()
-		JWT := signToken(token)
-
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
-		assert.Nil(t, response)
-		if assert.NotNil(t, err) {
-			assert.Contains(t, err.Error(), "subject scope requested but no legal base present")
-		}
-	})
-
-	t.Run("valid - no legal base and no sid", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(&services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
-		ctx.cryptoMock.EXPECT().SignJWT(gomock.Any(), gomock.Any()).Return("expectedAT", nil)
-
-		token := validBearerToken()
-		token.SubjectID = ""
-		JWT := signToken(token)
-
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
-		assert.Nil(t, err)
-		if assert.NotNil(t, response) {
-			assert.Equal(t, "expectedAT", response.AccessToken)
-		}
-	})
-
 	t.Run("valid - with legal base", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
@@ -276,6 +136,120 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		if assert.NotNil(t, response) {
 			assert.Equal(t, "expectedAT", response.AccessToken)
 		}
+	})
+}
+
+func TestService_validateIssuer(t *testing.T) {
+	t.Run("invalid issuer format", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		token := validBearerToken()
+		token.Issuer = "not a urn"
+
+		err := ctx.oauthService.validateIssuer(&token)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "invalid jwt.issuer: invalid PartyID: not a urn")
+		}
+	})
+
+	t.Run("unknown issuer", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, db.ErrOrganizationNotFound)
+
+		token := validBearerToken()
+
+		err := ctx.oauthService.validateIssuer(&token)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "invalid jwt.issuer: organization not found")
+		}
+	})
+
+	t.Run("invalid signing certificate", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{err: errors.New("x509 verify error")})
+
+		token := validBearerToken()
+
+		err := ctx.oauthService.validateIssuer(&token)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "x509 verify error")
+		}
+	})
+
+	t.Run("actor no sibling of x5c signing certificate", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		fakeVendor, _ := core.NewPartyID("q", "v")
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: fakeVendor}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
+
+		token := validBearerToken()
+
+		err := ctx.oauthService.validateIssuer(&token)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "certificate from x5c is no sibling of actor signing certificate")
+		}
+	})
+}
+
+func TestService_validateSubject(t *testing.T) {
+	t.Run("invalid subject format", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		token := validBearerToken()
+		token.Subject = "not a urn"
+
+		err := ctx.oauthService.validateSubject(&token)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "invalid jwt.subject: invalid PartyID: not a urn")
+		}
+	})
+
+	t.Run("unknown subject", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, db.ErrOrganizationNotFound)
+
+		token := validBearerToken()
+
+		err := ctx.oauthService.validateSubject(&token)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "invalid jwt.subject: organization not found")
+		}
+	})
+}
+
+func TestService_validateLegalBase(t *testing.T) {
+	t.Run("no legal base present", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.consentMock.EXPECT().QueryConsent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]pkg2.PatientConsent{}, nil)
+
+		token := validBearerToken()
+
+		err := ctx.oauthService.validateLegalBase(&token)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "subject scope requested but no legal base present")
+		}
+	})
+
+	t.Run("valid - no legal base and no sid", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		token := validBearerToken()
+		token.SubjectID = ""
+
+		err := ctx.oauthService.validateLegalBase(&token)
+		assert.NoError(t, err)
+
 	})
 }
 

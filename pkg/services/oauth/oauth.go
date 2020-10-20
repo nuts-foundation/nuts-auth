@@ -102,49 +102,14 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	}
 
 	// check if the custodian is registered by this vendor, according to RFC003 §5.2.1.8
-	custPartyID, err := core.ParsePartyID(jwtBearerToken.Subject)
+	err = s.validateSubject(jwtBearerToken)
 	if err != nil {
-		return nil, fmt.Errorf(errInvalidSubjectFmt, err)
+		return nil, err
 	}
-	custodian, err := s.registry.OrganizationById(custPartyID)
-	if err != nil {
-		return nil, fmt.Errorf(errInvalidSubjectFmt, err)
-	}
-	if custodian.Vendor.String() != core.NutsConfig().VendorID().String() {
-		return nil, fmt.Errorf(errInvalidSubjectFmt, errors.New("organisation.vendor doesn't match with vendorID of this node"))
-	}
-
-	validationTime := time.Unix(jwtBearerToken.IssuedAt, 0)
 
 	// check the actor against the registry, according to RFC003 §5.2.1.3
-	// we do this by getting the validation chain for the certificate in the x5c header and check the vendorID SAN from the root
-	// with the vendorId of the actor
-	actorPartyID, err := core.ParsePartyID(jwtBearerToken.Issuer)
-	if err != nil {
-		return nil, fmt.Errorf(errInvalidIssuerFmt, err)
-	}
-	actor, err := s.registry.OrganizationById(actorPartyID)
-	if err != nil {
-		return nil, fmt.Errorf(errInvalidIssuerFmt, err)
-	}
-	chains, err := s.crypto.TrustStore().VerifiedChain(jwtBearerToken.SigningCertificate, validationTime)
-	if err != nil || len(chains) == 0 {
-		return nil, fmt.Errorf("jwt x5c certificate validation failed: %w", err)
-	}
-	match := false
-	for _, chain := range chains {
-		root := chain[len(chain)-1]
-		v, err := cert.VendorIDFromCertificate(root)
-		if err != nil {
-			fmt.Errorf("no vendorID in SAN: %w", err)
-		}
-		if v.String() == actor.Vendor.String() {
-			match = true
-			break
-		}
-	}
-	if !match {
-		return nil, errors.New("certificate from x5c is no sibling of actor signing certificate")
+	if err = s.validateIssuer(jwtBearerToken); err != nil {
+		return nil, err
 	}
 
 	// check the maximum validity, according to RFC003 §5.2.1.4
@@ -167,16 +132,8 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	// todo: implement when services and endpoints in registry have been implemented (https://github.com/nuts-foundation/nuts-registry/issues/156)
 
 	// validate the legal base, according to RFC003 §5.2.1.7 is sid is present
-	// use consent store
-	// todo: scope design is not completed, a valid consent record is enough for this flow, change to consentAuth call in future.
-	if jwtBearerToken.SubjectID != "" {
-		legalBase, err := s.consent.QueryConsent(context.Background(), &jwtBearerToken.Issuer, &jwtBearerToken.Subject, &jwtBearerToken.SubjectID, &validationTime)
-		if err != nil {
-			return nil, fmt.Errorf("legal base validation failed: %w", err)
-		}
-		if len(legalBase) == 0 {
-			return nil, errors.New("subject scope requested but no legal base present")
-		}
+	if err = s.validateLegalBase(jwtBearerToken); err != nil {
+		return nil, err
 	}
 
 	accessToken, err := s.buildAccessToken(jwtBearerToken, res)
@@ -185,6 +142,79 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	}
 
 	return &services.AccessTokenResult{AccessToken: accessToken}, nil
+}
+
+// check the actor against the registry, according to RFC003 §5.2.1.3
+// we do this by getting the validation chain for the certificate in the x5c header and check the vendorID SAN from the root
+// with the vendorId of the actor
+func (s *service) validateIssuer(jwtBearerToken *services.NutsJwtBearerToken) error {
+	validationTime := time.Unix(jwtBearerToken.IssuedAt, 0)
+
+	actorPartyID, err := core.ParsePartyID(jwtBearerToken.Issuer)
+	if err != nil {
+		return fmt.Errorf(errInvalidIssuerFmt, err)
+	}
+	actor, err := s.registry.OrganizationById(actorPartyID)
+	if err != nil {
+		return fmt.Errorf(errInvalidIssuerFmt, err)
+	}
+	chains, err := s.crypto.TrustStore().VerifiedChain(jwtBearerToken.SigningCertificate, validationTime)
+	if err != nil || len(chains) == 0 {
+		return fmt.Errorf(errInvalidIssuerFmt, err)
+	}
+	match := false
+	for _, chain := range chains {
+		root := chain[len(chain)-1]
+		v, err := cert.VendorIDFromCertificate(root)
+		if err != nil {
+			fmt.Errorf("no vendorID in SAN: %w", err)
+		}
+		if v.String() == actor.Vendor.String() {
+			match = true
+			break
+		}
+	}
+	if !match {
+		return errors.New("certificate from x5c is no sibling of actor signing certificate")
+	}
+
+	return nil
+}
+
+// check if the custodian is registered by this vendor, according to RFC003 §5.2.1.8
+func (s *service) validateSubject(jwtBearerToken *services.NutsJwtBearerToken) error {
+	custPartyID, err := core.ParsePartyID(jwtBearerToken.Subject)
+	if err != nil {
+		return fmt.Errorf(errInvalidSubjectFmt, err)
+	}
+	custodian, err := s.registry.OrganizationById(custPartyID)
+	if err != nil {
+		return fmt.Errorf(errInvalidSubjectFmt, err)
+	}
+	if custodian.Vendor.String() != core.NutsConfig().VendorID().String() {
+		return fmt.Errorf(errInvalidSubjectFmt, errors.New("organisation.vendor doesn't match with vendorID of this node"))
+	}
+
+	return nil
+}
+
+// validate the legal base, according to RFC003 §5.2.1.7 is sid is present
+// use consent store
+// todo: scope design is not completed, a valid consent record is enough for this flow, change to consentAuth call in future.
+func (s *service) validateLegalBase(jwtBearerToken *services.NutsJwtBearerToken) error {
+	validationTime := time.Unix(jwtBearerToken.IssuedAt, 0)
+
+	if jwtBearerToken.SubjectID != "" {
+		legalBase, err := s.consent.QueryConsent(context.Background(), &jwtBearerToken.Issuer, &jwtBearerToken.Subject, &jwtBearerToken.SubjectID, &validationTime)
+		if err != nil {
+			return fmt.Errorf("legal base validation failed: %w", err)
+		}
+		if len(legalBase) == 0 {
+			return errors.New("subject scope requested but no legal base present")
+		}
+	}
+
+	return nil
 }
 
 // CreateJwtBearerToken creates a JwtBearerToken from the given CreateJwtBearerTokenRequest
