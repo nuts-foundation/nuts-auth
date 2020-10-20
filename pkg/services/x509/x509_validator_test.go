@@ -7,10 +7,16 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
 
+	"github.com/lestrrat-go/jwx/jwa"
+	"github.com/lestrrat-go/jwx/jws"
+	"github.com/lestrrat-go/jwx/jws/sign"
+	"github.com/lestrrat-go/jwx/jwt"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
@@ -50,7 +56,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 			token := &JwtX509Token{chain: []*x509.Certificate{leafCert}}
 			leaf, chain, err := validator.verifyCertChain(token)
 			if assert.Error(t, err) {
-				assert.Equal(t, err.Error(), "unable to verify certificate chain: x509: certificate signed by unknown authority")
+				assert.Equal(t, "unable to verify certificate chain: x509: certificate signed by unknown authority", err.Error())
 			}
 			assert.Nil(t, leaf)
 			assert.Nil(t, chain)
@@ -74,7 +80,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 		assert.Nil(t, leaf)
 		assert.Nil(t, chain)
 		if assert.Error(t, err) {
-			assert.Equal(t, err.Error(), "certificate is not a root CA")
+			assert.Equal(t, "certificate is not a root CA", err.Error())
 		}
 	})
 
@@ -96,7 +102,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 			token := &JwtX509Token{chain: []*x509.Certificate{}}
 			leaf, chain, err := validator.verifyCertChain(token)
 			if assert.Error(t, err) {
-				assert.Equal(t, err.Error(), "token does not have a certificate")
+				assert.Equal(t, "token does not have a certificate", err.Error())
 			}
 			assert.Nil(t, leaf)
 			assert.Nil(t, chain)
@@ -108,12 +114,122 @@ func TestNewJwtX509Validator(t *testing.T) {
 		token := &JwtX509Token{chain: []*x509.Certificate{leafCert, intermediateCert}}
 		_, _, err := validator.verifyCertChain(token)
 		if assert.Error(t, err) {
-			assert.Equal(t, err.Error(), "unable to verify certificate chain: x509: certificate signed by unknown authority")
+			assert.Equal(t, "unable to verify certificate chain: x509: certificate signed by unknown authority", err.Error())
 		}
 	})
 }
 
 func TestJwtX509Validator_Parse(t *testing.T) {
+	validator := NewJwtX509Validator(nil, nil, nil)
+
+	t.Run("nok - empty jwt", func(t *testing.T) {
+		token, err := validator.Parse("")
+		assert.Nil(t, token)
+		if assert.Error(t, err) {
+			assert.Equal(t, "the jwt should contain of 3 parts: invalid number of segments", err.Error())
+		}
+	})
+
+	t.Run("nok - invalid header", func(t *testing.T) {
+		token, err := validator.Parse("header.payload.signature")
+		assert.Nil(t, token)
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "could not unmarshall headers: invalid character")
+		}
+	})
+
+	priv, err := rsa.GenerateKey(rand.Reader, 1024)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	t.Run("nok - emtpy x5c header field", func(t *testing.T) {
+		theJwt := jwt.New()
+		signedJwt, err := jwt.Sign(theJwt, jwa.RS256, priv)
+		if !assert.NoError(t, err) {
+			return
+		}
+		token, err := validator.Parse(string(signedJwt))
+		assert.Nil(t, token)
+		if assert.Error(t, err) {
+			assert.Equal(t, "the jwt x5c field should contain at least 1 certificate", err.Error())
+		}
+
+	})
+
+	t.Run("nok - invalid base64 data in x5c header", func(t *testing.T) {
+		theJwt := jwt.New()
+		headers := jws.NewHeaders()
+		assert.NoError(t, headers.Set(jws.X509CertChainKey, []string{"123"}))
+		signedJwt, err := jwt.Sign(theJwt, jwa.RS256, priv, jwt.WithHeaders(headers))
+		if !assert.NoError(t, err) {
+			return
+		}
+		token, err := validator.Parse(string(signedJwt))
+		assert.Nil(t, token)
+		if assert.Error(t, err) {
+			assert.Equal(t, "could not base64 decode cert: illegal base64 data at input byte 0", err.Error())
+		}
+
+	})
+	t.Run("nok - invalid cert in x5c header", func(t *testing.T) {
+		theJwt := jwt.New()
+		headers := jws.NewHeaders()
+		assert.NoError(t, headers.Set(jws.X509CertChainKey, []string{"WvLTlMrX9NpYDQlEIFlnDA=="}))
+		signedJwt, err := jwt.Sign(theJwt, jwa.RS256, priv, jwt.WithHeaders(headers))
+		if !assert.NoError(t, err) {
+			return
+		}
+		token, err := validator.Parse(string(signedJwt))
+		assert.Nil(t, token)
+		if assert.Error(t, err) {
+			assert.Equal(t, "could not parse x509 certificate: asn1: structure error: length too large", err.Error())
+		}
+
+	})
+
+	t.Run("nok - alg header different from actual signing algorithm", func(t *testing.T) {
+		cert, privKey, err := createTestRootCert()
+		if !assert.NoError(t, err) {
+			return
+		}
+		b64Cert := base64.StdEncoding.EncodeToString(cert.Raw)
+		theJwt := jwt.New()
+		headers := jws.NewHeaders()
+		assert.NoError(t, headers.Set(jws.X509CertChainKey, []string{b64Cert}))
+		// set wrong algorithm
+		headers.Set(jws.AlgorithmKey, jwa.RS256)
+		signer, err := sign.New(jwa.RS512)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		hdrbuf, err := json.Marshal(headers)
+		if !assert.NoError(t, err) {
+			return
+		}
+		encodedHeader := base64.RawURLEncoding.EncodeToString(hdrbuf)
+
+		payloadbuf, err := json.Marshal(theJwt)
+		if !assert.NoError(t, err) {
+			return
+		}
+		encodedPayload := base64.RawURLEncoding.EncodeToString(payloadbuf)
+		dataToSign := fmt.Sprintf("%s.%s", encodedHeader, encodedPayload)
+
+		signature, err := signer.Sign([]byte(dataToSign), privKey)
+		if !assert.NoError(t, err) {
+			return
+		}
+		signedJwt := fmt.Sprintf("%s.%s", dataToSign, base64.RawURLEncoding.EncodeToString(signature))
+
+		token, err := validator.Parse(string(signedJwt))
+		assert.Nil(t, token)
+		if assert.Error(t, err) {
+			assert.Equal(t, "could not verify jwt signature: failed to verify message: crypto/rsa: verification error", err.Error())
+		}
+	})
+
 }
 
 func TestJwtX509Validator_SubjectAltNameOtherName(t *testing.T) {

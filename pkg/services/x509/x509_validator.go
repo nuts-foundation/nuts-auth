@@ -88,7 +88,7 @@ func (validator JwtX509Validator) Parse(rawAuthToken string) (*JwtX509Token, err
 	headers := jws.NewHeaders()
 	headerStr, _ := base64.RawURLEncoding.DecodeString(string(rawHeader))
 	if err = json.Unmarshal(headerStr, headers); err != nil {
-		panic("could not unmarshall headers " + err.Error())
+		return nil, fmt.Errorf("could not unmarshall headers: %w", err)
 	}
 
 	certsFromHeader := headers.X509CertChain()
@@ -101,12 +101,9 @@ func (validator JwtX509Validator) Parse(rawAuthToken string) (*JwtX509Token, err
 		return nil, err
 	}
 
-	if len(chain) == 0 {
-		return nil, fmt.Errorf("no certificates found in x509 jwt header")
-	}
-	certOnCard := chain[0]
+	certUsedForSigning := chain[0]
 
-	payload, err := jws.Verify([]byte(rawAuthToken), jwa.RS512, certOnCard.PublicKey)
+	payload, err := jws.Verify([]byte(rawAuthToken), headers.Algorithm(), certUsedForSigning.PublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify jwt signature: %w", err)
 	}
@@ -128,9 +125,9 @@ func (validator JwtX509Validator) parseCertsFromHeader(certsFromHeader []string)
 	chain := []*x509.Certificate{}
 
 	for _, certStr := range certsFromHeader {
-		rawCert, err := base64.StdEncoding.DecodeString(certStr)
+		rawCert, err := base64.StdEncoding.Strict().DecodeString(certStr)
 		if err != nil {
-			fmt.Errorf("could not base64 decode cert: %w", err)
+			return nil, fmt.Errorf("could not base64 decode cert: %w", err)
 		}
 		cert, err := x509.ParseCertificate(rawCert)
 		if err != nil {
