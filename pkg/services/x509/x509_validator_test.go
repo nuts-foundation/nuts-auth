@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -362,8 +364,86 @@ func TestJwtX509Validator_Verify(t *testing.T) {
 		}
 		err = validator.Verify(x509Token)
 		if assert.Error(t, err) {
-			assert.Equal(t, "signature algorithm RS512 is not allows", err.Error())
+			assert.Equal(t, "signature algorithm RS512 is not allowed", err.Error())
 		}
 
+	})
+}
+
+func TestJwtX509Validator_checkCertRevocation(t *testing.T) {
+
+	t.Run("no crls in chain", func(t *testing.T) {
+		rootCert, rootCertKey, err := createTestRootCert()
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		intermediateCert, intermediateCerKey, err := createIntermediateCert(rootCert, rootCertKey)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		leafCert, _, err := createLeafCert(intermediateCert, intermediateCerKey)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		t.Run("ok", func(t *testing.T) {
+			validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256})
+			assert.NoError(t, validator.checkCertRevocation([]*x509.Certificate{leafCert, intermediateCert, rootCert}))
+		})
+	})
+
+	t.Run("with crl", func(t *testing.T) {
+		var crl []byte
+		crlServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			t.Log("crl request received")
+			writer.Write(crl)
+		}))
+		defer crlServer.Close()
+
+		rootCert, rootCertKey, err := createTestRootCert()
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		intermediateCert, intermediateCerKey, err := createIntermediateCertWithCrl(rootCert, rootCertKey, crlServer.URL)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		leafCert, _, err := createLeafCert(intermediateCert, intermediateCerKey)
+		if !assert.NoError(t, err) {
+			return
+		}
+		crl, err = createCrl(nil, rootCert, rootCertKey, []*x509.Certificate{intermediateCert})
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		t.Run("ok - this intermediate is not revoked", func(t *testing.T) {
+			intermediateCert, intermediateCerKey, err := createIntermediateCertWithCrl(rootCert, rootCertKey, crlServer.URL)
+			if !assert.NoError(t, err) {
+				return
+			}
+
+			leafCert, _, err := createLeafCert(intermediateCert, intermediateCerKey)
+			if !assert.NoError(t, err) {
+				return
+			}
+
+			validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256})
+			err = validator.checkCertRevocation([]*x509.Certificate{leafCert, intermediateCert, rootCert})
+			assert.NoError(t, err)
+		})
+
+		t.Run("nok - intermediate is revoked", func(t *testing.T) {
+			validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256})
+			err = validator.checkCertRevocation([]*x509.Certificate{leafCert, intermediateCert, rootCert})
+			if assert.Error(t, err) {
+				assert.Equal(t, fmt.Sprintf("cert with serial '%s' is revoked", intermediateCert.SerialNumber.String()), err.Error())
+			}
+
+		})
 	})
 }

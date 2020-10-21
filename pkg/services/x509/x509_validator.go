@@ -149,13 +149,14 @@ func (validator JwtX509Validator) Verify(x509Token *JwtX509Token) error {
 		}
 	}
 	if !sigAlgAllowed {
-		return fmt.Errorf("signature algorithm %s is not allows", x509Token.sigAlg)
+		return fmt.Errorf("signature algorithm %s is not allowed", x509Token.sigAlg)
 	}
 
 	leafCert, verifiedChains, err := validator.verifyCertChain(x509Token)
 	if err != nil {
 		return err
 	}
+
 	for _, verifiedChain := range verifiedChains {
 		err := validator.checkCertRevocation(verifiedChain)
 		if err != nil {
@@ -217,12 +218,11 @@ func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x50
 }
 
 func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Certificate) error {
-	//fmt.Println("Checking CRLs for:")
+	fmt.Println("Checking CRLs for:")
 	for i, certToCheck := range verifiedChain[0 : len(verifiedChain)-1] {
-		//fmt.Printf("\t%s\n:", certToCheck.Subject.CommonName)
+		fmt.Printf("\t%s\n:", certToCheck.Subject.CommonName)
 		issuer := verifiedChain[i+1]
 		for _, crlPoint := range certToCheck.CRLDistributionPoints {
-			//fmt.Printf("\t\tChecking agains crl: %s\n", crlPoint)
 			crl, err := fetchCRL(crlPoint)
 			if err != nil {
 				return fmt.Errorf("could not fetch the crl: %w", err)
@@ -230,19 +230,15 @@ func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Cert
 			if crl.HasExpired(time.Now()) {
 				return fmt.Errorf("crl has been expired")
 			}
-			//fmt.Printf("\t\tcrl is not expired\n")
 			if err := issuer.CheckCRLSignature(crl); err != nil {
 				return fmt.Errorf("could not check cert agains CRL: %w", err)
 			}
-			//fmt.Printf("\t\tcrl has valid signature\n")
 			revokedCerts := crl.TBSCertList.RevokedCertificates
 			for _, revoked := range revokedCerts {
-				if certToCheck.SerialNumber == revoked.SerialNumber {
-					return fmt.Errorf("cert with serial " + certToCheck.SerialNumber.String() + "is revoked")
+				if certToCheck.SerialNumber.Cmp(revoked.SerialNumber) == 0 {
+					return fmt.Errorf("cert with serial '%s' is revoked", certToCheck.SerialNumber.String())
 				}
 			}
-			//fmt.Printf("\t\tnot on revokation list\n")
-			//fmt.Println("ok")
 		}
 	}
 	return nil
