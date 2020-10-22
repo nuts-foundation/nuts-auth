@@ -1,6 +1,6 @@
 module github.com/nuts-foundation/nuts-auth
 
-go 1.14
+go 1.15
 
 require (
 	github.com/bwesterb/go-atum v1.0.1 // indirect
