@@ -396,7 +396,7 @@ type TestContext struct {
 	echoMock     *coreMock.MockContext
 	authMock     *mock.MockAuthClient
 	oauthMock    *servicesMock.MockOAuthClient
-	contractMock *mock.MockContractClient
+	contractMock *servicesMock.MockContractClient
 	wrapper      Wrapper
 }
 
@@ -405,7 +405,7 @@ var createContext = func(t *testing.T) *TestContext {
 	authMock := mock.NewMockAuthClient(ctrl)
 	oauthMock := servicesMock.NewMockOAuthClient(ctrl)
 	authMock.EXPECT().OAuthClient().AnyTimes().Return(oauthMock)
-	contractMock := mock.NewMockContractClient(ctrl)
+	contractMock := servicesMock.NewMockContractClient(ctrl)
 	authMock.EXPECT().ContractClient().AnyTimes().Return(contractMock)
 	return &TestContext{
 		ctrl:         ctrl,

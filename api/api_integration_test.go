@@ -5,12 +5,17 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"path"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	testIo "github.com/nuts-foundation/nuts-go-test/io"
+	registry "github.com/nuts-foundation/nuts-registry/pkg"
+	"github.com/sirupsen/logrus"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 
@@ -31,6 +36,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// todo this test requires access to internals of other packages. Without this test some fields could be made private.
 func Test_Integration(t *testing.T) {
 	var organizationID = test.OrganizationID("00000003")
 	var otherOrganizationID = test.OrganizationID("00000004")
@@ -61,7 +67,7 @@ func Test_Integration(t *testing.T) {
 		t.Helper()
 		ctrl := gomock.NewController(t)
 
-		auth := pkg.NewTestAuthInstance(t)
+		auth := newTestAuthInstance(t)
 
 		// Register a vendor
 		test2.RegisterVendor(t, "Awesomesoft", auth.Crypto, auth.Registry)
@@ -219,4 +225,27 @@ func Test_Integration(t *testing.T) {
 			assert.Equal(t, "Willeke de Bruijn", keyVals["name"].(string))
 		})
 	})
+}
+
+// NewTestAuthInstance returns a fully configured Auth instance
+func newTestAuthInstance(t *testing.T) *pkg.Auth {
+	testDirectory := testIo.TestDirectory(t)
+	config := pkg.DefaultAuthConfig()
+	config.SkipAutoUpdateIrmaSchemas = true
+	config.IrmaConfigPath = path.Join(testDirectory, "auth", "irma")
+	config.ActingPartyCn = "CN=Awesomesoft"
+	config.PublicUrl = "http://" + config.Address
+	if err := os.MkdirAll(config.IrmaConfigPath, 0777); err != nil {
+		logrus.Fatal(err)
+	}
+	if err := test2.CopyDir("../testdata/irma", config.IrmaConfigPath); err != nil {
+		logrus.Fatal(err)
+	}
+	config.IrmaSchemeManager = "irma-demo"
+	newInstance := pkg.NewAuthInstance(config, crypto.NewTestCryptoInstance(testDirectory), registry.NewTestRegistryInstance(testDirectory))
+	if err := newInstance.Configure(); err != nil {
+		logrus.Fatal(err)
+	}
+
+	return newInstance
 }

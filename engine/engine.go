@@ -52,7 +52,7 @@ func NewAuthEngine() *nutsGo.Engine {
 					// strip the prefix
 					r.URL.Path = strings.Split(r.URL.Path, irma.IrmaMountPath)[1]
 				}
-				authBackend.Contract.IrmaServer.HandlerFunc()(w, r)
+				authBackend.Contract.HandlerFunc()(w, r)
 			}
 			// wrap the http handler in a echo handler
 			irmaEchoHandler := echo.WrapHandler(http.HandlerFunc(rewriteFunc))
@@ -88,11 +88,7 @@ func initEcho(auth *pkg.Auth) (*echo.Echo, error) {
 	echoServer.Use(rewriteIrmaRoute())
 
 	// Mount the irma-app routes
-	irmaServer, err := irma.GetIrmaServer(auth.Contract.IrmaServiceConfig)
-	if err != nil {
-		return nil, err
-	}
-	irmaClientHandler := irmaServer.HandlerFunc()
+	irmaClientHandler := auth.Contract.HandlerFunc()
 	irmaEchoHandler := echo.WrapHandler(irmaClientHandler)
 	echoServer.Any(irma.IrmaMountPath+"/*", irmaEchoHandler)
 

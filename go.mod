@@ -21,10 +21,9 @@ require (
 	github.com/nuts-foundation/nuts-go-test v0.15.0
 	github.com/nuts-foundation/nuts-registry v0.15.1-0.20201016062213-ead5838af16e
 	github.com/pkg/errors v0.9.1
-	github.com/privacybydesign/gabi v0.0.0-20200805114803-588904629b25 // indirect
-	github.com/privacybydesign/irmago v0.5.1
+	github.com/privacybydesign/irmago v0.6.0
 	github.com/sirupsen/logrus v1.7.0
-	github.com/spf13/cobra v1.0.0
+	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
 )

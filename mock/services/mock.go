@@ -6,9 +6,12 @@ package services
 
 import (
 	gomock "github.com/golang/mock/gomock"
+	contract "github.com/nuts-foundation/nuts-auth/pkg/contract"
 	services "github.com/nuts-foundation/nuts-auth/pkg/services"
+	nuts_go_core "github.com/nuts-foundation/nuts-go-core"
 	irmago "github.com/privacybydesign/irmago"
 	server "github.com/privacybydesign/irmago/server"
+	http "net/http"
 	reflect "reflect"
 )
 
@@ -133,89 +136,6 @@ func (mr *MockContractSessionHandlerMockRecorder) StartSession(request, handler 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSession", reflect.TypeOf((*MockContractSessionHandler)(nil).StartSession), request, handler)
 }
 
-// MockAccessTokenHandler is a mock of AccessTokenHandler interface
-type MockAccessTokenHandler struct {
-	ctrl     *gomock.Controller
-	recorder *MockAccessTokenHandlerMockRecorder
-}
-
-// MockAccessTokenHandlerMockRecorder is the mock recorder for MockAccessTokenHandler
-type MockAccessTokenHandlerMockRecorder struct {
-	mock *MockAccessTokenHandler
-}
-
-// NewMockAccessTokenHandler creates a new mock instance
-func NewMockAccessTokenHandler(ctrl *gomock.Controller) *MockAccessTokenHandler {
-	mock := &MockAccessTokenHandler{ctrl: ctrl}
-	mock.recorder = &MockAccessTokenHandlerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockAccessTokenHandler) EXPECT() *MockAccessTokenHandlerMockRecorder {
-	return m.recorder
-}
-
-// CreateJwtBearerToken mocks base method
-func (m *MockAccessTokenHandler) CreateJwtBearerToken(request *services.CreateJwtBearerTokenRequest, endpointIdentifier string) (*services.JwtBearerTokenResult, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateJwtBearerToken", request, endpointIdentifier)
-	ret0, _ := ret[0].(*services.JwtBearerTokenResult)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateJwtBearerToken indicates an expected call of CreateJwtBearerToken
-func (mr *MockAccessTokenHandlerMockRecorder) CreateJwtBearerToken(request, endpointIdentifier interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateJwtBearerToken", reflect.TypeOf((*MockAccessTokenHandler)(nil).CreateJwtBearerToken), request, endpointIdentifier)
-}
-
-// ParseAndValidateJwtBearerToken mocks base method
-func (m *MockAccessTokenHandler) ParseAndValidateJwtBearerToken(token string) (*services.NutsJwtBearerToken, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParseAndValidateJwtBearerToken", token)
-	ret0, _ := ret[0].(*services.NutsJwtBearerToken)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ParseAndValidateJwtBearerToken indicates an expected call of ParseAndValidateJwtBearerToken
-func (mr *MockAccessTokenHandlerMockRecorder) ParseAndValidateJwtBearerToken(token interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseAndValidateJwtBearerToken", reflect.TypeOf((*MockAccessTokenHandler)(nil).ParseAndValidateJwtBearerToken), token)
-}
-
-// BuildAccessToken mocks base method
-func (m *MockAccessTokenHandler) BuildAccessToken(jwtClaims *services.NutsJwtBearerToken, identityValidationResult *services.ContractValidationResult) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuildAccessToken", jwtClaims, identityValidationResult)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// BuildAccessToken indicates an expected call of BuildAccessToken
-func (mr *MockAccessTokenHandlerMockRecorder) BuildAccessToken(jwtClaims, identityValidationResult interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAccessToken", reflect.TypeOf((*MockAccessTokenHandler)(nil).BuildAccessToken), jwtClaims, identityValidationResult)
-}
-
-// ParseAndValidateAccessToken mocks base method
-func (m *MockAccessTokenHandler) ParseAndValidateAccessToken(accessToken string) (*services.NutsAccessToken, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParseAndValidateAccessToken", accessToken)
-	ret0, _ := ret[0].(*services.NutsAccessToken)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ParseAndValidateAccessToken indicates an expected call of ParseAndValidateAccessToken
-func (mr *MockAccessTokenHandlerMockRecorder) ParseAndValidateAccessToken(accessToken interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseAndValidateAccessToken", reflect.TypeOf((*MockAccessTokenHandler)(nil).ParseAndValidateAccessToken), accessToken)
-}
-
 // MockOAuthClient is a mock of OAuthClient interface
 type MockOAuthClient struct {
 	ctrl     *gomock.Controller
@@ -296,4 +216,158 @@ func (m *MockOAuthClient) Configure() error {
 func (mr *MockOAuthClientMockRecorder) Configure() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Configure", reflect.TypeOf((*MockOAuthClient)(nil).Configure))
+}
+
+// MockContractClient is a mock of ContractClient interface
+type MockContractClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockContractClientMockRecorder
+}
+
+// MockContractClientMockRecorder is the mock recorder for MockContractClient
+type MockContractClientMockRecorder struct {
+	mock *MockContractClient
+}
+
+// NewMockContractClient creates a new mock instance
+func NewMockContractClient(ctrl *gomock.Controller) *MockContractClient {
+	mock := &MockContractClient{ctrl: ctrl}
+	mock.recorder = &MockContractClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockContractClient) EXPECT() *MockContractClientMockRecorder {
+	return m.recorder
+}
+
+// CreateContractSession mocks base method
+func (m *MockContractClient) CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateContractSession", sessionRequest)
+	ret0, _ := ret[0].(*services.CreateSessionResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateContractSession indicates an expected call of CreateContractSession
+func (mr *MockContractClientMockRecorder) CreateContractSession(sessionRequest interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateContractSession", reflect.TypeOf((*MockContractClient)(nil).CreateContractSession), sessionRequest)
+}
+
+// ContractSessionStatus mocks base method
+func (m *MockContractClient) ContractSessionStatus(sessionID string) (*services.SessionStatusResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContractSessionStatus", sessionID)
+	ret0, _ := ret[0].(*services.SessionStatusResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ContractSessionStatus indicates an expected call of ContractSessionStatus
+func (mr *MockContractClientMockRecorder) ContractSessionStatus(sessionID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContractSessionStatus", reflect.TypeOf((*MockContractClient)(nil).ContractSessionStatus), sessionID)
+}
+
+// ContractByType mocks base method
+func (m *MockContractClient) ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContractByType", contractType, language, version)
+	ret0, _ := ret[0].(*contract.Template)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ContractByType indicates an expected call of ContractByType
+func (mr *MockContractClientMockRecorder) ContractByType(contractType, language, version interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContractByType", reflect.TypeOf((*MockContractClient)(nil).ContractByType), contractType, language, version)
+}
+
+// ValidateContract mocks base method
+func (m *MockContractClient) ValidateContract(request services.ValidationRequest) (*services.ContractValidationResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateContract", request)
+	ret0, _ := ret[0].(*services.ContractValidationResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateContract indicates an expected call of ValidateContract
+func (mr *MockContractClientMockRecorder) ValidateContract(request interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateContract", reflect.TypeOf((*MockContractClient)(nil).ValidateContract), request)
+}
+
+// KeyExistsFor mocks base method
+func (m *MockContractClient) KeyExistsFor(legalEntity nuts_go_core.PartyID) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "KeyExistsFor", legalEntity)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// KeyExistsFor indicates an expected call of KeyExistsFor
+func (mr *MockContractClientMockRecorder) KeyExistsFor(legalEntity interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "KeyExistsFor", reflect.TypeOf((*MockContractClient)(nil).KeyExistsFor), legalEntity)
+}
+
+// OrganizationNameByID mocks base method
+func (m *MockContractClient) OrganizationNameByID(legalEntity nuts_go_core.PartyID) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OrganizationNameByID", legalEntity)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OrganizationNameByID indicates an expected call of OrganizationNameByID
+func (mr *MockContractClientMockRecorder) OrganizationNameByID(legalEntity interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OrganizationNameByID", reflect.TypeOf((*MockContractClient)(nil).OrganizationNameByID), legalEntity)
+}
+
+// Configure mocks base method
+func (m *MockContractClient) Configure() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Configure")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Configure indicates an expected call of Configure
+func (mr *MockContractClientMockRecorder) Configure() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Configure", reflect.TypeOf((*MockContractClient)(nil).Configure))
+}
+
+// ContractValidatorInstance mocks base method
+func (m *MockContractClient) ContractValidatorInstance() services.ContractValidator {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ContractValidatorInstance")
+	ret0, _ := ret[0].(services.ContractValidator)
+	return ret0
+}
+
+// ContractValidatorInstance indicates an expected call of ContractValidatorInstance
+func (mr *MockContractClientMockRecorder) ContractValidatorInstance() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContractValidatorInstance", reflect.TypeOf((*MockContractClient)(nil).ContractValidatorInstance))
+}
+
+// HandlerFunc mocks base method
+func (m *MockContractClient) HandlerFunc() http.HandlerFunc {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HandlerFunc")
+	ret0, _ := ret[0].(http.HandlerFunc)
+	return ret0
+}
+
+// HandlerFunc indicates an expected call of HandlerFunc
+func (mr *MockContractClientMockRecorder) HandlerFunc() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandlerFunc", reflect.TypeOf((*MockContractClient)(nil).HandlerFunc))
 }

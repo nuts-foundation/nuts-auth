@@ -27,13 +27,13 @@ type SignedIrmaContract struct {
 //  its signature is signed with all attributes required by the Contract
 //  it has a valid time period
 //  the acting party named in the contract is the same as the one making the request
-type IrmaContractVerifier struct {
+type contractVerifier struct {
 	irmaConfig     *irma.Configuration
 	validContracts contract.TemplateStore
 }
 
-// ParseSignedIrmaContract parses a json string containing a signed irma contract.
-func (cv *IrmaContractVerifier) ParseSignedIrmaContract(rawContract string) (*SignedIrmaContract, error) {
+// parseSignedIrmaContract parses a json string containing a signed irma contract.
+func (cv *contractVerifier) parseSignedIrmaContract(rawContract string) (*SignedIrmaContract, error) {
 	signedIrmaContract := &SignedIrmaContract{}
 
 	if err := json.Unmarshal([]byte(rawContract), &signedIrmaContract.IrmaContract); err != nil {
@@ -54,22 +54,22 @@ func (cv *IrmaContractVerifier) ParseSignedIrmaContract(rawContract string) (*Si
 	return signedIrmaContract, nil
 }
 
-func (cv *IrmaContractVerifier) VerifyAll(signedContract *SignedIrmaContract, actingPartyCn string) (*services.ContractValidationResult, error) {
-	res, err := cv.VerifySignature(signedContract)
+func (cv *contractVerifier) verifyAll(signedContract *SignedIrmaContract, actingPartyCn string) (*services.ContractValidationResult, error) {
+	res, err := cv.verifySignature(signedContract)
 	if err != nil {
 		return res, err
 	}
-	res, err = cv.ValidateContractContents(signedContract, res, actingPartyCn)
+	res, err = cv.validateContractContents(signedContract, res, actingPartyCn)
 	if err != nil {
 		return nil, err
 	}
 	return cv.verifyRequiredAttributes(signedContract, res)
 }
 
-// VerifySignature verifies the IRMA signature.
+// verifySignature verifies the IRMA signature.
 // Returns a ContractValidationResult
 // Note: This method only checks the IRMA crypto, not the attributes used or the contents of the contract.
-func (cv *IrmaContractVerifier) VerifySignature(signedContract *SignedIrmaContract) (*services.ContractValidationResult, error) {
+func (cv *contractVerifier) verifySignature(signedContract *SignedIrmaContract) (*services.ContractValidationResult, error) {
 	// Actual verification
 	attributes, status, err := signedContract.IrmaContract.Verify(cv.irmaConfig, nil)
 	if err != nil {
@@ -115,9 +115,9 @@ func (cv *IrmaContractVerifier) VerifySignature(signedContract *SignedIrmaContra
 
 }
 
-// ValidateContractContents validates at the actual contract contents.
+// validateContractContents validates at the actual contract contents.
 // Is the timeframe valid and does the common name corresponds with the contract message.
-func (cv *IrmaContractVerifier) ValidateContractContents(signedContract *SignedIrmaContract, validationResult *services.ContractValidationResult, actingPartyCn string) (*services.ContractValidationResult, error) {
+func (cv *contractVerifier) validateContractContents(signedContract *SignedIrmaContract, validationResult *services.ContractValidationResult, actingPartyCn string) (*services.ContractValidationResult, error) {
 	if validationResult.ValidationResult == services.Invalid {
 		return validationResult, nil
 	}
@@ -162,7 +162,7 @@ func validateActingParty(params map[string]string, actingParty string) (bool, er
 	return actingParty == actingPartyFromContract, nil
 }
 
-func (cv *IrmaContractVerifier) verifyRequiredAttributes(signedIrmaContract *SignedIrmaContract, validationResult *services.ContractValidationResult) (*services.ContractValidationResult, error) {
+func (cv *contractVerifier) verifyRequiredAttributes(signedIrmaContract *SignedIrmaContract, validationResult *services.ContractValidationResult) (*services.ContractValidationResult, error) {
 	if validationResult.ValidationResult == services.Invalid {
 		return validationResult, nil
 	}

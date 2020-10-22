@@ -39,3 +39,16 @@ type ValidationState string
 
 // ContractFormat describes the format of a signed contract. Based on the format an appropriate validator can be selected.
 type ContractFormat string
+
+// ValidJWTAlg defines JWT signing algorithms allowed
+var ValidJWTAlg = []string{
+	jwt.SigningMethodPS256.Name,
+	jwt.SigningMethodPS384.Name,
+	jwt.SigningMethodPS512.Name,
+	jwt.SigningMethodES256.Name,
+	jwt.SigningMethodES384.Name,
+	jwt.SigningMethodES512.Name,
+}
+
+// OAuthEndpointType defines the type identifier for oauth endpoints (RFCtodo)
+const OAuthEndpointType = "oauth"
