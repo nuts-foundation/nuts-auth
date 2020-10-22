@@ -7,8 +7,6 @@ import (
 	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
-
-	contract "github.com/nuts-foundation/nuts-auth/pkg/contract"
 )
 
 // ContractValidator interface must be implemented by contract validators

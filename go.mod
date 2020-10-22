@@ -7,15 +7,12 @@ require (
 	github.com/cbroglie/mustache v1.2.0
 	github.com/deepmap/oapi-codegen v1.3.13
 	github.com/dgrijalva/jwt-go v3.2.1-0.20200107013213-dc14462fd587+incompatible
-	github.com/gbrlsnchs/jwt v1.1.0 // indirect
 	github.com/golang/mock v1.4.4
 	github.com/goodsign/monday v0.0.0-20190708072354-9bcb46af8546
-	github.com/google/uuid v1.1.2
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/lestrrat-go/jwx v1.0.5
 	github.com/mdp/qrterminal v1.0.1
-	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/nuts-foundation/nuts-crypto v0.15.1-0.20201015073554-cbeeb24605c8
 	github.com/nuts-foundation/nuts-go-core v0.15.0
 	github.com/nuts-foundation/nuts-go-test v0.15.0
