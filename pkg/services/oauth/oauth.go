@@ -131,7 +131,7 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	// this is needed to prevent relay attacks.
 	// todo: implement when services and endpoints in registry have been implemented (https://github.com/nuts-foundation/nuts-registry/issues/156)
 
-	// validate the legal base, according to RFC003 §5.2.1.7 is sid is present
+	// validate the legal base, according to RFC003 §5.2.1.7 if sid is present
 	if err = s.validateLegalBase(jwtBearerToken); err != nil {
 		return nil, err
 	}
@@ -198,9 +198,8 @@ func (s *service) validateSubject(jwtBearerToken *services.NutsJwtBearerToken) e
 	return nil
 }
 
-// validate the legal base, according to RFC003 §5.2.1.7 is sid is present
+// validate the legal base, according to RFC003 §5.2.1.7 if sid is present
 // use consent store
-// todo: scope design is not completed, a valid consent record is enough for this flow, change to consentAuth call in future.
 func (s *service) validateLegalBase(jwtBearerToken *services.NutsJwtBearerToken) error {
 	validationTime := time.Unix(jwtBearerToken.IssuedAt, 0)
 
