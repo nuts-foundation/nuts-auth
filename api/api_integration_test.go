@@ -213,7 +213,7 @@ func Test_Integration(t *testing.T) {
 			accessTokenResponse := &AccessTokenResponse{}
 			expectStatusOK(ctx, AccessTokenResponse{}, accessTokenResponse)
 
-			if !assert.NoError(t, ctx.wrapper.CreateAccessToken(ctx.echoMock)) {
+			if !assert.NoError(t, ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})) {
 				t.FailNow()
 			}
 			printTokenConents(t, "accessToken", accessTokenResponse.AccessToken)

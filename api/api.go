@@ -115,14 +115,14 @@ func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) err
 	var disclosedAttributes []DisclosedAttribute
 	if len(sessionStatus.Disclosed) > 0 {
 		for _, attr := range sessionStatus.Disclosed[0] {
-			value := make(map[string]string)
+			value := make(map[string]interface{})
 			for key, val := range map[string]string(attr.Value) {
 				value[key] = val
 			}
 
 			disclosedAttributes = append(disclosedAttributes, DisclosedAttribute{
 				Identifier: attr.Identifier.String(),
-				Value:      DisclosedAttribute_Value{value},
+				Value:      value,
 				Rawvalue:   attr.RawValue,
 				Status:     string(attr.Status),
 			})
@@ -171,14 +171,14 @@ func (api *Wrapper) ValidateContract(ctx echo.Context) error {
 	}
 
 	// convert internal result back to generated api format
-	signerAttributes := make(map[string]string)
+	signerAttributes := make(map[string]interface{})
 	for k, v := range validationResponse.DisclosedAttributes {
 		signerAttributes[k] = v
 	}
 
 	answer := ValidationResult{
 		ContractFormat:   string(validationResponse.ContractFormat),
-		SignerAttributes: ValidationResult_SignerAttributes{AdditionalProperties: signerAttributes},
+		SignerAttributes: signerAttributes,
 		ValidationResult: string(validationResponse.ValidationResult),
 	}
 
@@ -223,7 +223,7 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 
 // CreateAccessToken handles the api call to create an access token.
 // It consumes and checks the JWT and returns a smaller sessionToken
-func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
+func (api *Wrapper) CreateAccessToken(ctx echo.Context, _ CreateAccessTokenParams) (err error) {
 	// Can't use echo.Bind() here since it requires extra tags on generated code
 	request := new(CreateAccessTokenRequest)
 	request.Assertion = ctx.FormValue("assertion")

@@ -241,9 +241,7 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 
 		a := []DisclosedAttribute{
 			{
-				Value: DisclosedAttribute_Value{
-					AdditionalProperties: map[string]string{"nl": "00000001"},
-				},
+				Value: map[string]interface{}{"nl": "00000001"},
 			},
 		}
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, SessionResult{
@@ -291,7 +289,7 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 
-		sa := ValidationResult_SignerAttributes{AdditionalProperties: map[string]string{"nl": "00000007"}}
+		sa := map[string]interface{}{"nl": "00000007"}
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, ValidationResult{
 			ContractFormat:   string(services.JwtFormat),
 			ValidationResult: "VALID",
@@ -443,7 +441,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
 
 		assert.Nil(t, err)
 	})
@@ -460,7 +458,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
 
 		assert.Nil(t, err)
 	})
@@ -484,7 +482,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		expectError(ctx, errorResponse)
 
 		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(nil, fmt.Errorf("oh boy"))
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
 
 		assert.Nil(t, err)
 	})
@@ -511,7 +509,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
 
 		assert.Nil(t, err)
 	})
@@ -529,7 +527,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
 		expectStatusOK(ctx, apiResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
 
 		assert.Nil(t, err)
 
