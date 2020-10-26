@@ -7,6 +7,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/jwa"
 
+	"github.com/nuts-foundation/nuts-auth/assets"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
@@ -35,8 +36,8 @@ type UziValidator struct {
 
 type UziEnv string
 
-const ProductionTree UziEnv = "production"
-const AcceptationTree UziEnv = "acceptation"
+const UziProduction UziEnv = "production"
+const UziAcceptation UziEnv = "acceptation"
 
 func (t UziSignedToken) SignerAttributes() map[string]string {
 	otherNameStr, err := t.jwtX509Token.SubjectAltNameOtherName()
@@ -54,20 +55,73 @@ func (t UziSignedToken) SignerAttributes() map[string]string {
 }
 
 func (t UziSignedToken) Contract() contract.Contract {
-	return t.Contract()
+	return *t.contract
 }
 
-func NewUziValidator(env UziEnv, contractTemplates *contract.TemplateStore) *UziValidator {
-	// TODO: load certs based on the UziEnv
-	roots := []*x509.Certificate{}
-	intermediates := []*x509.Certificate{}
+func certsFromAssets(paths []string) (certs []*x509.Certificate, err error) {
+	for _, path := range paths {
+		var (
+			rawCert []byte
+			cert    *x509.Certificate
+		)
+		rawCert, err = assets.Asset(path)
+		if err != nil {
+			return
+		}
 
-	validator := &UziValidator{
+		cert, err = x509.ParseCertificate(rawCert)
+		if err != nil {
+			return
+		}
+		certs = append(certs, cert)
+	}
+	return
+}
+
+func NewUziValidator(env UziEnv, contractTemplates *contract.TemplateStore) (validator *UziValidator, err error) {
+	var roots []*x509.Certificate
+	var intermediates []*x509.Certificate
+
+	if env == UziProduction {
+		roots, err = certsFromAssets([]string{
+			"certs/uzi-prod/RootCA-G3.cer",
+		})
+		if err != nil {
+			return
+		}
+
+		intermediates, err = certsFromAssets([]string{
+			"certs/uzi-prod/20190418_UZI-register_Medewerker_op_naam_CA_G3.cer",
+			"certs/uzi-prod/20190418_UZI-register_Zorgverlener_CA_G3.cer",
+			"certs/uzi-prod/DomOrganisatiePersoonCA-G3.cer",
+			"certs/uzi-prod/UZI-register_Medewerker_op_naam_CA_G3.cer",
+			"certs/uzi-prod/UZI-register_Zorgverlener_CA_G3.cer",
+		})
+		if err != nil {
+			return
+		}
+	} else if env == UziAcceptation {
+		roots, err = certsFromAssets([]string{
+			"certs/uzi-acc/test_zorg_csp_root_ca_g3.cer",
+		})
+		if err != nil {
+			return
+		}
+
+		intermediates, err = certsFromAssets([]string{
+			"certs/uzi-acc/test_zorg_csp_root_ca_g3.cer",
+			"certs/uzi-acc/test_zorg_csp_level_2_persoon_ca_g3.cer",
+		})
+		if err != nil {
+			return
+		}
+	}
+
+	validator = &UziValidator{
 		validator:         NewJwtX509Validator(roots, intermediates, []jwa.SignatureAlgorithm{jwa.RS256}),
 		contractTemplates: contractTemplates,
 	}
-
-	return validator
+	return
 }
 
 func (u UziValidator) Parse(rawAuthToken string) (services.SignedToken, error) {
@@ -75,7 +129,7 @@ func (u UziValidator) Parse(rawAuthToken string) (services.SignedToken, error) {
 	if err != nil {
 		return nil, err
 	}
-	tokenField, ok := x509Token.token.Get("token")
+	tokenField, ok := x509Token.token.Get("message")
 	if !ok {
 		return nil, fmt.Errorf("jwt did not contain token field")
 	}
