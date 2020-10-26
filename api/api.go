@@ -247,7 +247,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: vendorID}
+	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: &vendorID}
 	acResponse, err := api.Auth.OAuthClient().CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()

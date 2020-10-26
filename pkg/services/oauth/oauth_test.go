@@ -41,7 +41,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 	t.Run("invalid identity", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(nil, errors.New("identity validation failed"))
+		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", nil).Return(nil, errors.New("identity validation failed"))
 
 		token := validBearerToken()
 		JWT := signToken(token)
@@ -56,7 +56,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 	t.Run("it creates a token", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(&services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
+		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", nil).Return(&services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
 		ctx.cryptoMock.EXPECT().SignJWT(gomock.Any(), gomock.Any()).Return("expectedAT", nil)
 
 		token := validBearerToken()

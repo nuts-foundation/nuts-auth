@@ -218,7 +218,7 @@ func TestValidateContract(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			contract.NowFunc = func() time.Time { return tt.date }
-			got, err := validator.ValidateContract(tt.args.contract, tt.args.format, tt.args.actingPartyCN)
+			got, err := validator.ValidateContract(tt.args.contract, tt.args.format, &tt.args.actingPartyCN)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateContract() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -386,7 +386,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		token := createJwt(cryptoInstance, organizationID, organizationID, testdata.ValidIrmaContract)
 		actingParty := "Demo EHR"
 
-		result, err := validator.ValidateJwt(string(token), actingParty)
+		result, err := validator.ValidateJwt(string(token), &actingParty)
 		if assert.NoError(t, err) && assert.NotNil(t, result) {
 			assert.Equal(t, services.ValidationState("VALID"), result.ValidationResult)
 			assert.Equal(t, services.ContractFormat("irma"), result.ContractFormat)
@@ -422,7 +422,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		actingParty := "Demo EHR"
 
-		result, err := validator.ValidateJwt(token, actingParty)
+		result, err := validator.ValidateJwt(token, &actingParty)
 		if assert.Nil(t, result) && assert.NotNil(t, err) {
 			assert.EqualError(t, err, ErrLegalEntityNotProvided.Error())
 		}
@@ -431,7 +431,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 	t.Run("invalid formatted jwt", func(t *testing.T) {
 		token := "foo.bar.sig"
 
-		result, err := validator.ValidateJwt(token, "actingParty")
+		result, err := validator.ValidateJwt(token, nil)
 
 		assert.Nil(t, result)
 		assert.Error(t, err)
@@ -454,7 +454,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		token := createJwt(cryptoInstance, organizationID, organizationID, testdata.ForgedIrmaContract)
 
-		result, err := validator.ValidateJwt(string(token), "Demo EHR")
+		result, err := validator.ValidateJwt(string(token), nil)
 
 		if assert.NotNil(t, result) && assert.Nil(t, err) {
 			assert.Equal(t, services.Invalid, result.ValidationResult)
@@ -464,7 +464,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 	t.Run("wrong issuer", func(t *testing.T) {
 		token := createJwt(cryptoInstance, registryTest.OrganizationID("wrong_issuer"), organizationID, testdata.ValidIrmaContract)
 
-		result, err := validator.ValidateJwt(string(token), "Demo EHR")
+		result, err := validator.ValidateJwt(string(token), nil)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.Equal(t, "urn:oid:2.16.840.1.113883.2.4.6.1:wrong_issuer: organization not found", err.Error())
@@ -493,7 +493,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 		if assert.True(t, core.NutsConfig().InStrictMode()) {
 			token := createJwt(cryptoInstance, organizationID, organizationID, testdata.ValidIrmaContract)
 			actingParty := "Demo EHR"
-			result, err := validator.ValidateJwt(string(token), actingParty)
+			result, err := validator.ValidateJwt(string(token), &actingParty)
 			if assert.NoError(t, err) && assert.NotNil(t, result) {
 				assert.Equal(t, services.ValidationState("INVALID"), result.ValidationResult)
 			}
@@ -526,7 +526,8 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 		tokenString, err := validator.CreateIdentityTokenFromIrmaContract(&c, organizationID)
 
 		if assert.Nil(t, err) && assert.NotEmpty(t, tokenString) {
-			result, err := validator.ValidateJwt(tokenString, "Demo EHR")
+			actingPartyCN := "Demo EHR"
+			result, err := validator.ValidateJwt(tokenString, &actingPartyCN)
 			if assert.NoError(t, err) && assert.NotNil(t, result) {
 				assert.Equal(t, services.Valid, result.ValidationResult)
 			}

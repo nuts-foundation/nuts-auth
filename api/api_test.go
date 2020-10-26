@@ -467,8 +467,9 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 
 	const validJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6NDgwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjoxNTc4MTEwNDgxLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.76XtU81IyR3Ak_2fgrYsuLcvxndf0eedT1mFPa-rPXk"
 
+	demoEHR := "Demo EHR"
 	vendorIdentifierFromHeader = func(ctx echo.Context) string {
-		return "Demo EHR"
+		return demoEHR
 	}
 
 	t.Run("auth.CreateAccessToken returns error", func(t *testing.T) {
@@ -483,7 +484,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
-		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(nil, fmt.Errorf("oh boy"))
+		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: &demoEHR}).Return(nil, fmt.Errorf("oh boy"))
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock)
 
 		assert.Nil(t, err)
@@ -524,7 +525,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		bindPostBody(ctx, params)
 
 		pkgResponse := &services.AccessTokenResult{AccessToken: "foo"}
-		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: "Demo EHR"}).Return(pkgResponse, nil)
+		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: &demoEHR}).Return(pkgResponse, nil)
 
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
 		expectStatusOK(ctx, apiResponse)

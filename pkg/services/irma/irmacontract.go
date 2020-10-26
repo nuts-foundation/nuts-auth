@@ -54,7 +54,7 @@ func (cv *contractVerifier) parseSignedIrmaContract(rawContract string) (*Signed
 	return signedIrmaContract, nil
 }
 
-func (cv *contractVerifier) verifyAll(signedContract *SignedIrmaContract, actingPartyCn string) (*services.ContractValidationResult, error) {
+func (cv *contractVerifier) verifyAll(signedContract *SignedIrmaContract, actingPartyCn *string) (*services.ContractValidationResult, error) {
 	res, err := cv.verifySignature(signedContract)
 	if err != nil {
 		return res, err
@@ -117,7 +117,7 @@ func (cv *contractVerifier) verifySignature(signedContract *SignedIrmaContract) 
 
 // validateContractContents validates at the actual contract contents.
 // Is the timeframe valid and does the common name corresponds with the contract message.
-func (cv *contractVerifier) validateContractContents(signedContract *SignedIrmaContract, validationResult *services.ContractValidationResult, actingPartyCn string) (*services.ContractValidationResult, error) {
+func (cv *contractVerifier) validateContractContents(signedContract *SignedIrmaContract, validationResult *services.ContractValidationResult, actingPartyCn *string) (*services.ContractValidationResult, error) {
 	if validationResult.ValidationResult == services.Invalid {
 		return validationResult, nil
 	}
@@ -129,13 +129,16 @@ func (cv *contractVerifier) validateContractContents(signedContract *SignedIrmaC
 	}
 
 	// Validate ActingParty Common Name
-	ok, err := validateActingParty(signedContract.Contract.Params, actingPartyCn)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		validationResult.ValidationResult = services.Invalid
-		return validationResult, nil
+	// todo remove in 0.17
+	if actingPartyCn != nil {
+		ok, err := validateActingParty(signedContract.Contract.Params, *actingPartyCn)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			validationResult.ValidationResult = services.Invalid
+			return validationResult, nil
+		}
 	}
 
 	// Verify if required attributes are used
