@@ -416,6 +416,8 @@ var createContext = func(t *testing.T) *TestContext {
 }
 
 func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
+	const validJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6NDgwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjoxNTc4MTEwNDgxLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.76XtU81IyR3Ak_2fgrYsuLcvxndf0eedT1mFPa-rPXk"
+
 	bindPostBody := func(ctx *TestContext, body CreateAccessTokenRequest) {
 		ctx.echoMock.EXPECT().FormValue("assertion").Return(body.Assertion)
 		ctx.echoMock.EXPECT().FormValue("grant_type").Return(body.GrantType)
@@ -446,6 +448,40 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		assert.Nil(t, err)
 	})
 
+	t.Run("missing client certificate", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
+		bindPostBody(ctx, params)
+
+		errorDescription := "Client certificate missing in header"
+		errorType := "invalid_request"
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
+		expectError(ctx, errorResponse)
+
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
+
+		assert.Nil(t, err)
+	})
+
+	t.Run("invalid client certificate", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
+		bindPostBody(ctx, params)
+
+		errorDescription := "corrupted client certificate header"
+		errorType := "invalid_request"
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
+		expectError(ctx, errorResponse)
+
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: "%"})
+
+		assert.Nil(t, err)
+	})
+
 	t.Run("invalid assertion", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
@@ -462,8 +498,6 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 
 		assert.Nil(t, err)
 	})
-
-	const validJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6NDgwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjoxNTc4MTEwNDgxLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.76XtU81IyR3Ak_2fgrYsuLcvxndf0eedT1mFPa-rPXk"
 
 	t.Run("auth.CreateAccessToken returns error", func(t *testing.T) {
 		ctx := createContext(t)
