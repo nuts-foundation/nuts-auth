@@ -38,15 +38,6 @@ func TestAuth_Configure(t *testing.T) {
 		assert.NoError(t, i.Configure())
 	})
 
-	t.Run("error - missing actingPartyCn", func(t *testing.T) {
-		i := testInstance(t, AuthConfig{
-			Mode:      core.ServerEngineMode,
-			PublicUrl: "url",
-		})
-
-		assert.Equal(t, contract.ErrMissingActingParty, i.Configure())
-	})
-
 	t.Run("error - missing publicUrl", func(t *testing.T) {
 		i := testInstance(t, AuthConfig{
 			Mode:          core.ServerEngineMode,

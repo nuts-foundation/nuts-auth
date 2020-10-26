@@ -58,6 +58,7 @@ type ValidationRequest struct {
 type CreateAccessTokenRequest struct {
 	RawJwtBearerToken string
 	ClientCert  string
+	VendorIdentifier  *string
 }
 
 // CreateJwtBearerTokenRequest contains all information to create a JwtBearerToken

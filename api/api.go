@@ -255,7 +255,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context, params CreateAccessToken
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 
-	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, ClientCert: cert}
+	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: &vendorID, ClientCert: cert}
 	acResponse, err := api.Auth.OAuthClient().CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()
