@@ -108,9 +108,9 @@ func (cv *contractVerifier) verifySignature(signedContract *SignedIrmaContract) 
 
 	// Assemble and return the validation response
 	return &services.ContractValidationResult{
-		validationResult,
-		services.IrmaFormat,
-		disclosedAttributes,
+		ValidationResult: validationResult,
+		ContractFormat: services.IrmaFormat,
+		DisclosedAttributes: disclosedAttributes,
 	}, nil
 
 }
@@ -141,7 +141,8 @@ func (cv *contractVerifier) validateContractContents(signedContract *SignedIrmaC
 		}
 	}
 
-	// Verify if required attributes are used
+	// all valid fill contractAttributes
+	validationResult.ContractAttributes = signedContract.Contract.Params
 
 	return validationResult, nil
 }

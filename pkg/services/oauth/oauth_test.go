@@ -63,18 +63,34 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		}
 	})
 
-	t.Run("broken identity token", func(t *testing.T) {
+	t.Run("missing client certificate", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
+
+		tokenCtx := validContext()
+		signToken(tokenCtx)
+
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: tokenCtx.rawJwtBearerToken})
+
+		assert.Nil(t, response)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "invalid TLS client certificate")
+		}
+	})
+
+	t.Run("broken identity token", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Times(2).Return(&db.Organization{Vendor: vendorID}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().AnyTimes().Return(testTrustStore{ca: vendorCA(t)})
 		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", nil).Return(nil, errors.New("identity validation failed"))
 
-		token := validBearerToken()
-		JWT := signToken(token)
+		tokenCtx := validContext()
+		signToken(tokenCtx)
 
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: tokenCtx.rawJwtBearerToken, ClientCert: clientCert(t)})
 
 		assert.Nil(t, response)
 		if assert.NotNil(t, err) {
@@ -85,15 +101,12 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 	t.Run("JWT validity to long", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
 
-		token := validBearerToken()
-		token.ExpiresAt = time.Now().Add(10 * time.Second).Unix()
-		JWT := signToken(token)
+		tokenCtx := validContext()
+		tokenCtx.jwtBearerToken.ExpiresAt = time.Now().Add(10 * time.Second).Unix()
+		signToken(tokenCtx)
 
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: tokenCtx.rawJwtBearerToken})
 		assert.Nil(t, response)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "JWT validity to long")
@@ -103,15 +116,14 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 	t.Run("invalid identity token", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", "").Return(&services.ContractValidationResult{ValidationResult: services.Invalid, DisclosedAttributes: map[string]string{}}, nil)
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
+		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", nil).Return(&services.ContractValidationResult{ValidationResult: services.Invalid, DisclosedAttributes: map[string]string{}}, nil)
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Times(2).Return(&db.Organization{Vendor: vendorID}, nil)
+		ctx.cryptoMock.EXPECT().TrustStore().AnyTimes().Return(testTrustStore{ca: vendorCA(t)})
 
-		token := validBearerToken()
-		JWT := signToken(token)
+		tokenCtx := validContext()
+		signToken(tokenCtx)
 
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: tokenCtx.rawJwtBearerToken, ClientCert: clientCert(t)})
 		assert.Nil(t, response)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "identity validation failed")
@@ -124,14 +136,14 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", nil).Return(&services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
-		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
+		ctx.cryptoMock.EXPECT().TrustStore().AnyTimes().Return(testTrustStore{ca: vendorCA(t)})
 		ctx.consentMock.EXPECT().QueryConsent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]pkg2.PatientConsent{{}}, nil)
 		ctx.cryptoMock.EXPECT().SignJWT(gomock.Any(), gomock.Any()).Return("expectedAT", nil)
 
-		token := validBearerToken()
-		JWT := signToken(token)
+		tokenCtx := validContext()
+		signToken(tokenCtx)
 
-		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: JWT})
+		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: tokenCtx.rawJwtBearerToken, ClientCert: clientCert(t)})
 		assert.Nil(t, err)
 		if assert.NotNil(t, response) {
 			assert.Equal(t, "expectedAT", response.AccessToken)
@@ -144,10 +156,10 @@ func TestService_validateIssuer(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		token := validBearerToken()
-		token.Issuer = "not a urn"
+		tokenCtx := validContext()
+		tokenCtx.jwtBearerToken.Issuer = "not a urn"
 
-		err := ctx.oauthService.validateIssuer(&token)
+		err := ctx.oauthService.validateIssuer(tokenCtx)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "invalid jwt.issuer: invalid PartyID: not a urn")
 		}
@@ -158,9 +170,9 @@ func TestService_validateIssuer(t *testing.T) {
 		defer ctx.ctrl.Finish()
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, db.ErrOrganizationNotFound)
 
-		token := validBearerToken()
+		tokenCtx := validContext()
 
-		err := ctx.oauthService.validateIssuer(&token)
+		err := ctx.oauthService.validateIssuer(tokenCtx)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "invalid jwt.issuer: organization not found")
 		}
@@ -172,9 +184,9 @@ func TestService_validateIssuer(t *testing.T) {
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{err: errors.New("x509 verify error")})
 
-		token := validBearerToken()
+		tokenCtx := validContext()
 
-		err := ctx.oauthService.validateIssuer(&token)
+		err := ctx.oauthService.validateIssuer(tokenCtx)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "x509 verify error")
 		}
@@ -188,9 +200,9 @@ func TestService_validateIssuer(t *testing.T) {
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: fakeVendor}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().Return(testTrustStore{ca: vendorCA(t)})
 
-		token := validBearerToken()
+		tokenCtx := validContext()
 
-		err := ctx.oauthService.validateIssuer(&token)
+		err := ctx.oauthService.validateIssuer(tokenCtx)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "certificate from x5c is no sibling of actor signing certificate")
 		}
@@ -202,10 +214,10 @@ func TestService_validateSubject(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		token := validBearerToken()
-		token.Subject = "not a urn"
+		tokenCtx := validContext()
+		tokenCtx.jwtBearerToken.Subject = "not a urn"
 
-		err := ctx.oauthService.validateSubject(&token)
+		err := ctx.oauthService.validateSubject(tokenCtx)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "invalid jwt.subject: invalid PartyID: not a urn")
 		}
@@ -216,14 +228,17 @@ func TestService_validateSubject(t *testing.T) {
 		defer ctx.ctrl.Finish()
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, db.ErrOrganizationNotFound)
 
-		token := validBearerToken()
+		tokenCtx := validContext()
 
-		err := ctx.oauthService.validateSubject(&token)
+		err := ctx.oauthService.validateSubject(tokenCtx)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "invalid jwt.subject: organization not found")
 		}
 	})
 }
+
+// todo validate actor
+// todo validate client cert
 
 func TestService_validateLegalBase(t *testing.T) {
 	t.Run("no legal base present", func(t *testing.T) {
@@ -232,9 +247,9 @@ func TestService_validateLegalBase(t *testing.T) {
 
 		ctx.consentMock.EXPECT().QueryConsent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]pkg2.PatientConsent{}, nil)
 
-		token := validBearerToken()
+		tokenCtx := validContext()
 
-		err := ctx.oauthService.validateLegalBase(&token)
+		err := ctx.oauthService.validateLegalBase(tokenCtx.jwtBearerToken)
 		if assert.NotNil(t, err) {
 			assert.Contains(t, err.Error(), "subject scope requested but no legal base present")
 		}
@@ -244,10 +259,10 @@ func TestService_validateLegalBase(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		token := validBearerToken()
-		token.SubjectID = ""
+		tokenCtx := validContext()
+		tokenCtx.jwtBearerToken.SubjectID = ""
 
-		err := ctx.oauthService.validateLegalBase(&token)
+		err := ctx.oauthService.validateLegalBase(tokenCtx.jwtBearerToken)
 		assert.NoError(t, err)
 
 	})
@@ -257,58 +272,70 @@ func TestOAuthService_parseAndValidateJwtBearerToken(t *testing.T) {
 	ctx := createContext(t)
 	defer ctx.ctrl.Finish()
 
-	t.Run("malformed access tokens", func(t *testing.T) {
-		response, err := ctx.oauthService.parseAndValidateJwtBearerToken("foo")
-		assert.Nil(t, response)
+	t.Run("malformed JWTs", func(t *testing.T) {
+		tokenCtx := &validationContext{
+			rawJwtBearerToken: "foo",
+		}
+		err := ctx.oauthService.parseAndValidateJwtBearerToken(tokenCtx)
+		assert.Nil(t, tokenCtx.jwtBearerToken)
 		assert.Equal(t, "token contains an invalid number of segments", err.Error())
 
-		response, err = ctx.oauthService.parseAndValidateJwtBearerToken("123.456.787")
-		assert.Nil(t, response)
+		tokenCtx2 := &validationContext{
+			rawJwtBearerToken: "123.456.787",
+		}
+		err = ctx.oauthService.parseAndValidateJwtBearerToken(tokenCtx2)
+		assert.Nil(t, tokenCtx.jwtBearerToken)
 		assert.Equal(t, "invalid character '×' looking for beginning of value", err.Error())
 	})
 
 	t.Run("wrong signing algorithm", func(t *testing.T) {
 		// alg: HS256
 		const invalidJwt = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MDAwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjo0MDcwOTA4ODAwLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.2_4bxKKsVspQ4QxXRG8m2mOnLbl-fFgSkEq_h8N9sNE"
-		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(invalidJwt)
-		assert.Nil(t, response)
+		tokenCtx := &validationContext{
+			rawJwtBearerToken: invalidJwt,
+		}
+		err := ctx.oauthService.parseAndValidateJwtBearerToken(tokenCtx)
+		assert.Nil(t, tokenCtx.jwtBearerToken)
 		assert.Equal(t, "signing method HS256 is invalid", err.Error())
 	})
 
 	t.Run("missing x5c header", func(t *testing.T) {
-		token := validBearerToken()
-		jwt := signTokenWithHeader(token, []string{})
+		tokenCtx := validContext()
+		signTokenWithHeader(tokenCtx, []string{})
+		tokenCtx.jwtBearerToken = nil
 
-		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(jwt)
-		assert.Nil(t, response)
+		err := ctx.oauthService.parseAndValidateJwtBearerToken(tokenCtx)
+		assert.Nil(t, tokenCtx.jwtBearerToken)
 		assert.Equal(t, "invalid x5c header", err.Error())
 	})
 
 	t.Run("x5c header to large", func(t *testing.T) {
-		token := validBearerToken()
-		jwt := signTokenWithHeader(token, []string{"a", "b"})
+		tokenCtx := validContext()
+		signTokenWithHeader(tokenCtx, []string{"a", "b"})
+		tokenCtx.jwtBearerToken = nil
 
-		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(jwt)
-		assert.Nil(t, response)
+		err := ctx.oauthService.parseAndValidateJwtBearerToken(tokenCtx)
+		assert.Nil(t, tokenCtx.jwtBearerToken)
 		assert.Equal(t, "invalid x5c header", err.Error())
 	})
 
 	t.Run("x5c header wrong format", func(t *testing.T) {
-		token := validBearerToken()
-		jwt := signTokenWithHeader(token, []string{"a"})
+		tokenCtx := validContext()
+		signTokenWithHeader(tokenCtx, []string{"a"})
+		tokenCtx.jwtBearerToken = nil
 
-		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(jwt)
-		assert.Nil(t, response)
+		err := ctx.oauthService.parseAndValidateJwtBearerToken(tokenCtx)
+		assert.Nil(t, tokenCtx.jwtBearerToken)
 		assert.Equal(t, "invalid x5c header: illegal base64 data at input byte 0", err.Error())
 	})
 
 	t.Run("valid token", func(t *testing.T) {
-		token := validBearerToken()
-		jwt := signToken(token)
+		tokenCtx := validContext()
+		signToken(tokenCtx)
 
-		response, err := ctx.oauthService.parseAndValidateJwtBearerToken(jwt)
+		err := ctx.oauthService.parseAndValidateJwtBearerToken(tokenCtx)
 		assert.Nil(t, err)
-		assert.Equal(t, "urn:oid:2.16.840.1.113883.2.4.6.1:actor", response.Issuer)
+		assert.Equal(t, "urn:oid:2.16.840.1.113883.2.4.6.1:actor", tokenCtx.jwtBearerToken.Issuer)
 
 	})
 }
@@ -318,10 +345,12 @@ func TestOAuthService_buildAccessToken(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		claims := &services.NutsJwtBearerToken{}
-		identityValidationResult := &services.ContractValidationResult{ValidationResult: services.Valid}
+		tokenCtx := &validationContext{
+			contractValidationResult: &services.ContractValidationResult{ValidationResult: services.Valid},
+			jwtBearerToken: &services.NutsJwtBearerToken{},
+		}
 
-		token, err := ctx.oauthService.buildAccessToken(claims, identityValidationResult)
+		token, err := ctx.oauthService.buildAccessToken(tokenCtx)
 		assert.Empty(t, token)
 		assert.EqualError(t, err, "could not build accessToken: subject is missing")
 	})
@@ -332,9 +361,12 @@ func TestOAuthService_buildAccessToken(t *testing.T) {
 
 		ctx.cryptoMock.EXPECT().SignJWT(gomock.Any(), gomock.Any()).Return("expectedAT", nil)
 
-		claims := &services.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}}
-		identityValidationResult := &services.ContractValidationResult{ValidationResult: services.Valid}
-		token, err := ctx.oauthService.buildAccessToken(claims, identityValidationResult)
+		tokenCtx := &validationContext{
+			contractValidationResult: &services.ContractValidationResult{ValidationResult: services.Valid},
+			jwtBearerToken: &services.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}},
+		}
+
+		token, err := ctx.oauthService.buildAccessToken(tokenCtx)
 
 		assert.Nil(t, err)
 		assert.Equal(t, "expectedAT", token)
@@ -450,11 +482,11 @@ func TestOAuthService_validateAccessToken(t *testing.T) {
 		ctx.cryptoMock.EXPECT().GetPrivateKey(oauthKeyEntity).Return(key, nil)
 
 		// First build an access token
-		token := validBearerToken()
-		jwt := signToken(token)
+		tokenCtx := validContext()
+		signToken(tokenCtx)
 
 		// Then validate it
-		claims, err := ctx.oauthService.parseAndValidateAccessToken(jwt)
+		claims, err := ctx.oauthService.parseAndValidateAccessToken(tokenCtx.rawJwtBearerToken)
 		if !assert.NoError(t, err) || !assert.NotNil(t, claims) {
 			t.FailNow()
 		}
@@ -467,11 +499,11 @@ func TestOAuthService_validateAccessToken(t *testing.T) {
 		ctx.cryptoMock.EXPECT().PrivateKeyExists(oauthKeyEntity).Return(false)
 
 		// First build an access token
-		token := validBearerToken()
-		jwt := signToken(token)
+		tokenCtx := validContext()
+		signToken(tokenCtx)
 
 		// Then validate it
-		_, err := ctx.oauthService.parseAndValidateAccessToken(jwt)
+		_, err := ctx.oauthService.parseAndValidateAccessToken(tokenCtx.rawJwtBearerToken)
 		assert.Error(t, err)
 	})
 }
@@ -505,8 +537,16 @@ var key, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 var certBytes = test.GenerateCertificate(time.Now(), 2, key)
 var oauthKeyEntity = cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: vendorID.String()}).WithQualifier(oauthKeyQualifier)
 
-func validBearerToken() services.NutsJwtBearerToken {
-	return services.NutsJwtBearerToken{
+func clientCert(t *testing.T) string {
+	c, err := x509.ParseCertificate(certBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cert.CertificateToPEM(c)
+}
+
+func validContext() *validationContext {
+	token :=  services.NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "endpoint",
 			ExpiresAt: time.Now().Add(5 * time.Second).Unix(),
@@ -519,21 +559,24 @@ func validBearerToken() services.NutsJwtBearerToken {
 		AuthTokenContainer: "authToken",
 		SubjectID:          "subject",
 	}
+	return &validationContext{
+		jwtBearerToken: &token,
+	}
 }
 
-func signToken(jwtBearerToken services.NutsJwtBearerToken) string {
+func signToken(context *validationContext) {
 	certificate, _ := x509.ParseCertificate(certBytes)
 	chain := cert.MarshalX509CertChain([]*x509.Certificate{certificate})
 
 	// Sign and get the complete encoded token as a string using the secret
-	return signTokenWithHeader(jwtBearerToken, chain)
+	signTokenWithHeader(context, chain)
 }
 
-func signTokenWithHeader(jwtBearerToken services.NutsJwtBearerToken, chain []string) string {
+func signTokenWithHeader(context *validationContext, chain []string) {
 	var keyVals map[string]interface{}
-	inrec, _ := json.Marshal(jwtBearerToken)
+	inrec, _ := json.Marshal(context.jwtBearerToken)
 	if err := json.Unmarshal(inrec, &keyVals); err != nil {
-		return ""
+		return
 	}
 
 	c := jwt.MapClaims{}
@@ -544,8 +587,7 @@ func signTokenWithHeader(jwtBearerToken services.NutsJwtBearerToken, chain []str
 	token.Header["x5c"] = chain
 
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, _ := token.SignedString(key)
-	return tokenString
+	context.rawJwtBearerToken, _ = token.SignedString(key)
 }
 
 type testContext struct {

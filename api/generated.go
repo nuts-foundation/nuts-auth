@@ -294,7 +294,8 @@ type CreateAccessTokenJSONBody CreateAccessTokenRequest
 
 // CreateAccessTokenParams defines parameters for CreateAccessToken.
 type CreateAccessTokenParams struct {
-	XSslClientCert string `json:"X-Ssl-Client-Cert"`
+	XSslClientCert   string  `json:"X-Ssl-Client-Cert"`
+	XNutsLegalEntity *string `json:"X-Nuts-LegalEntity,omitempty"`
 }
 
 // CreateSessionJSONBody defines parameters for CreateSession.
@@ -383,6 +384,21 @@ func (w *ServerInterfaceWrapper) CreateAccessToken(ctx echo.Context) error {
 		params.XSslClientCert = XSslClientCert
 	} else {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Header parameter X-Ssl-Client-Cert is required, but not found"))
+	}
+	// ------------- Optional header parameter "X-Nuts-LegalEntity" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Nuts-LegalEntity")]; found {
+		var XNutsLegalEntity string
+		n := len(valueList)
+		if n != 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for X-Nuts-LegalEntity, got %d", n))
+		}
+
+		err = runtime.BindStyledParameter("simple", false, "X-Nuts-LegalEntity", valueList[0], &XNutsLegalEntity)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter X-Nuts-LegalEntity: %s", err))
+		}
+
+		params.XNutsLegalEntity = &XNutsLegalEntity
 	}
 
 	// Invoke the callback with all the unmarshalled arguments

@@ -465,11 +465,6 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 
 	const validJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6NDgwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjoxNTc4MTEwNDgxLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.76XtU81IyR3Ak_2fgrYsuLcvxndf0eedT1mFPa-rPXk"
 
-	demoEHR := "Demo EHR"
-	vendorIdentifierFromHeader = func(ctx echo.Context) string {
-		return demoEHR
-	}
-
 	t.Run("auth.CreateAccessToken returns error", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
@@ -478,39 +473,12 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		bindPostBody(ctx, params)
 
 		errorDescription := "oh boy"
-		errorType := "invalid_grant"
+		errorType := "invalid_request"
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
 		expectError(ctx, errorResponse)
 
-		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: &demoEHR}).Return(nil, fmt.Errorf("oh boy"))
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
-
-		assert.Nil(t, err)
-	})
-
-	t.Run("request without vendor information returns an error", func(t *testing.T) {
-		// Overwrite the vendorIdentifierFromHeader function to return an empty string
-		vendorIdentifierFromHeader = func(ctx echo.Context) string {
-			return ""
-		}
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-		// Set the vendorIdentifierFromHeader back to working value so other test still work
-		defer func() {
-			vendorIdentifierFromHeader = func(ctx echo.Context) string {
-				return "Demo EHR"
-			}
-		}()
-
-		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
-		bindPostBody(ctx, params)
-
-		errorDescription := "Vendor identifier missing in header"
-		errorType := "invalid_grant"
-		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
-		expectError(ctx, errorResponse)
-
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
+		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, ClientCert: "cert"}).Return(nil, fmt.Errorf("oh boy"))
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: "cert"})
 
 		assert.Nil(t, err)
 	})
@@ -523,12 +491,12 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		bindPostBody(ctx, params)
 
 		pkgResponse := &services.AccessTokenResult{AccessToken: "foo"}
-		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, VendorIdentifier: &demoEHR}).Return(pkgResponse, nil)
+		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, ClientCert: "cert"}).Return(pkgResponse, nil)
 
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
 		expectStatusOK(ctx, apiResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: "cert"})
 
 		assert.Nil(t, err)
 

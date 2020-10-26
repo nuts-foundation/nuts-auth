@@ -132,6 +132,12 @@ paths:
           required: true
           schema:
             type: string
+        - name: X-Nuts-LegalEntity
+          in: header
+          required: false
+          deprecated: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:

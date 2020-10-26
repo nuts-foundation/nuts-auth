@@ -58,6 +58,7 @@ type ValidationRequest struct {
 type CreateAccessTokenRequest struct {
 	RawJwtBearerToken string
 	ClientCert  string
+	// deprecated
 	VendorIdentifier  *string
 }
 
@@ -119,4 +120,6 @@ type ContractValidationResult struct {
 	ContractFormat   ContractFormat  `json:"contract_format"`
 	// DisclosedAttributes contain the attributes used to sign this contract
 	DisclosedAttributes map[string]string `json:"disclosed_attributes"`
+	// ContractAttributes contain the attributes used to fill the contract
+	ContractAttributes map[string]string `json:"contract_attributes"`
 }

@@ -26,11 +26,6 @@ type Wrapper struct {
 	Auth pkg.AuthClient
 }
 
-// TODO: Use the client certificate here, added by a revere proxy. Than the vendor urn can be fetched from the subject alternative name.
-var vendorIdentifierFromHeader = func(ctx echo.Context) string {
-	return ctx.Request().Header.Get("X-Nuts-LegalEntity")
-}
-
 // CreateSession translates http params to internal format, creates a IRMA signing session
 // and returns the session pointer to the HTTP stack.
 func (api *Wrapper) CreateSession(ctx echo.Context) error {
@@ -255,7 +250,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context, params CreateAccessToken
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 
-	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: &vendorID, ClientCert: cert}
+	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: params.XNutsLegalEntity, ClientCert: cert}
 	acResponse, err := api.Auth.OAuthClient().CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()

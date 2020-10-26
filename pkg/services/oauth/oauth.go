@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	nutsConsentClient "github.com/nuts-foundation/nuts-consent-store/client"
 	nutsConsent "github.com/nuts-foundation/nuts-consent-store/pkg"
 	nutsCrypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -48,6 +49,7 @@ var errMissingVendorID = errors.New("missing vendorID")
 var errIncorrectNumberOfEndpoints = errors.New("none or multiple registered endpoints found")
 var errMissingCertificate = errors.New("missing x5c header")
 var errInvalidX5cHeader = errors.New("invalid x5c header")
+var errInvalidClientCert = errors.New("invalid TLS client certificate")
 
 const errInvalidIssuerFmt = "invalid jwt.issuer: %w"
 const errInvalidSubjectFmt = "invalid jwt.subject: %w"
@@ -59,6 +61,14 @@ type service struct {
 	consent           nutsConsent.ConsentStoreClient
 	oauthKeyEntity    nutsCryptoTypes.KeyIdentifier
 	contractValidator services.ContractValidator
+}
+
+type validationContext struct {
+	rawJwtBearerToken        string
+	jwtBearerToken           *services.NutsJwtBearerToken
+	actorName                string
+	vendor                   core.PartyID
+	contractValidationResult *services.ContractValidationResult
 }
 
 func NewOAuthService(vendorID core.PartyID, cryptoClient nutsCrypto.Client, registryClient nutsRegistry.RegistryClient, contractValidator services.ContractValidator) services.OAuthClient {
@@ -93,39 +103,50 @@ func (s *service) Configure() (err error) {
 
 // CreateAccessToken extracts the claims out of the request, checks the validity and builds the access token
 func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (*services.AccessTokenResult, error) {
+	context := validationContext{
+		rawJwtBearerToken: request.RawJwtBearerToken,
+	}
+
 	// extract the JwtBearerToken, validates according to RFC003 §5.2.1.1
 	// also check if used algorithms are according to spec (ES*** and PS***)
-	// and checks basic validity
-	jwtBearerToken, err := s.parseAndValidateJwtBearerToken(request.RawJwtBearerToken)
-	if err != nil {
+	// and checks basic validity. Set jwtBearerToken in validationContext
+	if err := s.parseAndValidateJwtBearerToken(&context); err != nil {
 		return nil, fmt.Errorf("jwt bearer token validation failed: %w", err)
 	}
 
-	// check if the custodian is registered by this vendor, according to RFC003 §5.2.1.8
-	err = s.validateSubject(jwtBearerToken)
-	if err != nil {
-		return nil, err
-	}
-
-	// check the actor against the registry, according to RFC003 §5.2.1.3
-	var vendor core.PartyID
-	if vendor, err = s.validateIssuer(jwtBearerToken); err != nil {
-		return nil, err
-	}
-
 	// check the maximum validity, according to RFC003 §5.2.1.4
-	if jwtBearerToken.ExpiresAt-jwtBearerToken.IssuedAt > OauthBearerTokenMaxValidity {
+	if context.jwtBearerToken.ExpiresAt-context.jwtBearerToken.IssuedAt > OauthBearerTokenMaxValidity {
 		return nil, errors.New("JWT validity to long")
 	}
 
+	// check the actor against the registry, according to RFC003 §5.2.1.3
+	// checks signing certificate and sets vendor, actorName in validationContext
+	if err := s.validateIssuer(&context); err != nil {
+		return nil, err
+	}
+
+	// check if client certificate is issued by vendor according to RFC003 §5.2.1.2
+	if err := s.validateClientCertificate(&context, request.ClientCert); err != nil {
+		return nil, err
+	}
+
+	// check if the custodian is registered by this vendor, according to RFC003 §5.2.1.8
+	if err := s.validateSubject(&context); err != nil {
+		return nil, err
+	}
+
 	// Validate the AuthTokenContainer, according to RFC003 §5.2.1.5
-	// todo: missing acting party, is currently the actor software which is not registered anywhere and only in the cert as common name?
-	res, err := s.contractValidator.ValidateJwt(jwtBearerToken.AuthTokenContainer, vendor.String())
-	if err != nil {
+	// todo: request.VendorIdentifier is deprecated, remove in 0.17
+	var err error
+	if context.contractValidationResult, err = s.contractValidator.ValidateJwt(context.jwtBearerToken.AuthTokenContainer, request.VendorIdentifier); err != nil {
 		return nil, fmt.Errorf("identity token validation failed: %w", err)
 	}
-	if res.ValidationResult == services.Invalid {
+	if context.contractValidationResult.ValidationResult == services.Invalid {
 		return nil, fmt.Errorf("identity validation failed")
+	}
+	// checks if the name from the login contract matches with the registered name of the issuer.
+	if err = s.validateActor(&context); err != nil {
+		return nil, err
 	}
 
 	// validate the endpoint in aud, according to RFC003 §5.2.1.6
@@ -134,11 +155,11 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	// todo: implement when services and endpoints in registry have been implemented (https://github.com/nuts-foundation/nuts-registry/issues/156)
 
 	// validate the legal base, according to RFC003 §5.2.1.7 if sid is present
-	if err = s.validateLegalBase(jwtBearerToken); err != nil {
+	if err = s.validateLegalBase(context.jwtBearerToken); err != nil {
 		return nil, err
 	}
 
-	accessToken, err := s.buildAccessToken(jwtBearerToken, res)
+	accessToken, err := s.buildAccessToken(&context)
 	if err != nil {
 		return nil, err
 	}
@@ -146,24 +167,32 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	return &services.AccessTokenResult{AccessToken: accessToken}, nil
 }
 
+// checks if the name from the login contract matches with the registered name of the issuer.
+func (s *service) validateActor(context *validationContext) error {
+	if context.contractValidationResult.ContractAttributes[contract.LegalEntityAttr] != context.actorName {
+		return errors.New("legal entity mismatch")
+	}
+	return nil
+}
+
 // check the actor against the registry, according to RFC003 §5.2.1.3
 // we do this by getting the validation chain for the certificate in the x5c header and check the vendorID SAN from the root
-// with the vendorId of the actor. It returns the vendorID
-func (s *service) validateIssuer(jwtBearerToken *services.NutsJwtBearerToken) (core.PartyID, error) {
-	validationTime := time.Unix(jwtBearerToken.IssuedAt, 0)
+// with the vendorId of the actor. It returns the actor name which must match the login contract.
+func (s *service) validateIssuer(context *validationContext) error {
+	validationTime := time.Unix(context.jwtBearerToken.IssuedAt, 0)
 	var vendor core.PartyID
 
-	actorPartyID, err := core.ParsePartyID(jwtBearerToken.Issuer)
+	actorPartyID, err := core.ParsePartyID(context.jwtBearerToken.Issuer)
 	if err != nil {
-		return vendor, fmt.Errorf(errInvalidIssuerFmt, err)
+		return fmt.Errorf(errInvalidIssuerFmt, err)
 	}
 	actor, err := s.registry.OrganizationById(actorPartyID)
 	if err != nil {
-		return vendor, fmt.Errorf(errInvalidIssuerFmt, err)
+		return fmt.Errorf(errInvalidIssuerFmt, err)
 	}
-	chains, err := s.crypto.TrustStore().VerifiedChain(jwtBearerToken.SigningCertificate, validationTime)
+	chains, err := s.crypto.TrustStore().VerifiedChain(context.jwtBearerToken.SigningCertificate, validationTime)
 	if err != nil || len(chains) == 0 {
-		return vendor, fmt.Errorf(errInvalidIssuerFmt, err)
+		return fmt.Errorf(errInvalidIssuerFmt, err)
 	}
 
 	match := false
@@ -179,15 +208,51 @@ func (s *service) validateIssuer(jwtBearerToken *services.NutsJwtBearerToken) (c
 		}
 	}
 	if !match {
-		return vendor, errors.New("certificate from x5c is no sibling of actor signing certificate")
+		return errors.New("certificate from x5c is no sibling of actor signing certificate")
 	}
 
-	return vendor, nil
+	context.actorName = actor.Name
+	context.vendor = vendor
+
+	return nil
+}
+
+func (s *service) validateClientCertificate(context *validationContext, pemEncodedCertificate string) error {
+	validationTime := time.Unix(context.jwtBearerToken.IssuedAt, 0)
+	var vendor core.PartyID
+
+	c, err := cert.PemToX509([]byte(pemEncodedCertificate))
+	if err != nil {
+		return errInvalidClientCert
+	}
+
+	chains, err := s.crypto.TrustStore().VerifiedChain(c, validationTime)
+	if err != nil || len(chains) == 0 {
+		return errInvalidClientCert
+	}
+
+	match := false
+	for _, chain := range chains {
+		root := chain[len(chain)-1]
+		vendor, err = cert.VendorIDFromCertificate(root)
+		if err != nil {
+			fmt.Errorf("no vendorID in SAN: %w", err)
+		}
+		if vendor.String() == context.vendor.String() {
+			match = true
+			break
+		}
+	}
+	if !match {
+		return errors.New("certificate from TLS is not issued by same vendor as x5c signing certificate")
+	}
+
+	return nil
 }
 
 // check if the custodian is registered by this vendor, according to RFC003 §5.2.1.8
-func (s *service) validateSubject(jwtBearerToken *services.NutsJwtBearerToken) error {
-	custPartyID, err := core.ParsePartyID(jwtBearerToken.Subject)
+func (s *service) validateSubject(context *validationContext) error {
+	custPartyID, err := core.ParsePartyID(context.jwtBearerToken.Subject)
 	if err != nil {
 		return fmt.Errorf(errInvalidSubjectFmt, err)
 	}
@@ -195,7 +260,7 @@ func (s *service) validateSubject(jwtBearerToken *services.NutsJwtBearerToken) e
 	if err != nil {
 		return fmt.Errorf(errInvalidSubjectFmt, err)
 	}
-	if custodian.Vendor.String() != core.NutsConfig().VendorID().String() {
+	if custodian.Vendor.String() != context.vendor.String() {
 		return fmt.Errorf(errInvalidSubjectFmt, errors.New("organisation.vendor doesn't match with vendorID of this node"))
 	}
 
@@ -277,9 +342,9 @@ func (s *service) IntrospectAccessToken(token string) (*services.NutsAccessToken
 }
 
 // ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
-func (s *service) parseAndValidateJwtBearerToken(acString string) (*services.NutsJwtBearerToken, error) {
+func (s *service) parseAndValidateJwtBearerToken(context *validationContext) error {
 	parser := &jwt.Parser{ValidMethods: services.ValidJWTAlg}
-	token, err := parser.ParseWithClaims(acString, &services.NutsJwtBearerToken{}, func(token *jwt.Token) (i interface{}, e error) {
+	token, err := parser.ParseWithClaims(context.rawJwtBearerToken, &services.NutsJwtBearerToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		// get public key from x5c header
 		certificate, err := getCertificateFromHeaders(token)
 		if err != nil {
@@ -293,11 +358,12 @@ func (s *service) parseAndValidateJwtBearerToken(acString string) (*services.Nut
 		if claims, ok := token.Claims.(*services.NutsJwtBearerToken); ok {
 			// this should be ok since it has already succeeded before
 			claims.SigningCertificate, _ = getCertificateFromHeaders(token)
-			return claims, nil
+			context.jwtBearerToken = claims
+			return nil
 		}
 	}
 
-	return nil, err
+	return err
 }
 
 func getCertificateFromHeaders(token *jwt.Token) (*x509.Certificate, error) {
@@ -353,7 +419,9 @@ func (s *service) parseAndValidateAccessToken(accessToken string) (*services.Nut
 // todo split this func for easier testing
 // BuildAccessToken builds an access token based on the oauth claims and the identity of the user provided by the identityValidationResult
 // The token gets signed with the custodians private key and returned as a string.
-func (s *service) buildAccessToken(jwtBearerToken *services.NutsJwtBearerToken, identityValidationResult *services.ContractValidationResult) (string, error) {
+func (s *service) buildAccessToken(context *validationContext) (string, error) {
+	identityValidationResult := context.contractValidationResult
+	jwtBearerToken := context.jwtBearerToken
 
 	if identityValidationResult.ValidationResult != services.Valid {
 		return "", fmt.Errorf("could not build accessToken: %w", errors.New("invalid contract"))
