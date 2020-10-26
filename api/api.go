@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"time"
 
@@ -223,7 +224,7 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 
 // CreateAccessToken handles the api call to create an access token.
 // It consumes and checks the JWT and returns a smaller sessionToken
-func (api *Wrapper) CreateAccessToken(ctx echo.Context, _ CreateAccessTokenParams) (err error) {
+func (api *Wrapper) CreateAccessToken(ctx echo.Context, params CreateAccessTokenParams) (err error) {
 	// Can't use echo.Bind() here since it requires extra tags on generated code
 	request := new(CreateAccessTokenRequest)
 	request.Assertion = ctx.FormValue("assertion")
@@ -241,17 +242,24 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context, _ CreateAccessTokenParam
 		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-	vendorID := vendorIdentifierFromHeader(ctx)
-	if vendorID == "" {
-		errDesc := "Vendor identifier missing in header"
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
+
+	if params.XSslClientCert == "" {
+		errDesc := "Client certificate missing in header"
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_request", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: vendorID}
+	cert, err := url.PathUnescape(params.XSslClientCert)
+	if (err != nil) {
+		errDesc := "corrupted client certificate header"
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_request", ErrorDescription: errDesc}
+		return ctx.JSON(http.StatusBadRequest, errorResponse)
+	}
+
+	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, ClientCert: cert}
 	acResponse, err := api.Auth.OAuthClient().CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_request", ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 	response := AccessTokenResponse{AccessToken: acResponse.AccessToken}

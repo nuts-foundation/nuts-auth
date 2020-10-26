@@ -108,7 +108,8 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	}
 
 	// check the actor against the registry, according to RFC003 §5.2.1.3
-	if err = s.validateIssuer(jwtBearerToken); err != nil {
+	var vendor core.PartyID
+	if vendor, err = s.validateIssuer(jwtBearerToken); err != nil {
 		return nil, err
 	}
 
@@ -118,7 +119,8 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	}
 
 	// Validate the AuthTokenContainer, according to RFC003 §5.2.1.5
-	res, err := s.contractValidator.ValidateJwt(jwtBearerToken.AuthTokenContainer, request.VendorIdentifier)
+	// todo: missing acting party, is currently the actor software which is not registered anywhere and only in the cert as common name?
+	res, err := s.contractValidator.ValidateJwt(jwtBearerToken.AuthTokenContainer, vendor.String())
 	if err != nil {
 		return nil, fmt.Errorf("identity token validation failed: %w", err)
 	}
@@ -146,39 +148,41 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 
 // check the actor against the registry, according to RFC003 §5.2.1.3
 // we do this by getting the validation chain for the certificate in the x5c header and check the vendorID SAN from the root
-// with the vendorId of the actor
-func (s *service) validateIssuer(jwtBearerToken *services.NutsJwtBearerToken) error {
+// with the vendorId of the actor. It returns the vendorID
+func (s *service) validateIssuer(jwtBearerToken *services.NutsJwtBearerToken) (core.PartyID, error) {
 	validationTime := time.Unix(jwtBearerToken.IssuedAt, 0)
+	var vendor core.PartyID
 
 	actorPartyID, err := core.ParsePartyID(jwtBearerToken.Issuer)
 	if err != nil {
-		return fmt.Errorf(errInvalidIssuerFmt, err)
+		return vendor, fmt.Errorf(errInvalidIssuerFmt, err)
 	}
 	actor, err := s.registry.OrganizationById(actorPartyID)
 	if err != nil {
-		return fmt.Errorf(errInvalidIssuerFmt, err)
+		return vendor, fmt.Errorf(errInvalidIssuerFmt, err)
 	}
 	chains, err := s.crypto.TrustStore().VerifiedChain(jwtBearerToken.SigningCertificate, validationTime)
 	if err != nil || len(chains) == 0 {
-		return fmt.Errorf(errInvalidIssuerFmt, err)
+		return vendor, fmt.Errorf(errInvalidIssuerFmt, err)
 	}
+
 	match := false
 	for _, chain := range chains {
 		root := chain[len(chain)-1]
-		v, err := cert.VendorIDFromCertificate(root)
+		vendor, err = cert.VendorIDFromCertificate(root)
 		if err != nil {
 			fmt.Errorf("no vendorID in SAN: %w", err)
 		}
-		if v.String() == actor.Vendor.String() {
+		if vendor.String() == actor.Vendor.String() {
 			match = true
 			break
 		}
 	}
 	if !match {
-		return errors.New("certificate from x5c is no sibling of actor signing certificate")
+		return vendor, errors.New("certificate from x5c is no sibling of actor signing certificate")
 	}
 
-	return nil
+	return vendor, nil
 }
 
 // check if the custodian is registered by this vendor, according to RFC003 §5.2.1.8
