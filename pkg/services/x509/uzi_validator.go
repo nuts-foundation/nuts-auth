@@ -12,6 +12,9 @@ import (
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
+// Uzi Attributes used to sign the message
+// See table 12 on page 62 of the Certification Practice Statement (CPS) UZI-register v10.x
+// https://zorgcsp.nl/Media/Default/documenten/2020-05-06_RK1%20CPS%20UZI-register%20V10.0.pdf
 var UziAttributes = []string{
 	"oidCa",
 	"version",

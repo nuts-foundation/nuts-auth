@@ -218,9 +218,7 @@ func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x50
 }
 
 func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Certificate) error {
-	fmt.Println("Checking CRLs for:")
 	for i, certToCheck := range verifiedChain[0 : len(verifiedChain)-1] {
-		fmt.Printf("\t%s\n:", certToCheck.Subject.CommonName)
 		issuer := verifiedChain[i+1]
 		for _, crlPoint := range certToCheck.CRLDistributionPoints {
 			crl, err := fetchCRL(crlPoint)

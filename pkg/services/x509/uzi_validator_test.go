@@ -26,7 +26,6 @@ func TestUziValidator(t *testing.T) {
 			return
 		}
 
-		//t.Skip("the current test token does not contain a token field")
 		signedToken, err := uziValidator.Parse(uziSignedJwt)
 
 		if !assert.NoError(t, err) {
