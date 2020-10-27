@@ -39,7 +39,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 	}
 
 	t.Run("validator with only a root", func(t *testing.T) {
-		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, nil, nil)
+		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, nil, nil, nil)
 		assert.NotNil(t, validator)
 
 		t.Run("ok - leaf and intermediate in token", func(t *testing.T) {
@@ -64,7 +64,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 
 		t.Run("nok - complete chain in token, but not part of roots", func(t *testing.T) {
 			otherRootCert, _, _ := createTestRootCert()
-			validator := NewJwtX509Validator([]*x509.Certificate{otherRootCert}, nil, nil)
+			validator := NewJwtX509Validator([]*x509.Certificate{otherRootCert}, nil, nil, nil)
 			token := &JwtX509Token{chain: []*x509.Certificate{leafCert, intermediateCert, rootCert}}
 			_, _, err := validator.verifyCertChain(token)
 			assert.Error(t, err)
@@ -74,7 +74,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 	})
 
 	t.Run("nok - root is not a root", func(t *testing.T) {
-		validator := NewJwtX509Validator([]*x509.Certificate{intermediateCert}, nil, nil)
+		validator := NewJwtX509Validator([]*x509.Certificate{intermediateCert}, nil, nil, nil)
 		token := &JwtX509Token{chain: []*x509.Certificate{leafCert}}
 		leaf, chain, err := validator.verifyCertChain(token)
 		assert.Nil(t, leaf)
@@ -85,7 +85,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 	})
 
 	t.Run("validator with root and intermediates", func(t *testing.T) {
-		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, nil)
+		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, nil, nil)
 		assert.NotNil(t, validator)
 
 		t.Run("ok - valid chain", func(t *testing.T) {
@@ -110,7 +110,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 
 	})
 	t.Run("nok - validator without roots", func(t *testing.T) {
-		validator := NewJwtX509Validator(nil, []*x509.Certificate{rootCert, intermediateCert}, nil)
+		validator := NewJwtX509Validator(nil, []*x509.Certificate{rootCert, intermediateCert}, nil, nil)
 		token := &JwtX509Token{chain: []*x509.Certificate{leafCert, intermediateCert}}
 		_, _, err := validator.verifyCertChain(token)
 		if assert.Error(t, err) {
@@ -120,7 +120,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 }
 
 func TestJwtX509Validator_Parse(t *testing.T) {
-	validator := NewJwtX509Validator(nil, nil, nil)
+	validator := NewJwtX509Validator(nil, nil, nil, nil)
 	cert, privKey, err := createTestRootCert()
 	if !assert.NoError(t, err) {
 		return
@@ -337,7 +337,7 @@ func TestJwtX509Validator_Verify(t *testing.T) {
 	}
 
 	t.Run("ok - valid jwt", func(t *testing.T) {
-		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256})
+		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256}, nil)
 
 		theJwt := jwt.New()
 		headers := jws.NewHeaders()
@@ -358,7 +358,7 @@ func TestJwtX509Validator_Verify(t *testing.T) {
 	})
 
 	t.Run("nok - signing algorithm not on allowed", func(t *testing.T) {
-		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256})
+		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256}, nil)
 		x509Token := &JwtX509Token{
 			sigAlg: jwa.RS512,
 		}
@@ -388,8 +388,10 @@ func TestJwtX509Validator_checkCertRevocation(t *testing.T) {
 			return
 		}
 
+		crls := NewMemoryCrlService()
+
 		t.Run("ok", func(t *testing.T) {
-			validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256})
+			validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256}, crls)
 			assert.NoError(t, validator.checkCertRevocation([]*x509.Certificate{leafCert, intermediateCert, rootCert}))
 		})
 	})
@@ -421,6 +423,8 @@ func TestJwtX509Validator_checkCertRevocation(t *testing.T) {
 			return
 		}
 
+		crls := HttpCrlService{}
+
 		t.Run("ok - this intermediate is not revoked", func(t *testing.T) {
 			intermediateCert, intermediateCerKey, err := createIntermediateCertWithCrl(rootCert, rootCertKey, crlServer.URL)
 			if !assert.NoError(t, err) {
@@ -432,13 +436,13 @@ func TestJwtX509Validator_checkCertRevocation(t *testing.T) {
 				return
 			}
 
-			validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256})
+			validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256}, crls)
 			err = validator.checkCertRevocation([]*x509.Certificate{leafCert, intermediateCert, rootCert})
 			assert.NoError(t, err)
 		})
 
 		t.Run("nok - intermediate is revoked", func(t *testing.T) {
-			validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256})
+			validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256}, crls)
 			err = validator.checkCertRevocation([]*x509.Certificate{leafCert, intermediateCert, rootCert})
 			if assert.Error(t, err) {
 				assert.Equal(t, fmt.Sprintf("cert with serial '%s' is revoked", intermediateCert.SerialNumber.String()), err.Error())

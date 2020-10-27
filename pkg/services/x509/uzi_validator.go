@@ -81,7 +81,7 @@ func certsFromAssets(paths []string) (certs []*x509.Certificate, err error) {
 	return
 }
 
-func NewUziValidator(env UziEnv, contractTemplates *contract.TemplateStore) (validator *UziValidator, err error) {
+func NewUziValidator(env UziEnv, contractTemplates *contract.TemplateStore, crls crlService) (validator *UziValidator, err error) {
 	var roots []*x509.Certificate
 	var intermediates []*x509.Certificate
 
@@ -112,7 +112,7 @@ func NewUziValidator(env UziEnv, contractTemplates *contract.TemplateStore) (val
 		}
 
 		intermediates, err = certsFromAssets([]string{
-			"certs/uzi-acc/test_zorg_csp_root_ca_g3.cer",
+			"certs/uzi-acc/test_uzi-register_medewerker_op_naam_ca_g3.cer",
 			"certs/uzi-acc/test_zorg_csp_level_2_persoon_ca_g3.cer",
 		})
 		if err != nil {
@@ -120,8 +120,12 @@ func NewUziValidator(env UziEnv, contractTemplates *contract.TemplateStore) (val
 		}
 	}
 
+	if crls == nil {
+		crls = NewCachedHttpCrlService()
+	}
+
 	validator = &UziValidator{
-		validator:         NewJwtX509Validator(roots, intermediates, []jwa.SignatureAlgorithm{jwa.RS256}),
+		validator:         NewJwtX509Validator(roots, intermediates, []jwa.SignatureAlgorithm{jwa.RS256, jwa.RS512}, crls),
 		contractTemplates: contractTemplates,
 	}
 	return
@@ -147,5 +151,9 @@ func (u UziValidator) Parse(rawAuthToken string) (services.SignedToken, error) {
 }
 
 func (u UziValidator) Verify(token services.SignedToken) error {
-	return u.Verify(token)
+	x509SignedToken, ok := token.(UziSignedToken)
+	if !ok {
+		return fmt.Errorf("wrong token type")
+	}
+	return u.validator.Verify(x509SignedToken.jwtX509Token)
 }

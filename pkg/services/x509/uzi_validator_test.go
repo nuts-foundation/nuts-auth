@@ -14,14 +14,22 @@ var uziSignedJwt = `eyJ4NWMiOlsiTUlJSGN6Q0NCVnVnQXdJQkFnSVVIUFU4cVZYS3FEZXByWUhD
 
 func TestUziValidator(t *testing.T) {
 	t.Run("ok - it loads the production certificates", func(t *testing.T) {
-		_, err := NewUziValidator(UziProduction, &contract.StandardContractTemplates)
+		_, err := NewUziValidator(UziProduction, &contract.StandardContractTemplates, nil)
 		if !assert.NoError(t, err) {
 			return
 		}
 	})
 
 	t.Run("ok - acceptation environment", func(t *testing.T) {
-		uziValidator, err := NewUziValidator(UziAcceptation, &contract.StandardContractTemplates)
+		crls, err := NewMockCrlService([]string{
+			"http://www.uzi-register-test.nl/cdp/test_uzi-register_medewerker_op_naam_ca_g3.crl",
+			"http://www.uzi-register-test.nl/cdp/test_zorg_csp_level_2_persoon_ca_g3.crl",
+			"http://www.uzi-register-test.nl/cdp/test_zorg_csp_root_ca_g3.crl"})
+
+		if !assert.NoError(t, err) {
+			return
+		}
+		uziValidator, err := NewUziValidator(UziAcceptation, &contract.StandardContractTemplates, crls)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -51,5 +59,8 @@ func TestUziValidator(t *testing.T) {
 		assert.Equal(t, contract.Type("BehandelaarLogin"), signedToken.Contract().Template.Type)
 		assert.Equal(t, contract.Language("NL"), signedToken.Contract().Template.Language)
 		assert.Equal(t, contract.Version("v1"), signedToken.Contract().Template.Version)
+
+		err = uziValidator.Verify(signedToken)
+		assert.NoError(t, err)
 	})
 }
