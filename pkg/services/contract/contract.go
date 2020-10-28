@@ -112,6 +112,8 @@ func (s *service) configureContracts() (err error) {
 	if s.config.ActingPartyCn == "" {
 		// todo remove this check in 0.17
 		logrus.Info("no actingPartyCn configured, this is needed for v2 contracts (deprecated)")
+	} else {
+		logrus.Warn("actingPartyCn is deprecated, please migrate to v3 contracts and remove the config parameter")
 	}
 	if s.config.PublicUrl == "" {
 		err = ErrMissingPublicURL

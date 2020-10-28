@@ -25,6 +25,9 @@ import (
 type Wrapper struct {
 	Auth pkg.AuthClient
 }
+const errOauthInvalidRequest = "invalid_request"
+const errOauthInvalidGrant = "invalid_grant"
+const errOauthUnsupportedGrant = "unsupported_grant_type"
 
 // CreateSession translates http params to internal format, creates a IRMA signing session
 // and returns the session pointer to the HTTP stack.
@@ -227,26 +230,26 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context, params CreateAccessToken
 
 	if request.GrantType != pkg.JwtBearerGrantType {
 		errDesc := fmt.Sprintf("grant_type must be: '%s'", pkg.JwtBearerGrantType)
-		errorResponse := AccessTokenRequestFailedResponse{Error: "unsupported_grant_type", ErrorDescription: errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthUnsupportedGrant, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 
 	const jwtPattern = `^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$`
 	if matched, err := regexp.Match(jwtPattern, []byte(request.Assertion)); !matched || err != nil {
 		errDesc := "Assertion must be a valid encoded jwt"
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidGrant, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 
 	if params.XSslClientCert == "" {
 		errDesc := "Client certificate missing in header"
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_request", ErrorDescription: errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidRequest, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 	cert, err := url.PathUnescape(params.XSslClientCert)
 	if (err != nil) {
 		errDesc := "corrupted client certificate header"
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_request", ErrorDescription: errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidRequest, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 
@@ -254,7 +257,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context, params CreateAccessToken
 	acResponse, err := api.Auth.OAuthClient().CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_request", ErrorDescription: errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidRequest, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 	response := AccessTokenResponse{AccessToken: acResponse.AccessToken}

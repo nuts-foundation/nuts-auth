@@ -439,8 +439,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		bindPostBody(ctx, params)
 
 		errorDescription := "grant_type must be: 'urn:ietf:params:oauth:grant-type:jwt-bearer'"
-		errorType := "unsupported_grant_type"
-		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errOauthUnsupportedGrant}
 		expectError(ctx, errorResponse)
 
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
@@ -456,8 +455,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		bindPostBody(ctx, params)
 
 		errorDescription := "Client certificate missing in header"
-		errorType := "invalid_request"
-		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errOauthInvalidRequest}
 		expectError(ctx, errorResponse)
 
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
@@ -473,8 +471,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		bindPostBody(ctx, params)
 
 		errorDescription := "corrupted client certificate header"
-		errorType := "invalid_request"
-		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errOauthInvalidRequest}
 		expectError(ctx, errorResponse)
 
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: "%"})
@@ -490,8 +487,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		bindPostBody(ctx, params)
 
 		errorDescription := "Assertion must be a valid encoded jwt"
-		errorType := "invalid_grant"
-		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errOauthInvalidGrant}
 		expectError(ctx, errorResponse)
 
 		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
@@ -507,8 +503,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		bindPostBody(ctx, params)
 
 		errorDescription := "oh boy"
-		errorType := "invalid_request"
-		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errorType}
+		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errOauthInvalidRequest}
 		expectError(ctx, errorResponse)
 
 		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, ClientCert: "cert"}).Return(nil, fmt.Errorf("oh boy"))

@@ -29,7 +29,7 @@ var StandardContractTemplates = TemplateStore{
 		},
 		"v3": &Template{
 			Type:               "BehandelaarLogin",
-			Version:            "v2",
+			Version:            "v3",
 			Language:           "NL",
 			SignerAttributes:   StandardSignerAttributes,
 			Template:           `NL:BehandelaarLogin:v3 Hierbij verklaar ik te handelen in naam van {{` + LegalEntityAttr + `}}. Deze verklaring is geldig van {{` + ValidFromAttr + `}} tot {{` + ValidToAttr + `}}.`,

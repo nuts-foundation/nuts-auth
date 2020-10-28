@@ -11,9 +11,9 @@ import (
 
 // ContractValidator interface must be implemented by contract validators
 type ContractValidator interface {
-	// actingPartyCN is deprecated and thus optional
+	// ValidateContract validates a signed login contract, actingPartyCN is deprecated and thus optional
 	ValidateContract(contract string, format ContractFormat, actingPartyCN *string) (*ContractValidationResult, error)
-	// actingPartyCN is deprecated and thus optional
+	// ValidateJwt validates a JWT that contains a signed login contract, actingPartyCN is deprecated and thus optional
 	ValidateJwt(contract string, actingPartyCN *string) (*ContractValidationResult, error)
 	IsInitialized() bool
 }

@@ -51,8 +51,8 @@ var errMissingCertificate = errors.New("missing x5c header")
 var errInvalidX5cHeader = errors.New("invalid x5c header")
 var errInvalidClientCert = errors.New("invalid TLS client certificate")
 
-const errInvalidIssuerFmt = "invalid jwt.issuer: %w"
-const errInvalidSubjectFmt = "invalid jwt.subject: %w"
+const errInvalidIssuerFmt = "invalid jwt.issuer: %s, cause %w"
+const errInvalidSubjectFmt = "invalid jwt.subject: %s, cause %w"
 
 type service struct {
 	vendorID          core.PartyID
@@ -142,7 +142,7 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 		return nil, fmt.Errorf("identity token validation failed: %w", err)
 	}
 	if context.contractValidationResult.ValidationResult == services.Invalid {
-		return nil, fmt.Errorf("identity validation failed")
+		return nil, errors.New("identity validation failed")
 	}
 	// checks if the name from the login contract matches with the registered name of the issuer.
 	if err = s.validateActor(&context); err != nil {
@@ -184,15 +184,15 @@ func (s *service) validateIssuer(context *validationContext) error {
 
 	actorPartyID, err := core.ParsePartyID(context.jwtBearerToken.Issuer)
 	if err != nil {
-		return fmt.Errorf(errInvalidIssuerFmt, err)
+		return fmt.Errorf(errInvalidIssuerFmt, context.jwtBearerToken.Issuer, err)
 	}
 	actor, err := s.registry.OrganizationById(actorPartyID)
 	if err != nil {
-		return fmt.Errorf(errInvalidIssuerFmt, err)
+		return fmt.Errorf(errInvalidIssuerFmt, context.jwtBearerToken.Issuer, err)
 	}
 	chains, err := s.crypto.TrustStore().VerifiedChain(context.jwtBearerToken.SigningCertificate, validationTime)
 	if err != nil || len(chains) == 0 {
-		return fmt.Errorf(errInvalidIssuerFmt, err)
+		return fmt.Errorf(errInvalidIssuerFmt, context.jwtBearerToken.Issuer, err)
 	}
 
 	match := false
@@ -200,7 +200,8 @@ func (s *service) validateIssuer(context *validationContext) error {
 		root := chain[len(chain)-1]
 		vendor, err = cert.VendorIDFromCertificate(root)
 		if err != nil {
-			fmt.Errorf("no vendorID in SAN: %w", err)
+			logrus.Warnf("no vendorID in SAN for %s", root.Subject.String())
+			continue
 		}
 		if vendor.String() == actor.Vendor.String() {
 			match = true
@@ -208,7 +209,7 @@ func (s *service) validateIssuer(context *validationContext) error {
 		}
 	}
 	if !match {
-		return errors.New("certificate from x5c is no sibling of actor signing certificate")
+		return errors.New("the signing certificate from the actor registry entry and the certificate from the x5c header do not share a common vendor CA")
 	}
 
 	context.actorName = actor.Name
@@ -236,7 +237,8 @@ func (s *service) validateClientCertificate(context *validationContext, pemEncod
 		root := chain[len(chain)-1]
 		vendor, err = cert.VendorIDFromCertificate(root)
 		if err != nil {
-			fmt.Errorf("no vendorID in SAN: %w", err)
+			logrus.Warnf("no vendorID in SAN for %s", root.Subject.String())
+			continue
 		}
 		if vendor.String() == context.vendor.String() {
 			match = true
@@ -254,14 +256,14 @@ func (s *service) validateClientCertificate(context *validationContext, pemEncod
 func (s *service) validateSubject(context *validationContext) error {
 	custPartyID, err := core.ParsePartyID(context.jwtBearerToken.Subject)
 	if err != nil {
-		return fmt.Errorf(errInvalidSubjectFmt, err)
+		return fmt.Errorf(errInvalidSubjectFmt, context.jwtBearerToken.Subject, err)
 	}
 	custodian, err := s.registry.OrganizationById(custPartyID)
 	if err != nil {
-		return fmt.Errorf(errInvalidSubjectFmt, err)
+		return fmt.Errorf(errInvalidSubjectFmt, context.jwtBearerToken.Subject, err)
 	}
 	if custodian.Vendor.String() != context.vendor.String() {
-		return fmt.Errorf(errInvalidSubjectFmt, errors.New("organisation.vendor doesn't match with vendorID of this node"))
+		return fmt.Errorf(errInvalidSubjectFmt, context.jwtBearerToken.Subject, errors.New("organisation.vendor doesn't match with vendorID of this node"))
 	}
 
 	return nil
