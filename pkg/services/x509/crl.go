@@ -19,7 +19,12 @@ var _ CrlGetter = (*HttpCrlService)(nil)
 type HttpCrlService struct {
 }
 
+// GetCrl accepts a url and will try to make a http request to that endpoint. The results will be parsed into a CertificateList.
+// Note: The call is blocking. It is advisable to use this service behind a caching mechanism or use cachedHttpCrlService
 func (h HttpCrlService) GetCrl(url string) (*pkix.CertificateList, error) {
+	// TODO: this is a rather naive implementation of a http crl getter. It will not scale under high load and will
+	// block requests when the crl endpoint is down.
+	// https://github.com/nuts-foundation/nuts-auth/issues/136
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -29,7 +34,7 @@ func (h HttpCrlService) GetCrl(url string) (*pkix.CertificateList, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not read the crl response body: %w", err)
 	}
 	resp.Body.Close()
 
