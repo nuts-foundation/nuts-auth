@@ -3,10 +3,11 @@ package services
 import (
 	"net/http"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 )
 
 // ContractValidator interface must be implemented by contract validators
@@ -39,17 +40,20 @@ type AuthenticationTokenContainerEncoded interface {
 	Encode(authTokenContainer *NutsAuthenticationTokenContainer) (string, error)
 }
 
+// SignedToken defines the uniform interface to crypto specific implementations such as Irma or x509 tokens.
 type SignedToken interface {
+	// SignerAttributes extracts a map of attribute names and their values from the signature
 	SignerAttributes() map[string]string
+	// Contract extracts the Contract from the SignedToken
 	Contract() contract.Contract
 }
 
-// AuthenticationTokenService provides a uniform interface for Authentication services like IRMA or x509 signed tokens
-type AuthenticationTokenService interface {
-	// Parse a raw Auth token string. The token must be of the same type as the implementing service
+// AuthenticationTokenParser provides a uniform interface for Authentication services like IRMA or x509 signed tokens
+type AuthenticationTokenParser interface {
+	// Parse accepts a raw Auth token string. The parser tries to parse the token into a SignedToken.
 	Parse(rawAuthToken string) (SignedToken, error)
 
-	// Verify the signature of the SignedToken using the crypto of the Authentication service
+	// Verify accepts a SignedToken and verifies the signature using the crypto for the specific implementation of this interface.
 	Verify(token SignedToken) error
 }
 
