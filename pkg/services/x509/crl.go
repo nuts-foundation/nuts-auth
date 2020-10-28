@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-type crlService interface {
+type CrlGetter interface {
 	GetCrl(url string) (*pkix.CertificateList, error)
 }
 
-// Compiler check if HttpCrlService implements the crlService
-var _ crlService = (*HttpCrlService)(nil)
+// Compiler check if HttpCrlService implements the CrlGetter
+var _ CrlGetter = (*HttpCrlService)(nil)
 
 type HttpCrlService struct {
 }
@@ -24,7 +24,7 @@ func (h HttpCrlService) GetCrl(url string) (*pkix.CertificateList, error) {
 	if err != nil {
 		return nil, err
 	} else if resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("failed to retrieve CRL")
+		return nil, fmt.Errorf("failed to retrieve CRL: '%s' statuscode: %s", url, resp.Status)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -36,7 +36,7 @@ func (h HttpCrlService) GetCrl(url string) (*pkix.CertificateList, error) {
 	return x509.ParseCRL(body)
 }
 
-var _ crlService = (*memoryCrlService)(nil)
+var _ CrlGetter = (*memoryCrlService)(nil)
 
 type memoryCrlService struct {
 	crls map[string]*pkix.CertificateList
@@ -56,7 +56,7 @@ func (m memoryCrlService) GetCrl(url string) (*pkix.CertificateList, error) {
 	return crl, nil
 }
 
-var _ crlService = (*cachedHttpCrlService)(nil)
+var _ CrlGetter = (*cachedHttpCrlService)(nil)
 
 type cachedHttpCrlService struct {
 	httpCrlService   HttpCrlService

@@ -10,8 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -397,19 +395,14 @@ func TestJwtX509Validator_checkCertRevocation(t *testing.T) {
 	})
 
 	t.Run("with crl", func(t *testing.T) {
-		var crl []byte
-		crlServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-			t.Log("crl request received")
-			writer.Write(crl)
-		}))
-		defer crlServer.Close()
+		crlUrl := "http://example.com/cert.crl"
 
 		rootCert, rootCertKey, err := createTestRootCert()
 		if !assert.NoError(t, err) {
 			return
 		}
 
-		intermediateCert, intermediateCerKey, err := createIntermediateCertWithCrl(rootCert, rootCertKey, crlServer.URL)
+		intermediateCert, intermediateCerKey, err := createIntermediateCertWithCrl(rootCert, rootCertKey, crlUrl)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -418,15 +411,17 @@ func TestJwtX509Validator_checkCertRevocation(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		crl, err = createCrl(nil, rootCert, rootCertKey, []*x509.Certificate{intermediateCert})
+		rawCrl, err := createCrl(nil, rootCert, rootCertKey, []*x509.Certificate{intermediateCert})
 		if !assert.NoError(t, err) {
 			return
 		}
 
-		crls := HttpCrlService{}
+		crl, err := x509.ParseCRL(rawCrl)
+		crls := NewMemoryCrlService()
+		crls.crls[crlUrl] = crl
 
 		t.Run("ok - this intermediate is not revoked", func(t *testing.T) {
-			intermediateCert, intermediateCerKey, err := createIntermediateCertWithCrl(rootCert, rootCertKey, crlServer.URL)
+			intermediateCert, intermediateCerKey, err := createIntermediateCertWithCrl(rootCert, rootCertKey, crlUrl)
 			if !assert.NoError(t, err) {
 				return
 			}

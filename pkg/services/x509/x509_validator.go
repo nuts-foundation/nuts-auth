@@ -27,7 +27,7 @@ type JwtX509Validator struct {
 	roots              []*x509.Certificate
 	intermediates      []*x509.Certificate
 	allowedSigningAlgs []jwa.SignatureAlgorithm
-	crls               crlService
+	crls               CrlGetter
 }
 
 // generalNames defines the asn1 data structure of the generalNames as defined in rfc5280#section-4.2.1.6
@@ -68,7 +68,7 @@ func (j JwtX509Token) SubjectAltNameOtherName() (string, error) {
 	return otherNameStr, nil
 }
 
-func NewJwtX509Validator(roots, intermediates []*x509.Certificate, allowedSigAlgs []jwa.SignatureAlgorithm, crls crlService) *JwtX509Validator {
+func NewJwtX509Validator(roots, intermediates []*x509.Certificate, allowedSigAlgs []jwa.SignatureAlgorithm, crls CrlGetter) *JwtX509Validator {
 	return &JwtX509Validator{
 		roots:              roots,
 		intermediates:      intermediates,

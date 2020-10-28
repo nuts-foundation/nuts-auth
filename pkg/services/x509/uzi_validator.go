@@ -81,7 +81,7 @@ func certsFromAssets(paths []string) (certs []*x509.Certificate, err error) {
 	return
 }
 
-func NewUziValidator(env UziEnv, contractTemplates *contract.TemplateStore, crls crlService) (validator *UziValidator, err error) {
+func NewUziValidator(env UziEnv, contractTemplates *contract.TemplateStore, crls CrlGetter) (validator *UziValidator, err error) {
 	var roots []*x509.Certificate
 	var intermediates []*x509.Certificate
 

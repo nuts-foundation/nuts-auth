@@ -118,9 +118,18 @@ type ContractValidationResult struct {
 	DisclosedAttributes map[string]string `json:"disclosed_attributes"`
 }
 
+// TokenContainerType is used in the NutsAuthenticationTokenContainer to tell the type of the
+type TokenContainerType string
+
+// UziTokenContainerType indicate the NutsAuthenticationTokenContainer token is an Uzi signed JWT
+const UziTokenContainerType TokenContainerType = "uzi"
+
+// IrmaTokenContainerType indicate the NutsAuthenticationTokenContainer token is an irma token
+const IrmaTokenContainerType TokenContainerType = "irma"
+
 // NutsAuthenticationTokenContainer holds the base64 encoded token and a type which uniquely
 // identifies the means used to sign the contract
 type NutsAuthenticationTokenContainer struct {
-	Type  string `json:"type"`
-	Token string `json:"token"`
+	Type  TokenContainerType `json:"type"`
+	Token string             `json:"token"`
 }

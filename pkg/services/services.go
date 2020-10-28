@@ -30,13 +30,13 @@ type OAuthClient interface {
 	Configure() error
 }
 
-// AuthenticationTokenContainerService defines the interface for Authentication Token Containers services
-type AuthenticationTokenContainerService interface {
-	// Decodes a base64 encoded Authentication Token and returns a NutsAuthenticationTokenContainer
-	DecodeAuthenticationTokenContainer(rawTokenContainer string) (*NutsAuthenticationTokenContainer, error)
+// AuthenticationTokenContainerEncoded defines the interface for Authentication Token Containers services
+type AuthenticationTokenContainerEncoded interface {
+	// Decode accepts a raw token container encoded as a string and decodes it into a NutsAuthenticationTokenContainer
+	Decode(rawTokenContainer string) (*NutsAuthenticationTokenContainer, error)
 
-	// Encodes NutsAuthenticationTokenContainer to a base64 encoded token which can be used as a usi field
-	EncodeAuthenticationTokenContainer(authTokenContainer *NutsAuthenticationTokenContainer) (string, error)
+	// Encode accepts a NutsAuthenticationTokenContainer and encodes in into a string
+	Encode(authTokenContainer *NutsAuthenticationTokenContainer) (string, error)
 }
 
 type SignedToken interface {
