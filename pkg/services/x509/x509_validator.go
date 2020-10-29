@@ -141,6 +141,8 @@ func (validator JwtX509Validator) parseCertsFromHeader(certsFromHeader []string)
 	return chain, nil
 }
 
+var nowFunc = time.Now
+
 func (validator JwtX509Validator) Verify(x509Token *JwtX509Token) error {
 	var sigAlgAllowed bool
 	for _, allowedAlg := range validator.allowedSigningAlgs {
@@ -226,8 +228,8 @@ func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Cert
 			if err != nil {
 				return err
 			}
-			if crl.HasExpired(time.Now()) {
-				return fmt.Errorf("crl has been expired")
+			if crl.HasExpired(nowFunc()) {
+				return fmt.Errorf("crl has expired since: %s", crl.TBSCertList.NextUpdate.String())
 			}
 			if err := issuer.CheckCRLSignature(crl); err != nil {
 				return fmt.Errorf("could not check cert agains CRL: %w", err)
