@@ -51,8 +51,8 @@ var errMissingCertificate = errors.New("missing x5c header")
 var errInvalidX5cHeader = errors.New("invalid x5c header")
 var errInvalidClientCert = errors.New("invalid TLS client certificate")
 
-const errInvalidIssuerFmt = "invalid jwt.issuer: %s, cause %w"
-const errInvalidSubjectFmt = "invalid jwt.subject: %s, cause %w"
+const errInvalidIssuerFmt = "invalid jwt.issuer: %w"
+const errInvalidSubjectFmt = "invalid jwt.subject: %w"
 
 type service struct {
 	vendorID          core.PartyID
@@ -184,15 +184,15 @@ func (s *service) validateIssuer(context *validationContext) error {
 
 	actorPartyID, err := core.ParsePartyID(context.jwtBearerToken.Issuer)
 	if err != nil {
-		return fmt.Errorf(errInvalidIssuerFmt, context.jwtBearerToken.Issuer, err)
+		return fmt.Errorf(errInvalidIssuerFmt, err)
 	}
 	actor, err := s.registry.OrganizationById(actorPartyID)
 	if err != nil {
-		return fmt.Errorf(errInvalidIssuerFmt, context.jwtBearerToken.Issuer, err)
+		return fmt.Errorf(errInvalidIssuerFmt, err)
 	}
 	chains, err := s.crypto.TrustStore().VerifiedChain(context.jwtBearerToken.SigningCertificate, validationTime)
 	if err != nil || len(chains) == 0 {
-		return fmt.Errorf(errInvalidIssuerFmt, context.jwtBearerToken.Issuer, err)
+		return fmt.Errorf(errInvalidIssuerFmt, err)
 	}
 
 	match := false
@@ -256,14 +256,14 @@ func (s *service) validateClientCertificate(context *validationContext, pemEncod
 func (s *service) validateSubject(context *validationContext) error {
 	custPartyID, err := core.ParsePartyID(context.jwtBearerToken.Subject)
 	if err != nil {
-		return fmt.Errorf(errInvalidSubjectFmt, context.jwtBearerToken.Subject, err)
+		return fmt.Errorf(errInvalidSubjectFmt, err)
 	}
 	custodian, err := s.registry.OrganizationById(custPartyID)
 	if err != nil {
-		return fmt.Errorf(errInvalidSubjectFmt, context.jwtBearerToken.Subject, err)
+		return fmt.Errorf(errInvalidSubjectFmt, err)
 	}
 	if custodian.Vendor.String() != context.vendor.String() {
-		return fmt.Errorf(errInvalidSubjectFmt, context.jwtBearerToken.Subject, errors.New("organisation.vendor doesn't match with vendorID of this node"))
+		return fmt.Errorf(errInvalidSubjectFmt, errors.New("organisation.vendor doesn't match with vendorID of this node"))
 	}
 
 	return nil

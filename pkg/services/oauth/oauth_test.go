@@ -204,7 +204,7 @@ func TestService_validateIssuer(t *testing.T) {
 
 		err := ctx.oauthService.validateIssuer(tokenCtx)
 		if assert.NotNil(t, err) {
-			assert.Contains(t, err.Error(), "certificate from x5c is no sibling of actor signing certificate")
+			assert.Contains(t, err.Error(), "the signing certificate from the actor registry entry and the certificate from the x5c header do not share a common vendor CA")
 		}
 	})
 }
