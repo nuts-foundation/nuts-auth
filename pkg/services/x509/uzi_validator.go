@@ -12,19 +12,7 @@ import (
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
-// Uzi Attributes used to sign the message
-// See table 12 on page 62 of the Certification Practice Statement (CPS) UZI-register v10.x
-// https://zorgcsp.nl/Media/Default/documenten/2020-05-06_RK1%20CPS%20UZI-register%20V10.0.pdf
-var UziAttributes = []string{
-	"oidCa",
-	"version",
-	"uziNr",
-	"cardType",
-	"orgID",
-	"rollCode",
-	"agbCode",
-}
-
+// UziSignedToken
 type UziSignedToken struct {
 	jwtX509Token *JwtX509Token
 	contract     *contract.Contract
@@ -42,6 +30,21 @@ type UziEnv string
 const UziProduction UziEnv = "production"
 const UziAcceptation UziEnv = "acceptation"
 
+func getUziAttributeNames() []string {
+	// A list of Uzi attribute names used to sign the message
+	// See table 12 on page 62 of the Certification Practice Statement (CPS) UZI-register v10.x
+	// https://zorgcsp.nl/Media/Default/documenten/2020-05-06_RK1%20CPS%20UZI-register%20V10.0.pdf
+	return []string{
+		"oidCa",
+		"version",
+		"uziNr",
+		"cardType",
+		"orgID",
+		"rollCode",
+		"agbCode",
+	}
+}
+
 func (t UziSignedToken) SignerAttributes() map[string]string {
 	otherNameStr, err := t.jwtX509Token.SubjectAltNameOtherName()
 	if err != nil {
@@ -51,7 +54,7 @@ func (t UziSignedToken) SignerAttributes() map[string]string {
 	parts := strings.Split(otherNameStr, "-")
 
 	res := map[string]string{}
-	for idx, name := range UziAttributes {
+	for idx, name := range getUziAttributeNames() {
 		res[name] = parts[idx]
 	}
 	return res
