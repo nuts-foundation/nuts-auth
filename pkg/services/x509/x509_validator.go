@@ -239,12 +239,14 @@ func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x50
 // The order of the certificates should be that each certificate is issued by the next one. The root comes last.
 func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Certificate) error {
 	for i, certToCheck := range verifiedChain {
-		issuerIdx := i + 1
-		// root is self signed
-		if issuerIdx == len(verifiedChain) {
-			issuerIdx = i
+		var issuer *x509.Certificate
+
+		if i+1 == len(verifiedChain) {
+			// root is self signed
+			issuer = certToCheck
+		} else {
+			issuer = verifiedChain[i+1]
 		}
-		issuer := verifiedChain[issuerIdx]
 
 		for _, crlPoint := range certToCheck.CRLDistributionPoints {
 			crl, err := validator.crls.GetCrl(crlPoint)
