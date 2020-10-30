@@ -3,12 +3,10 @@ package x509
 import (
 	"bytes"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"time"
 
 	"github.com/lestrrat-go/jwx/jwa"
@@ -16,6 +14,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwt"
 )
 
+// JwtX509Token contains a parsed JWT signed with a x509 certificate.
 type JwtX509Token struct {
 	chain  []*x509.Certificate
 	token  jwt.Token
@@ -23,6 +22,7 @@ type JwtX509Token struct {
 	sigAlg jwa.SignatureAlgorithm
 }
 
+// JwtX509Validator contains all logic to parse and verify a JwtX509Token.
 type JwtX509Validator struct {
 	roots              []*x509.Certificate
 	intermediates      []*x509.Certificate
@@ -41,33 +41,37 @@ type otherName struct {
 	Value asn1.RawValue `asn1:"tag:0"`
 }
 
-// is the object identifier of the subjectAltName (id-ce 17)
+// subjectAltNameID is the object identifier of the subjectAltName (id-ce 17)
 var subjectAltNameID = asn1.ObjectIdentifier{2, 5, 29, 17}
 
-func (j JwtX509Token) SubjectAltNameOtherName() (string, error) {
+// SubjectAltNameOtherNames extracts the SANs as string from the certificate which was used to sign the Jwt.
+func (j JwtX509Token) SubjectAltNameOtherNames() ([]string, error) {
 	leaf := j.chain[0]
-	var subjAltName pkix.Extension
+	result := []string{}
 	for _, ext := range leaf.Extensions {
 		if ext.Id.Equal(subjectAltNameID) {
-			subjAltName = ext
-		}
-		break
-	}
-	if len(subjAltName.Value) == 0 {
-		return "", nil
-	}
+			if len(ext.Value) == 0 {
+				continue
+			}
 
-	var otherNames generalNames
-	if _, err := asn1.Unmarshal(subjAltName.Value, &otherNames); err != nil {
-		return "", err
+			var otherNames generalNames
+			if _, err := asn1.Unmarshal(ext.Value, &otherNames); err != nil {
+				return nil, err
+			}
+			var otherNameStr string
+			if _, err := asn1.Unmarshal(otherNames.OtherName.Value.Bytes, &otherNameStr); err != nil {
+				return nil, err
+			}
+			result = append(result, otherNameStr)
+		}
 	}
-	var otherNameStr string
-	if _, err := asn1.Unmarshal(otherNames.OtherName.Value.Bytes, &otherNameStr); err != nil {
-		return "", err
-	}
-	return otherNameStr, nil
+	return result, nil
 }
 
+// NewJwtX509Validator creates a new NewJwtX509Validator.
+// It accepts root and intermediate certificates to validate the chain.
+// It accepts a list of valid signature algorithms
+// It accepts a CRL getter
 func NewJwtX509Validator(roots, intermediates []*x509.Certificate, allowedSigAlgs []jwa.SignatureAlgorithm, crls CrlGetter) *JwtX509Validator {
 	return &JwtX509Validator{
 		roots:              roots,
@@ -84,13 +88,13 @@ func (validator JwtX509Validator) Parse(rawAuthToken string) (*JwtX509Token, err
 	// check the cert chain in the jwt
 	rawHeader, _, _, err := jws.SplitCompact(bytes.NewReader([]byte(rawAuthToken)))
 	if err != nil {
-		return nil, fmt.Errorf("the jwt should contain of 3 parts: %w", err)
+		return nil, fmt.Errorf("the jwt should contain out of 3 parts: %w", err)
 	}
 
 	headers := jws.NewHeaders()
 	headerStr, _ := base64.RawURLEncoding.DecodeString(string(rawHeader))
 	if err = json.Unmarshal(headerStr, headers); err != nil {
-		return nil, fmt.Errorf("could not unmarshall headers: %w", err)
+		return nil, fmt.Errorf("could not parse jwt headers: %w", err)
 	}
 
 	certsFromHeader := headers.X509CertChain()
@@ -98,9 +102,9 @@ func (validator JwtX509Validator) Parse(rawAuthToken string) (*JwtX509Token, err
 		return nil, fmt.Errorf("the jwt x5c field should contain at least 1 certificate")
 	}
 
-	chain, err := validator.parseCertsFromHeader(certsFromHeader)
+	chain, err := validator.parseBase64EncodedCertList(certsFromHeader)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse certificates from headers: %w", err)
 	}
 
 	certUsedForSigning := chain[0]
@@ -123,26 +127,34 @@ func (validator JwtX509Validator) Parse(rawAuthToken string) (*JwtX509Token, err
 	}, nil
 }
 
-func (validator JwtX509Validator) parseCertsFromHeader(certsFromHeader []string) ([]*x509.Certificate, error) {
+// parseBase64EncodedCertList makes it convenient to parse an array of base64 certificate into x509.Certificates
+func (validator JwtX509Validator) parseBase64EncodedCertList(certsFromHeader []string) ([]*x509.Certificate, error) {
 	// Parse all the certificates from the header into a chain
 	chain := []*x509.Certificate{}
 
 	for _, certStr := range certsFromHeader {
 		rawCert, err := base64.StdEncoding.Strict().DecodeString(certStr)
 		if err != nil {
-			return nil, fmt.Errorf("could not base64 decode cert: %w", err)
+			return nil, fmt.Errorf("could not base64 decode certificate: %w", err)
 		}
 		cert, err := x509.ParseCertificate(rawCert)
 		if err != nil {
-			return nil, fmt.Errorf("could not parse x509 certificate: %w", err)
+			return nil, fmt.Errorf("could not parse certificate: %w", err)
 		}
 		chain = append(chain, cert)
 	}
 	return chain, nil
 }
 
+// nowFunc can be overwritten during tests to return a different time
 var nowFunc = time.Now
 
+// Verify verifies a JwtX509Token.
+// It checks the signature algorithm
+// It verifies if the certificate used to sign the token has a valid chain
+// It checks the signature of the jst agains the provided leaf certificate in the x509 header
+// It performs additional JWT checks on optional fields like exp, nbf, iat etc.
+// Note: it does not verifies the extended key usage! This should be performed by hand.
 func (validator JwtX509Validator) Verify(x509Token *JwtX509Token) error {
 	var sigAlgAllowed bool
 	for _, allowedAlg := range validator.allowedSigningAlgs {
@@ -181,7 +193,14 @@ func (validator JwtX509Validator) Verify(x509Token *JwtX509Token) error {
 	return nil
 }
 
+// verifyCertChain tries to find a valid certificate chain for the given JwtX509Token.
+// It uses the provided roots and intermediates.
+// If a chain is found, it returns the leaf certificate and the list of valid chains.
 func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x509.Certificate, [][]*x509.Certificate, error) {
+	if len(x509Token.chain) == 0 {
+		return nil, nil, fmt.Errorf("JWT x5c field does not contain certificates")
+	}
+
 	rootsPool := x509.NewCertPool()
 	for _, cert := range validator.roots {
 		rootsPool.AddCert(cert)
@@ -197,10 +216,6 @@ func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x50
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 	}
 
-	if len(x509Token.chain) == 0 {
-		return nil, nil, fmt.Errorf("token does not have a certificate")
-	}
-
 	for _, cert := range x509Token.chain[1:len(x509Token.chain)] {
 		verifyOpts.Intermediates.AddCert(cert)
 	}
@@ -214,15 +229,23 @@ func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x50
 
 	rootCert := verifiedChains[0][len(verifiedChains[0])-1]
 	if !bytes.Equal(rootCert.RawIssuer, rootCert.RawSubject) || rootCert.CheckSignatureFrom(rootCert) != nil {
-		return nil, nil, fmt.Errorf("certificate is not a root CA")
+		return nil, nil, fmt.Errorf("certificate '%s' is not a root CA", rootCert.Subject.String())
 	}
 
 	return leafCert, verifiedChains, err
 }
 
+// checkCertRevocation checks a given certificate chain for revoked certificates.
+// The order of the certificates should be that each certificate is issued by the next one. The root comes last.
 func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Certificate) error {
-	for i, certToCheck := range verifiedChain[0 : len(verifiedChain)-1] {
-		issuer := verifiedChain[i+1]
+	for i, certToCheck := range verifiedChain {
+		issuerIdx := i + 1
+		// root is self signed
+		if issuerIdx == len(verifiedChain) {
+			issuerIdx = i
+		}
+		issuer := verifiedChain[issuerIdx]
+
 		for _, crlPoint := range certToCheck.CRLDistributionPoints {
 			crl, err := validator.crls.GetCrl(crlPoint)
 			if err != nil {
@@ -232,24 +255,15 @@ func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Cert
 				return fmt.Errorf("crl has expired since: %s", crl.TBSCertList.NextUpdate.String())
 			}
 			if err := issuer.CheckCRLSignature(crl); err != nil {
-				return fmt.Errorf("could not check cert agains CRL: %w", err)
+				return fmt.Errorf("could not check cert agains crl: %w", err)
 			}
 			revokedCerts := crl.TBSCertList.RevokedCertificates
 			for _, revoked := range revokedCerts {
 				if certToCheck.SerialNumber.Cmp(revoked.SerialNumber) == 0 {
-					return fmt.Errorf("cert with serial '%s' is revoked", certToCheck.SerialNumber.String())
+					return fmt.Errorf("cert with serial '%s' and subject '%s' is revoked", certToCheck.SerialNumber.String(), certToCheck.Subject.String())
 				}
 			}
 		}
 	}
 	return nil
-}
-
-func readCertFromFile(path string) (*x509.Certificate, error) {
-	// get the cert chain:
-	rawCert, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return x509.ParseCertificate(rawCert)
 }

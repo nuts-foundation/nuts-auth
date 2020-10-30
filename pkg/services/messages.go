@@ -129,7 +129,10 @@ const IrmaTokenContainerType TokenContainerType = "irma"
 
 // NutsAuthenticationTokenContainer holds the base64 encoded token and a type which uniquely
 // identifies the means used to sign the contract
+// See the Nuts RFC002 section 6 :Authentication Token Container
 type NutsAuthenticationTokenContainer struct {
-	Type  TokenContainerType `json:"type"`
-	Token string             `json:"token"`
+	// Type indicates the type of the base64 encoded Token
+	Type TokenContainerType `json:"type"`
+	// Token contains a base64 signed token.
+	Token string `json:"token"`
 }

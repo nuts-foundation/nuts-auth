@@ -230,7 +230,7 @@ func convertPayloadToClaimsLegacy(payload LegacyIdentityToken) (map[string]inter
 	}
 
 	if err := json.Unmarshal(jsonString, &claims); err != nil {
-		return nil, fmt.Errorf("could not unmarshall string: %w", err)
+		return nil, fmt.Errorf("could not unmarshal string: %w", err)
 	}
 
 	return claims, nil
@@ -250,7 +250,7 @@ func convertPayloadToClaims(payload services.NutsIdentityToken) (map[string]inte
 	}
 
 	if err := json.Unmarshal(jsonString, &claims); err != nil {
-		return nil, fmt.Errorf("could not unmarshall string: %w", err)
+		return nil, fmt.Errorf("could not unmarshal string: %w", err)
 	}
 
 	return claims, nil

@@ -54,9 +54,10 @@ func TestUziValidator(t *testing.T) {
 			"uziNr":    "900021219",
 			"version":  "1",
 		}
+		attrs, err := signedToken.SignerAttributes()
 
-		assert.Equal(t, expected, signedToken.SignerAttributes())
-
+		assert.NoError(t, err)
+		assert.Equal(t, expected, attrs)
 		assert.Equal(t, contract.Type("BehandelaarLogin"), signedToken.Contract().Template.Type)
 		assert.Equal(t, contract.Language("NL"), signedToken.Contract().Template.Language)
 		assert.Equal(t, contract.Version("v1"), signedToken.Contract().Template.Version)

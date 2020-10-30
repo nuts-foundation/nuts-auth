@@ -78,7 +78,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 		assert.Nil(t, leaf)
 		assert.Nil(t, chain)
 		if assert.Error(t, err) {
-			assert.Equal(t, "certificate is not a root CA", err.Error())
+			assert.Equal(t, "certificate 'CN=Nuts Test - Intermediate CA,O=Nuts,C=NL' is not a root CA", err.Error())
 		}
 	})
 
@@ -100,7 +100,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 			token := &JwtX509Token{chain: []*x509.Certificate{}}
 			leaf, chain, err := validator.verifyCertChain(token)
 			if assert.Error(t, err) {
-				assert.Equal(t, "token does not have a certificate", err.Error())
+				assert.Equal(t, "JWT x5c field does not contain certificates", err.Error())
 			}
 			assert.Nil(t, leaf)
 			assert.Nil(t, chain)
@@ -140,7 +140,7 @@ func TestJwtX509Validator_Parse(t *testing.T) {
 		token, err := validator.Parse("")
 		assert.Nil(t, token)
 		if assert.Error(t, err) {
-			assert.Equal(t, "the jwt should contain of 3 parts: invalid number of segments", err.Error())
+			assert.Equal(t, "the jwt should contain out of 3 parts: invalid number of segments", err.Error())
 		}
 	})
 
@@ -148,7 +148,7 @@ func TestJwtX509Validator_Parse(t *testing.T) {
 		token, err := validator.Parse("header.payload.signature")
 		assert.Nil(t, token)
 		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "could not unmarshall headers: invalid character")
+			assert.Contains(t, err.Error(), "could not parse jwt headers: invalid character")
 		}
 	})
 
@@ -182,7 +182,7 @@ func TestJwtX509Validator_Parse(t *testing.T) {
 		token, err := validator.Parse(string(signedJwt))
 		assert.Nil(t, token)
 		if assert.Error(t, err) {
-			assert.Equal(t, "could not base64 decode cert: illegal base64 data at input byte 0", err.Error())
+			assert.Equal(t, "could not parse certificates from headers: could not base64 decode certificate: illegal base64 data at input byte 0", err.Error())
 		}
 
 	})
@@ -197,7 +197,7 @@ func TestJwtX509Validator_Parse(t *testing.T) {
 		token, err := validator.Parse(string(signedJwt))
 		assert.Nil(t, token)
 		if assert.Error(t, err) {
-			assert.Equal(t, "could not parse x509 certificate: asn1: structure error: length too large", err.Error())
+			assert.Equal(t, "could not parse certificates from headers: could not parse certificate: asn1: structure error: length too large", err.Error())
 		}
 
 	})
@@ -258,11 +258,14 @@ func TestJwtX509Validator_SubjectAltNameOtherName(t *testing.T) {
 			chain: []*x509.Certificate{leaf},
 		}
 
-		san, err := token.SubjectAltNameOtherName()
+		san, err := token.SubjectAltNameOtherNames()
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.Equal(t, "2.16.528.1.1007.99.218-1-900021219-N-90000382-00.000-00000000", san)
+		if !assert.Len(t, san, 1) {
+			return
+		}
+		assert.Equal(t, "2.16.528.1.1007.99.218-1-900021219-N-90000382-00.000-00000000", san[0])
 	})
 
 	t.Run("ok - no san in cert", func(t *testing.T) {
@@ -274,11 +277,9 @@ func TestJwtX509Validator_SubjectAltNameOtherName(t *testing.T) {
 			chain: []*x509.Certificate{rootCert},
 		}
 
-		san, err := token.SubjectAltNameOtherName()
-		if !assert.NoError(t, err) {
-			return
-		}
-		assert.Equal(t, "", san)
+		san, err := token.SubjectAltNameOtherNames()
+		assert.NoError(t, err)
+		assert.Len(t, san, 0)
 	})
 
 	t.Run("ok - own certificate", func(t *testing.T) {
@@ -309,12 +310,11 @@ func TestJwtX509Validator_SubjectAltNameOtherName(t *testing.T) {
 		cert, err := createTestCert(nil, template, &priv.PublicKey, priv)
 
 		token := JwtX509Token{chain: []*x509.Certificate{cert}}
-		san, err := token.SubjectAltNameOtherName()
+		sans, err := token.SubjectAltNameOtherNames()
 		if !assert.NoError(t, err) {
 			return
 		}
-		assert.Equal(t, "foo:bar", san)
-
+		assert.Equal(t, "foo:bar", sans[0])
 	})
 }
 
@@ -440,7 +440,7 @@ func TestJwtX509Validator_checkCertRevocation(t *testing.T) {
 			validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256}, crls)
 			err = validator.checkCertRevocation([]*x509.Certificate{leafCert, intermediateCert, rootCert})
 			if assert.Error(t, err) {
-				assert.Equal(t, fmt.Sprintf("cert with serial '%s' is revoked", intermediateCert.SerialNumber.String()), err.Error())
+				assert.Equal(t, fmt.Sprintf("cert with serial '%s' and subject '%s' is revoked", intermediateCert.SerialNumber.String(), intermediateCert.Subject.String()), err.Error())
 			}
 
 		})

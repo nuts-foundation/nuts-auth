@@ -43,7 +43,7 @@ type AuthenticationTokenContainerEncoded interface {
 // SignedToken defines the uniform interface to crypto specific implementations such as Irma or x509 tokens.
 type SignedToken interface {
 	// SignerAttributes extracts a map of attribute names and their values from the signature
-	SignerAttributes() map[string]string
+	SignerAttributes() (map[string]string, error)
 	// Contract extracts the Contract from the SignedToken
 	Contract() contract.Contract
 }
