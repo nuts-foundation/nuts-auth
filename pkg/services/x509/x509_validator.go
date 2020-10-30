@@ -239,25 +239,22 @@ func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x50
 // The order of the certificates should be that each certificate is issued by the next one. The root comes last.
 func (validator JwtX509Validator) checkCertRevocation(verifiedChain []*x509.Certificate) error {
 	for i, certToCheck := range verifiedChain {
-		var issuer *x509.Certificate
-
-		if i+1 == len(verifiedChain) {
-			// root is self signed
-			issuer = certToCheck
-		} else {
-			issuer = verifiedChain[i+1]
+		// issuer is normally the next cert in the chain, except for the root which is self signed
+		issuerIdx := 1 + i
+		if issuerIdx == len(verifiedChain) {
+			issuerIdx = i
 		}
 
 		for _, crlPoint := range certToCheck.CRLDistributionPoints {
 			crl, err := validator.crls.GetCrl(crlPoint)
 			if err != nil {
-				return err
+				return fmt.Errorf("unable to get the crl for cert '%s': %w", certToCheck.Subject.String(), err)
 			}
 			if crl.HasExpired(nowFunc()) {
 				return fmt.Errorf("crl has expired since: %s", crl.TBSCertList.NextUpdate.String())
 			}
-			if err := issuer.CheckCRLSignature(crl); err != nil {
-				return fmt.Errorf("could not check cert agains crl: %w", err)
+			if err := verifiedChain[issuerIdx].CheckCRLSignature(crl); err != nil {
+				return fmt.Errorf("crl is not signed by the certs issuer: %w", err)
 			}
 			revokedCerts := crl.TBSCertList.RevokedCertificates
 			for _, revoked := range revokedCerts {
