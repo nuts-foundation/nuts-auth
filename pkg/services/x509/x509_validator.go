@@ -127,7 +127,7 @@ func (validator JwtX509Validator) Parse(rawAuthToken string) (*JwtX509Token, err
 	}, nil
 }
 
-// parseBase64EncodedCertList makes it convenient to parse an array of base64 certificate into x509.Certificates
+// parseBase64EncodedCertList makes it convenient to parse an array of base64 certificates into x509.Certificates
 func (validator JwtX509Validator) parseBase64EncodedCertList(certsFromHeader []string) ([]*x509.Certificate, error) {
 	// Parse all the certificates from the header into a chain
 	chain := []*x509.Certificate{}

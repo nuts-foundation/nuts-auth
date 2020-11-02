@@ -190,7 +190,7 @@ func (u UziValidator) Parse(rawAuthToken string) (services.SignedToken, error) {
 	return UziSignedToken{jwtX509Token: x509Token, contract: c}, nil
 }
 
-// extKeyUsageDocumentSigning is required for siging documents, according to the UZI spec.
+// extKeyUsageDocumentSigning is required for signing documents, according to the UZI spec.
 var extKeyUsageDocumentSigning = asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 311, 10, 3, 12}
 
 // Verify performs all the crypto verifications like:
@@ -222,7 +222,7 @@ func (u UziValidator) Verify(token services.SignedToken) error {
 		}
 	}
 	if !keyUsageFound {
-		return fmt.Errorf("certificate is missing the extended key usage for document siging (oid:1.3.6.1.4.1.311.10.3.12)")
+		return fmt.Errorf("certificate is missing the extended key usage for document signing (%s)", extKeyUsageDocumentSigning.String())
 	}
 	return nil
 }

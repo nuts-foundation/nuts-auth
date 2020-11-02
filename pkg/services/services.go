@@ -31,13 +31,13 @@ type OAuthClient interface {
 	Configure() error
 }
 
-// AuthenticationTokenContainerEncoded defines the interface for Authentication Token Containers services
-type AuthenticationTokenContainerEncoded interface {
+// AuthenticationTokenContainerEncoder defines the interface for Authentication Token Containers services
+type AuthenticationTokenContainerEncoder interface {
 	// Decode accepts a raw token container encoded as a string and decodes it into a NutsAuthenticationTokenContainer
 	Decode(rawTokenContainer string) (*NutsAuthenticationTokenContainer, error)
 
 	// Encode accepts a NutsAuthenticationTokenContainer and encodes in into a string
-	Encode(authTokenContainer *NutsAuthenticationTokenContainer) (string, error)
+	Encode(authTokenContainer NutsAuthenticationTokenContainer) (string, error)
 }
 
 // SignedToken defines the uniform interface to crypto specific implementations such as Irma or x509 tokens.
