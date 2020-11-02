@@ -167,7 +167,12 @@ func (validator JwtX509Validator) Verify(x509Token *JwtX509Token) error {
 		return fmt.Errorf("signature algorithm %s is not allowed", x509Token.sigAlg)
 	}
 
-	leafCert, verifiedChains, err := validator.verifyCertChain(x509Token)
+	rawIat, ok := x509Token.token.Get(jwt.IssuedAtKey)
+	checkTime, iatCastOk := rawIat.(time.Time)
+	if !ok || !iatCastOk {
+		return fmt.Errorf("jwt must have an issued at (iat) field")
+	}
+	leafCert, verifiedChains, err := validator.verifyCertChain(x509Token.chain, checkTime)
 	if err != nil {
 		return err
 	}
@@ -196,8 +201,9 @@ func (validator JwtX509Validator) Verify(x509Token *JwtX509Token) error {
 // verifyCertChain tries to find a valid certificate chain for the given JwtX509Token.
 // It uses the provided roots and intermediates.
 // If a chain is found, it returns the leaf certificate and the list of valid chains.
-func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x509.Certificate, [][]*x509.Certificate, error) {
-	if len(x509Token.chain) == 0 {
+// A chain should have been valid during the token issued at time.
+func (validator JwtX509Validator) verifyCertChain(chain []*x509.Certificate, checkTime time.Time) (*x509.Certificate, [][]*x509.Certificate, error) {
+	if len(chain) == 0 {
 		return nil, nil, fmt.Errorf("JWT x5c field does not contain certificates")
 	}
 
@@ -212,15 +218,15 @@ func (validator JwtX509Validator) verifyCertChain(x509Token *JwtX509Token) (*x50
 	verifyOpts := x509.VerifyOptions{
 		Intermediates: intermediatesPool,
 		Roots:         rootsPool,
-		CurrentTime:   time.Now(),
+		CurrentTime:   checkTime,
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 	}
 
-	for _, cert := range x509Token.chain[1:len(x509Token.chain)] {
+	for _, cert := range chain[1:] {
 		verifyOpts.Intermediates.AddCert(cert)
 	}
 
-	leafCert := x509Token.chain[0]
+	leafCert := chain[0]
 
 	verifiedChains, err := leafCert.Verify(verifyOpts)
 	if err != nil {

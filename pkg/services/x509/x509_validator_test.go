@@ -41,8 +41,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 		assert.NotNil(t, validator)
 
 		t.Run("ok - leaf and intermediate in token", func(t *testing.T) {
-			token := &JwtX509Token{chain: []*x509.Certificate{leafCert, intermediateCert}}
-			leaf, chain, err := validator.verifyCertChain(token)
+			leaf, chain, err := validator.verifyCertChain([]*x509.Certificate{leafCert, intermediateCert}, time.Now())
 			if !assert.NoError(t, err) {
 				return
 			}
@@ -51,8 +50,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 		})
 
 		t.Run("nok - intermediate missing from token", func(t *testing.T) {
-			token := &JwtX509Token{chain: []*x509.Certificate{leafCert}}
-			leaf, chain, err := validator.verifyCertChain(token)
+			leaf, chain, err := validator.verifyCertChain([]*x509.Certificate{leafCert}, time.Now())
 			if assert.Error(t, err) {
 				assert.Equal(t, "unable to verify certificate chain: x509: certificate signed by unknown authority", err.Error())
 			}
@@ -63,8 +61,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 		t.Run("nok - complete chain in token, but not part of roots", func(t *testing.T) {
 			otherRootCert, _, _ := createTestRootCert()
 			validator := NewJwtX509Validator([]*x509.Certificate{otherRootCert}, nil, nil, nil)
-			token := &JwtX509Token{chain: []*x509.Certificate{leafCert, intermediateCert, rootCert}}
-			_, _, err := validator.verifyCertChain(token)
+			_, _, err := validator.verifyCertChain([]*x509.Certificate{leafCert, intermediateCert, rootCert}, time.Now())
 			assert.Error(t, err)
 			assert.EqualError(t, err, "unable to verify certificate chain: x509: certificate signed by unknown authority (possibly because of \"crypto/rsa: verification error\" while trying to verify candidate authority certificate \"Nuts Test - Root CA\")")
 		})
@@ -73,8 +70,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 
 	t.Run("nok - root is not a root", func(t *testing.T) {
 		validator := NewJwtX509Validator([]*x509.Certificate{intermediateCert}, nil, nil, nil)
-		token := &JwtX509Token{chain: []*x509.Certificate{leafCert}}
-		leaf, chain, err := validator.verifyCertChain(token)
+		leaf, chain, err := validator.verifyCertChain([]*x509.Certificate{leafCert}, time.Now())
 		assert.Nil(t, leaf)
 		assert.Nil(t, chain)
 		if assert.Error(t, err) {
@@ -87,8 +83,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 		assert.NotNil(t, validator)
 
 		t.Run("ok - valid chain", func(t *testing.T) {
-			token := &JwtX509Token{chain: []*x509.Certificate{leafCert}}
-			leaf, chain, err := validator.verifyCertChain(token)
+			leaf, chain, err := validator.verifyCertChain([]*x509.Certificate{leafCert}, time.Now())
 			if !assert.NoError(t, err) {
 				return
 			}
@@ -97,8 +92,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 		})
 
 		t.Run("nok - token without leaf cert", func(t *testing.T) {
-			token := &JwtX509Token{chain: []*x509.Certificate{}}
-			leaf, chain, err := validator.verifyCertChain(token)
+			leaf, chain, err := validator.verifyCertChain([]*x509.Certificate{}, time.Now())
 			if assert.Error(t, err) {
 				assert.Equal(t, "JWT x5c field does not contain certificates", err.Error())
 			}
@@ -109,8 +103,7 @@ func TestNewJwtX509Validator(t *testing.T) {
 	})
 	t.Run("nok - validator without roots", func(t *testing.T) {
 		validator := NewJwtX509Validator(nil, []*x509.Certificate{rootCert, intermediateCert}, nil, nil)
-		token := &JwtX509Token{chain: []*x509.Certificate{leafCert, intermediateCert}}
-		_, _, err := validator.verifyCertChain(token)
+		_, _, err := validator.verifyCertChain([]*x509.Certificate{leafCert, intermediateCert}, time.Now())
 		if assert.Error(t, err) {
 			assert.Equal(t, "unable to verify certificate chain: x509: certificate signed by unknown authority", err.Error())
 		}
@@ -338,6 +331,7 @@ func TestJwtX509Validator_Verify(t *testing.T) {
 		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256}, nil)
 
 		theJwt := jwt.New()
+		theJwt.Set(jwt.IssuedAtKey, time.Now())
 		headers := jws.NewHeaders()
 		assert.NoError(t, headers.Set(jws.X509CertChainKey, []string{base64.StdEncoding.EncodeToString(leafCert.Raw)}))
 		rawJwt, err := jwt.Sign(theJwt, jwa.RS256, leafKey, jwt.WithHeaders(headers))
@@ -364,7 +358,30 @@ func TestJwtX509Validator_Verify(t *testing.T) {
 		if assert.Error(t, err) {
 			assert.Equal(t, "signature algorithm RS512 is not allowed", err.Error())
 		}
+	})
 
+	t.Run("nok - missing iat", func(t *testing.T) {
+		validator := NewJwtX509Validator([]*x509.Certificate{rootCert}, []*x509.Certificate{intermediateCert}, []jwa.SignatureAlgorithm{jwa.RS256}, nil)
+
+		theJwt := jwt.New()
+		headers := jws.NewHeaders()
+		assert.NoError(t, headers.Set(jws.X509CertChainKey, []string{base64.StdEncoding.EncodeToString(leafCert.Raw)}))
+		rawJwt, err := jwt.Sign(theJwt, jwa.RS256, leafKey, jwt.WithHeaders(headers))
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		x509Token := &JwtX509Token{
+			sigAlg: jwa.RS256,
+			chain:  []*x509.Certificate{leafCert},
+			raw:    string(rawJwt),
+			token:  theJwt,
+		}
+
+		err = validator.Verify(x509Token)
+		if assert.Error(t, err) {
+			assert.Equal(t, "jwt must have an issued at (iat) field", err.Error())
+		}
 	})
 }
 
