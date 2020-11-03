@@ -472,7 +472,7 @@ func Test_claimsFromRequest(t *testing.T) {
 	})
 }
 
-func TestOAuthService_validateAccessToken(t *testing.T) {
+func TestOAuthService_IntrospectAccessToken(t *testing.T) {
 
 	t.Run("validate access token", func(t *testing.T) {
 		ctx := createContext(t)
@@ -486,7 +486,7 @@ func TestOAuthService_validateAccessToken(t *testing.T) {
 		signToken(tokenCtx)
 
 		// Then validate it
-		claims, err := ctx.oauthService.parseAndValidateAccessToken(tokenCtx.rawJwtBearerToken)
+		claims, err := ctx.oauthService.IntrospectAccessToken(tokenCtx.rawJwtBearerToken)
 		if !assert.NoError(t, err) || !assert.NotNil(t, claims) {
 			t.FailNow()
 		}
@@ -503,7 +503,7 @@ func TestOAuthService_validateAccessToken(t *testing.T) {
 		signToken(tokenCtx)
 
 		// Then validate it
-		_, err := ctx.oauthService.parseAndValidateAccessToken(tokenCtx.rawJwtBearerToken)
+		_, err := ctx.oauthService.IntrospectAccessToken(tokenCtx.rawJwtBearerToken)
 		assert.Error(t, err)
 	})
 }

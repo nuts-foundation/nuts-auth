@@ -337,12 +337,6 @@ func claimsFromRequest(request services.CreateJwtBearerTokenRequest, audience st
 	}
 }
 
-// IntrospectAccessToken fills the fields in NutsAccessToken from the given Jwt Access Token
-func (s *service) IntrospectAccessToken(token string) (*services.NutsAccessToken, error) {
-	acClaims, err := s.parseAndValidateAccessToken(token)
-	return acClaims, err
-}
-
 // parseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
 func (s *service) parseAndValidateJwtBearerToken(context *validationContext) error {
 	parser := &jwt.Parser{ValidMethods: services.ValidJWTAlg}
@@ -391,8 +385,8 @@ func getCertificateFromHeaders(token *jwt.Token) (*x509.Certificate, error) {
 	return x509.ParseCertificate(bytes)
 }
 
-// ParseAndValidateAccessToken parses and validates an accesstoken string and returns a filled in NutsAccessToken.
-func (s *service) parseAndValidateAccessToken(accessToken string) (*services.NutsAccessToken, error) {
+// IntrospectAccessToken fills the fields in NutsAccessToken from the given Jwt Access Token
+func (s *service) IntrospectAccessToken(accessToken string) (*services.NutsAccessToken, error) {
 	parser := &jwt.Parser{ValidMethods: services.ValidJWTAlg}
 	token, err := parser.ParseWithClaims(accessToken, &services.NutsAccessToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		// Check if the care provider which signed the token is managed by this node

@@ -4,11 +4,13 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
 )
 
 // AccessTokenRequestFailedResponse defines model for AccessTokenRequestFailedResponse.
@@ -145,12 +147,22 @@ type Proof interface{}
 
 // ProofD defines model for ProofD.
 type ProofD struct {
-	A          *float32                `json:"A,omitempty"`
-	ADisclosed *map[string]interface{} `json:"a_disclosed,omitempty"`
-	AResponses *map[string]interface{} `json:"a_responses,omitempty"`
-	C          *float32                `json:"c,omitempty"`
-	EResponse  *float32                `json:"e_response,omitempty"`
-	VResponse  *float32                `json:"v_response,omitempty"`
+	A          *float32           `json:"A,omitempty"`
+	ADisclosed *ProofD_ADisclosed `json:"a_disclosed,omitempty"`
+	AResponses *ProofD_AResponses `json:"a_responses,omitempty"`
+	C          *float32           `json:"c,omitempty"`
+	EResponse  *float32           `json:"e_response,omitempty"`
+	VResponse  *float32           `json:"v_response,omitempty"`
+}
+
+// ProofD_ADisclosed defines model for ProofD.ADisclosed.
+type ProofD_ADisclosed struct {
+	AdditionalProperties map[string]float32 `json:"-"`
+}
+
+// ProofD_AResponses defines model for ProofD.AResponses.
+type ProofD_AResponses struct {
+	AdditionalProperties map[string]float32 `json:"-"`
 }
 
 // ProofP defines model for ProofP.
@@ -240,12 +252,14 @@ type TokenIntrospectionResponse struct {
 	GivenName *string `json:"given_name,omitempty"`
 	Iat       *int    `json:"iat,omitempty"`
 
-	// The issuer in the JWT is always the acting party, thus the care organization doing the request.
-	// This is used to find the public key of the issuer from the Nuts registry.
+	// The subject (not a Nuts subject) contains the urn of the custodian.
 	Iss *string `json:"iss,omitempty"`
 
 	// End-User's full name in displayable form including all name parts, possibly including titles and suffixes, ordered according to the End-User's locale and preferences.
 	Name *string `json:"name,omitempty"`
+
+	// encoded ops signature.
+	Osi *string `json:"osi,omitempty"`
 
 	// Surname prefix
 	Prefix *string `json:"prefix,omitempty"`
@@ -254,13 +268,11 @@ type TokenIntrospectionResponse struct {
 	// The Nuts subject id, patient identifier in the form of an oid encoded BSN.
 	Sid *string `json:"sid,omitempty"`
 
-	// The subject (not a Nuts subject) contains the urn of the custodian. The
-	// custodian information is used to find the relevant consent (together with actor
-	// and subject).
+	// The subject is always the acting party, thus the care organization requesting access to data.
 	Sub *string `json:"sub,omitempty"`
 
 	// Jwt encoded user identity.
-	Uid *string `json:"uid,omitempty"`
+	Usi *string `json:"usi,omitempty"`
 }
 
 // Type defines model for Type.
@@ -326,6 +338,112 @@ type ValidateContractJSONRequestBody ValidateContractJSONBody
 
 // CreateJwtBearerTokenRequestBody defines body for CreateJwtBearerToken for application/json ContentType.
 type CreateJwtBearerTokenJSONRequestBody CreateJwtBearerTokenJSONBody
+
+// Getter for additional properties for ProofD_ADisclosed. Returns the specified
+// element and whether it was found
+func (a ProofD_ADisclosed) Get(fieldName string) (value float32, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for ProofD_ADisclosed
+func (a *ProofD_ADisclosed) Set(fieldName string, value float32) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]float32)
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for ProofD_ADisclosed to handle AdditionalProperties
+func (a *ProofD_ADisclosed) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]float32)
+		for fieldName, fieldBuf := range object {
+			var fieldVal float32
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for ProofD_ADisclosed to handle AdditionalProperties
+func (a ProofD_ADisclosed) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for ProofD_AResponses. Returns the specified
+// element and whether it was found
+func (a ProofD_AResponses) Get(fieldName string) (value float32, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for ProofD_AResponses
+func (a *ProofD_AResponses) Set(fieldName string, value float32) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]float32)
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for ProofD_AResponses to handle AdditionalProperties
+func (a *ProofD_AResponses) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]float32)
+		for fieldName, fieldBuf := range object {
+			var fieldVal float32
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for ProofD_AResponses to handle AdditionalProperties
+func (a ProofD_AResponses) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
+		}
+	}
+	return json.Marshal(object)
+}
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -507,18 +625,24 @@ type EchoRouter interface {
 
 // RegisterHandlers adds each server route to the EchoRouter.
 func RegisterHandlers(router EchoRouter, si ServerInterface) {
+	RegisterHandlersWithBaseURL(router, si, "")
+}
+
+// Registers handlers, and prepends BaseURL to the paths, so that the paths
+// can be served under a prefix.
+func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL string) {
 
 	wrapper := ServerInterfaceWrapper{
 		Handler: si,
 	}
 
-	router.POST("/auth/accesstoken", wrapper.CreateAccessToken)
-	router.POST("/auth/contract/session", wrapper.CreateSession)
-	router.GET("/auth/contract/session/:id", wrapper.SessionRequestStatus)
-	router.POST("/auth/contract/validate", wrapper.ValidateContract)
-	router.GET("/auth/contract/:contractType", wrapper.GetContractByType)
-	router.POST("/auth/jwtbearertoken", wrapper.CreateJwtBearerToken)
-	router.POST("/auth/token_introspection", wrapper.IntrospectAccessToken)
+	router.POST(baseURL+"/auth/accesstoken", wrapper.CreateAccessToken)
+	router.POST(baseURL+"/auth/contract/session", wrapper.CreateSession)
+	router.GET(baseURL+"/auth/contract/session/:id", wrapper.SessionRequestStatus)
+	router.POST(baseURL+"/auth/contract/validate", wrapper.ValidateContract)
+	router.GET(baseURL+"/auth/contract/:contractType", wrapper.GetContractByType)
+	router.POST(baseURL+"/auth/jwtbearertoken", wrapper.CreateJwtBearerToken)
+	router.POST(baseURL+"/auth/token_introspection", wrapper.IntrospectAccessToken)
 
 }
 
