@@ -122,13 +122,29 @@ paths:
       summary: |
         Create an access token based on the OAuth JWT Bearer flow.
         This endpoint must be available to the outside world for other applications to request access tokens.
-        It requires a X-Nuts-LegalEntity header which should contain the vendor name and must be the same as used in the signed login contract.
+        It requires a two-way TLS connection. The client certificate must be a sibling of the signing certificate of the given JWT.
+        The client certificate must be passed using a X-Ssl-Client-Cert header, PEM encoded and urlescaped.
       tags:
         - auth
+      parameters:
+        - name: X-Ssl-Client-Cert
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Nuts-LegalEntity
+          in: header
+          required: false
+          deprecated: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/CreateAccessTokenRequest"
+          application/json:
             schema:
               $ref: "#/components/schemas/CreateAccessTokenRequest"
       responses:

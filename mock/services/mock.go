@@ -39,7 +39,7 @@ func (m *MockContractValidator) EXPECT() *MockContractValidatorMockRecorder {
 }
 
 // ValidateContract mocks base method
-func (m *MockContractValidator) ValidateContract(contract string, format services.ContractFormat, actingPartyCN string) (*services.ContractValidationResult, error) {
+func (m *MockContractValidator) ValidateContract(contract string, format services.ContractFormat, actingPartyCN *string) (*services.ContractValidationResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidateContract", contract, format, actingPartyCN)
 	ret0, _ := ret[0].(*services.ContractValidationResult)
@@ -54,7 +54,7 @@ func (mr *MockContractValidatorMockRecorder) ValidateContract(contract, format, 
 }
 
 // ValidateJwt mocks base method
-func (m *MockContractValidator) ValidateJwt(contract, actingPartyCN string) (*services.ContractValidationResult, error) {
+func (m *MockContractValidator) ValidateJwt(contract string, actingPartyCN *string) (*services.ContractValidationResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ValidateJwt", contract, actingPartyCN)
 	ret0, _ := ret[0].(*services.ContractValidationResult)

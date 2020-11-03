@@ -11,6 +11,7 @@ import (
 const timeLayout = "Monday, 2 January 2006 15:04:05"
 const ValidFromAttr = "valid_from"
 const ValidToAttr = "valid_to"
+// deprecated
 const ActingPartyAttr = "acting_party"
 const LegalEntityAttr = "legal_entity"
 

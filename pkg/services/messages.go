@@ -1,6 +1,7 @@
 package services
 
 import (
+	"crypto/x509"
 	"encoding/json"
 	"time"
 
@@ -56,7 +57,9 @@ type ValidationRequest struct {
 // CreateAccessTokenRequest contains all information to create an access token from a JwtBearerToken
 type CreateAccessTokenRequest struct {
 	RawJwtBearerToken string
-	VendorIdentifier  string
+	ClientCert  string
+	// deprecated
+	VendorIdentifier  *string
 }
 
 // CreateJwtBearerTokenRequest contains all information to create a JwtBearerToken
@@ -81,9 +84,10 @@ type JwtBearerTokenResult struct {
 // verified by the authorization server.
 type NutsJwtBearerToken struct {
 	jwt.StandardClaims
-	AuthTokenContainer string `json:"usi"`
-	SubjectID          string `json:"sid"`
-	Scope              string `json:"scope"`
+	AuthTokenContainer string            `json:"usi"`
+	SubjectID          string            `json:"sid"`
+	Scope              string            `json:"scope"`
+	SigningCertificate *x509.Certificate `json:-`
 }
 
 // NutsAccessToken is a OAuth 2.0 access token which provides context to a request.
@@ -116,6 +120,8 @@ type ContractValidationResult struct {
 	ContractFormat   ContractFormat  `json:"contract_format"`
 	// DisclosedAttributes contain the attributes used to sign this contract
 	DisclosedAttributes map[string]string `json:"disclosed_attributes"`
+	// ContractAttributes contain the attributes used to fill the contract
+	ContractAttributes map[string]string `json:"contract_attributes"`
 }
 
 // TokenContainerType is used in the NutsAuthenticationTokenContainer to tell the type of the

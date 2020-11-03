@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"time"
 
@@ -24,11 +25,9 @@ import (
 type Wrapper struct {
 	Auth pkg.AuthClient
 }
-
-// TODO: Use the client certificate here, added by a revere proxy. Than the vendor urn can be fetched from the subject alternative name.
-var vendorIdentifierFromHeader = func(ctx echo.Context) string {
-	return ctx.Request().Header.Get("X-Nuts-LegalEntity")
-}
+const errOauthInvalidRequest = "invalid_request"
+const errOauthInvalidGrant = "invalid_grant"
+const errOauthUnsupportedGrant = "unsupported_grant_type"
 
 // CreateSession translates http params to internal format, creates a IRMA signing session
 // and returns the session pointer to the HTTP stack.
@@ -115,14 +114,14 @@ func (api *Wrapper) SessionRequestStatus(ctx echo.Context, sessionID string) err
 	var disclosedAttributes []DisclosedAttribute
 	if len(sessionStatus.Disclosed) > 0 {
 		for _, attr := range sessionStatus.Disclosed[0] {
-			value := make(map[string]string)
+			value := make(map[string]interface{})
 			for key, val := range map[string]string(attr.Value) {
 				value[key] = val
 			}
 
 			disclosedAttributes = append(disclosedAttributes, DisclosedAttribute{
 				Identifier: attr.Identifier.String(),
-				Value:      DisclosedAttribute_Value{value},
+				Value:      value,
 				Rawvalue:   attr.RawValue,
 				Status:     string(attr.Status),
 			})
@@ -171,14 +170,14 @@ func (api *Wrapper) ValidateContract(ctx echo.Context) error {
 	}
 
 	// convert internal result back to generated api format
-	signerAttributes := make(map[string]string)
+	signerAttributes := make(map[string]interface{})
 	for k, v := range validationResponse.DisclosedAttributes {
 		signerAttributes[k] = v
 	}
 
 	answer := ValidationResult{
 		ContractFormat:   string(validationResponse.ContractFormat),
-		SignerAttributes: ValidationResult_SignerAttributes{AdditionalProperties: signerAttributes},
+		SignerAttributes: signerAttributes,
 		ValidationResult: string(validationResponse.ValidationResult),
 	}
 
@@ -223,7 +222,7 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 
 // CreateAccessToken handles the api call to create an access token.
 // It consumes and checks the JWT and returns a smaller sessionToken
-func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
+func (api *Wrapper) CreateAccessToken(ctx echo.Context, params CreateAccessTokenParams) (err error) {
 	// Can't use echo.Bind() here since it requires extra tags on generated code
 	request := new(CreateAccessTokenRequest)
 	request.Assertion = ctx.FormValue("assertion")
@@ -231,27 +230,34 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context) (err error) {
 
 	if request.GrantType != pkg.JwtBearerGrantType {
 		errDesc := fmt.Sprintf("grant_type must be: '%s'", pkg.JwtBearerGrantType)
-		errorResponse := AccessTokenRequestFailedResponse{Error: "unsupported_grant_type", ErrorDescription: errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthUnsupportedGrant, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 
 	const jwtPattern = `^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$`
 	if matched, err := regexp.Match(jwtPattern, []byte(request.Assertion)); !matched || err != nil {
 		errDesc := "Assertion must be a valid encoded jwt"
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidGrant, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-	vendorID := vendorIdentifierFromHeader(ctx)
-	if vendorID == "" {
-		errDesc := "Vendor identifier missing in header"
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
+
+	if params.XSslClientCert == "" {
+		errDesc := "Client certificate missing in header"
+		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidRequest, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: vendorID}
+	cert, err := url.PathUnescape(params.XSslClientCert)
+	if (err != nil) {
+		errDesc := "corrupted client certificate header"
+		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidRequest, ErrorDescription: errDesc}
+		return ctx.JSON(http.StatusBadRequest, errorResponse)
+	}
+
+	catRequest := services.CreateAccessTokenRequest{RawJwtBearerToken: request.Assertion, VendorIdentifier: params.XNutsLegalEntity, ClientCert: cert}
 	acResponse, err := api.Auth.OAuthClient().CreateAccessToken(catRequest)
 	if err != nil {
 		errDesc := err.Error()
-		errorResponse := AccessTokenRequestFailedResponse{Error: "invalid_grant", ErrorDescription: errDesc}
+		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidRequest, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 	response := AccessTokenResponse{AccessToken: acResponse.AccessToken}

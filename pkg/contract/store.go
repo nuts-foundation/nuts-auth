@@ -27,6 +27,15 @@ var StandardContractTemplates = TemplateStore{
 			TemplateAttributes: []string{ActingPartyAttr, LegalEntityAttr, ValidFromAttr, ValidToAttr},
 			Regexp:             `NL:BehandelaarLogin:v2 Ondergetekende geeft toestemming aan (.+) om namens (.+) en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van (.+) tot (.+).`,
 		},
+		"v3": &Template{
+			Type:               "BehandelaarLogin",
+			Version:            "v3",
+			Language:           "NL",
+			SignerAttributes:   StandardSignerAttributes,
+			Template:           `NL:BehandelaarLogin:v3 Hierbij verklaar ik te handelen in naam van {{` + LegalEntityAttr + `}}. Deze verklaring is geldig van {{` + ValidFromAttr + `}} tot {{` + ValidToAttr + `}}.`,
+			TemplateAttributes: []string{LegalEntityAttr, ValidFromAttr, ValidToAttr},
+			Regexp:             `NL:BehandelaarLogin:v3 Hierbij verklaar ik te handelen in naam van (.+). Deze verklaring is geldig van (.+) tot (.+).`,
+		},
 	}},
 	"EN": {"PractitionerLogin": {
 		"v1": &Template{
@@ -46,6 +55,15 @@ var StandardContractTemplates = TemplateStore{
 			Template:           `EN:PractitionerLogin:v2 Undersigned gives permission to {{` + ActingPartyAttr + `}} to make request to the Nuts network on behalf of {{` + LegalEntityAttr + `}} and itself. This permission is valid from {{` + ValidFromAttr + `}} until {{` + ValidToAttr + `}}.`,
 			TemplateAttributes: []string{ActingPartyAttr, LegalEntityAttr, ValidFromAttr, ValidToAttr},
 			Regexp:             `EN:PractitionerLogin:v2 Undersigned gives permission to (.+) to make request to the Nuts network on behalf of (.+) and itself. This permission is valid from (.+) until (.+).`,
+		},
+		"v3": &Template{
+			Type:               "PractitionerLogin",
+			Version:            "v3",
+			Language:           "EN",
+			SignerAttributes:   StandardSignerAttributes,
+			Template:           `EN:PractitionerLogin:v3 I hereby declare to act on behalf of {{` + LegalEntityAttr + `}}. This declaration is valid from {{` + ValidFromAttr + `}} until {{` + ValidToAttr + `}}.`,
+			TemplateAttributes: []string{LegalEntityAttr, ValidFromAttr, ValidToAttr},
+			Regexp:             `EN:PractitionerLogin:v3 I hereby declare to act on behalf of (.+). This declaration is valid from (.+) until (.+).`,
 		},
 	}},
 }

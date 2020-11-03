@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mdp/qrterminal"
+	"github.com/mdp/qrterminal/v3"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
@@ -110,8 +110,10 @@ var ErrMissingPublicURL = errors.New("missing publicUrl")
 
 func (s *service) configureContracts() (err error) {
 	if s.config.ActingPartyCn == "" {
-		err = ErrMissingActingParty
-		return
+		// todo remove this check in 0.17
+		logrus.Info("no actingPartyCn configured, this is needed for v2 contracts (deprecated)")
+	} else {
+		logrus.Warn("actingPartyCn is deprecated, please migrate to v3 contracts and remove the config parameter")
 	}
 	if s.config.PublicUrl == "" {
 		err = ErrMissingPublicURL
@@ -243,10 +245,15 @@ func (s *service) ContractSessionStatus(sessionID string) (*services.SessionStat
 // ValidateContract validates a given contract. Currently two Type's are accepted: Irma and Jwt.
 // Both types should be passed as a base64 encoded string in the ContractString of the request paramContractString of the request param
 func (s *service) ValidateContract(request services.ValidationRequest) (*services.ContractValidationResult, error) {
+	var actingPartyCN *string
+	if request.ActingPartyCN != "" {
+		actingPartyCN = &request.ActingPartyCN
+	}
+
 	if request.ContractFormat == services.IrmaFormat {
-		return s.contractValidator.ValidateContract(request.ContractString, services.IrmaFormat, request.ActingPartyCN)
+		return s.contractValidator.ValidateContract(request.ContractString, services.IrmaFormat, actingPartyCN)
 	} else if request.ContractFormat == services.JwtFormat {
-		return s.contractValidator.ValidateJwt(request.ContractString, request.ActingPartyCN)
+		return s.contractValidator.ValidateJwt(request.ContractString, actingPartyCN)
 	}
 	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, contract.ErrUnknownContractFormat)
 }

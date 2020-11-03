@@ -55,7 +55,7 @@ func (v IrmaService) IsInitialized() bool {
 // ValidateContract is the entry point for contract validation.
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
 // Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
-func (v IrmaService) ValidateContract(b64EncodedContract string, format services.ContractFormat, actingPartyCN string) (*services.ContractValidationResult, error) {
+func (v IrmaService) ValidateContract(b64EncodedContract string, format services.ContractFormat, actingPartyCN *string) (*services.ContractValidationResult, error) {
 	if format == services.IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
@@ -73,7 +73,7 @@ func (v IrmaService) ValidateContract(b64EncodedContract string, format services
 }
 
 // ValidateJwt validates a JWT formatted identity token
-func (v IrmaService) ValidateJwt(token string, actingPartyCN string) (*services.ContractValidationResult, error) {
+func (v IrmaService) ValidateJwt(token string, actingPartyCN *string) (*services.ContractValidationResult, error) {
 	parser := &jwt.Parser{ValidMethods: services.ValidJWTAlg}
 	parsedToken, err := parser.ParseWithClaims(token, &services.NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity, err := parseTokenIssuer(token.Claims.(*services.NutsIdentityToken).Issuer)

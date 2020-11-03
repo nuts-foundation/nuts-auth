@@ -4,13 +4,11 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
 )
 
 // AccessTokenRequestFailedResponse defines model for AccessTokenRequestFailedResponse.
@@ -108,15 +106,10 @@ type CreateSessionResult struct {
 
 // DisclosedAttribute defines model for DisclosedAttribute.
 type DisclosedAttribute struct {
-	Identifier string                   `json:"identifier"`
-	Rawvalue   *string                  `json:"rawvalue,omitempty"`
-	Status     string                   `json:"status"`
-	Value      DisclosedAttribute_Value `json:"value"`
-}
-
-// DisclosedAttribute_Value defines model for DisclosedAttribute.Value.
-type DisclosedAttribute_Value struct {
-	AdditionalProperties map[string]string `json:"-"`
+	Identifier string                 `json:"identifier"`
+	Rawvalue   *string                `json:"rawvalue,omitempty"`
+	Status     string                 `json:"status"`
+	Value      map[string]interface{} `json:"value"`
 }
 
 // DisclosedAttributeIndex defines model for DisclosedAttributeIndex.
@@ -152,22 +145,12 @@ type Proof interface{}
 
 // ProofD defines model for ProofD.
 type ProofD struct {
-	A          *float32           `json:"A,omitempty"`
-	ADisclosed *ProofD_ADisclosed `json:"a_disclosed,omitempty"`
-	AResponses *ProofD_AResponses `json:"a_responses,omitempty"`
-	C          *float32           `json:"c,omitempty"`
-	EResponse  *float32           `json:"e_response,omitempty"`
-	VResponse  *float32           `json:"v_response,omitempty"`
-}
-
-// ProofD_ADisclosed defines model for ProofD.ADisclosed.
-type ProofD_ADisclosed struct {
-	AdditionalProperties map[string]float32 `json:"-"`
-}
-
-// ProofD_AResponses defines model for ProofD.AResponses.
-type ProofD_AResponses struct {
-	AdditionalProperties map[string]float32 `json:"-"`
+	A          *float32                `json:"A,omitempty"`
+	ADisclosed *map[string]interface{} `json:"a_disclosed,omitempty"`
+	AResponses *map[string]interface{} `json:"a_responses,omitempty"`
+	C          *float32                `json:"c,omitempty"`
+	EResponse  *float32                `json:"e_response,omitempty"`
+	VResponse  *float32                `json:"v_response,omitempty"`
 }
 
 // ProofP defines model for ProofP.
@@ -298,18 +281,22 @@ type ValidationRequest struct {
 
 // ValidationResult defines model for ValidationResult.
 type ValidationResult struct {
-	ContractFormat   string                            `json:"contract_format"`
-	SignerAttributes ValidationResult_SignerAttributes `json:"signer_attributes"`
-	ValidationResult string                            `json:"validation_result"`
-}
-
-// ValidationResult_SignerAttributes defines model for ValidationResult.SignerAttributes.
-type ValidationResult_SignerAttributes struct {
-	AdditionalProperties map[string]string `json:"-"`
+	ContractFormat   string                 `json:"contract_format"`
+	SignerAttributes map[string]interface{} `json:"signer_attributes"`
+	ValidationResult string                 `json:"validation_result"`
 }
 
 // Version defines model for Version.
 type Version string
+
+// CreateAccessTokenJSONBody defines parameters for CreateAccessToken.
+type CreateAccessTokenJSONBody CreateAccessTokenRequest
+
+// CreateAccessTokenParams defines parameters for CreateAccessToken.
+type CreateAccessTokenParams struct {
+	XSslClientCert   string  `json:"X-Ssl-Client-Cert"`
+	XNutsLegalEntity *string `json:"X-Nuts-LegalEntity,omitempty"`
+}
 
 // CreateSessionJSONBody defines parameters for CreateSession.
 type CreateSessionJSONBody ContractSigningRequest
@@ -328,6 +315,9 @@ type GetContractByTypeParams struct {
 // CreateJwtBearerTokenJSONBody defines parameters for CreateJwtBearerToken.
 type CreateJwtBearerTokenJSONBody CreateJwtBearerTokenRequest
 
+// CreateAccessTokenRequestBody defines body for CreateAccessToken for application/json ContentType.
+type CreateAccessTokenJSONRequestBody CreateAccessTokenJSONBody
+
 // CreateSessionRequestBody defines body for CreateSession for application/json ContentType.
 type CreateSessionJSONRequestBody CreateSessionJSONBody
 
@@ -337,225 +327,14 @@ type ValidateContractJSONRequestBody ValidateContractJSONBody
 // CreateJwtBearerTokenRequestBody defines body for CreateJwtBearerToken for application/json ContentType.
 type CreateJwtBearerTokenJSONRequestBody CreateJwtBearerTokenJSONBody
 
-// Getter for additional properties for DisclosedAttribute_Value. Returns the specified
-// element and whether it was found
-func (a DisclosedAttribute_Value) Get(fieldName string) (value string, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for DisclosedAttribute_Value
-func (a *DisclosedAttribute_Value) Set(fieldName string, value string) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]string)
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for DisclosedAttribute_Value to handle AdditionalProperties
-func (a *DisclosedAttribute_Value) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]string)
-		for fieldName, fieldBuf := range object {
-			var fieldVal string
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for DisclosedAttribute_Value to handle AdditionalProperties
-func (a DisclosedAttribute_Value) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for ProofD_ADisclosed. Returns the specified
-// element and whether it was found
-func (a ProofD_ADisclosed) Get(fieldName string) (value float32, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for ProofD_ADisclosed
-func (a *ProofD_ADisclosed) Set(fieldName string, value float32) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]float32)
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for ProofD_ADisclosed to handle AdditionalProperties
-func (a *ProofD_ADisclosed) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]float32)
-		for fieldName, fieldBuf := range object {
-			var fieldVal float32
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for ProofD_ADisclosed to handle AdditionalProperties
-func (a ProofD_ADisclosed) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for ProofD_AResponses. Returns the specified
-// element and whether it was found
-func (a ProofD_AResponses) Get(fieldName string) (value float32, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for ProofD_AResponses
-func (a *ProofD_AResponses) Set(fieldName string, value float32) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]float32)
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for ProofD_AResponses to handle AdditionalProperties
-func (a *ProofD_AResponses) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]float32)
-		for fieldName, fieldBuf := range object {
-			var fieldVal float32
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for ProofD_AResponses to handle AdditionalProperties
-func (a ProofD_AResponses) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for ValidationResult_SignerAttributes. Returns the specified
-// element and whether it was found
-func (a ValidationResult_SignerAttributes) Get(fieldName string) (value string, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for ValidationResult_SignerAttributes
-func (a *ValidationResult_SignerAttributes) Set(fieldName string, value string) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]string)
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for ValidationResult_SignerAttributes to handle AdditionalProperties
-func (a *ValidationResult_SignerAttributes) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]string)
-		for fieldName, fieldBuf := range object {
-			var fieldVal string
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for ValidationResult_SignerAttributes to handle AdditionalProperties
-func (a ValidationResult_SignerAttributes) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
-		}
-	}
-	return json.Marshal(object)
-}
-
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Create an access token based on the OAuth JWT Bearer flow.
 	// This endpoint must be available to the outside world for other applications to request access tokens.
-	// It requires a X-Nuts-LegalEntity header which should contain the vendor name and must be the same as used in the signed login contract.
+	// It requires a two-way TLS connection. The client certificate must be a sibling of the signing certificate of the given JWT.
+	// The client certificate must be passed using a X-Ssl-Client-Cert header, PEM encoded and urlescaped.
 	// (POST /auth/accesstoken)
-	CreateAccessToken(ctx echo.Context) error
+	CreateAccessToken(ctx echo.Context, params CreateAccessTokenParams) error
 	// CreateSessionHandler Initiates an IRMA signing session with the correct contract.
 	// (POST /auth/contract/session)
 	CreateSession(ctx echo.Context) error
@@ -585,8 +364,45 @@ type ServerInterfaceWrapper struct {
 func (w *ServerInterfaceWrapper) CreateAccessToken(ctx echo.Context) error {
 	var err error
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateAccessTokenParams
+
+	headers := ctx.Request().Header
+	// ------------- Required header parameter "X-Ssl-Client-Cert" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Ssl-Client-Cert")]; found {
+		var XSslClientCert string
+		n := len(valueList)
+		if n != 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for X-Ssl-Client-Cert, got %d", n))
+		}
+
+		err = runtime.BindStyledParameter("simple", false, "X-Ssl-Client-Cert", valueList[0], &XSslClientCert)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter X-Ssl-Client-Cert: %s", err))
+		}
+
+		params.XSslClientCert = XSslClientCert
+	} else {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Header parameter X-Ssl-Client-Cert is required, but not found"))
+	}
+	// ------------- Optional header parameter "X-Nuts-LegalEntity" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Nuts-LegalEntity")]; found {
+		var XNutsLegalEntity string
+		n := len(valueList)
+		if n != 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for X-Nuts-LegalEntity, got %d", n))
+		}
+
+		err = runtime.BindStyledParameter("simple", false, "X-Nuts-LegalEntity", valueList[0], &XNutsLegalEntity)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter X-Nuts-LegalEntity: %s", err))
+		}
+
+		params.XNutsLegalEntity = &XNutsLegalEntity
+	}
+
 	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.CreateAccessToken(ctx)
+	err = w.Handler.CreateAccessToken(ctx, params)
 	return err
 }
 
@@ -705,3 +521,4 @@ func RegisterHandlers(router EchoRouter, si ServerInterface) {
 	router.POST("/auth/token_introspection", wrapper.IntrospectAccessToken)
 
 }
+
