@@ -52,16 +52,9 @@ func GetIrmaConfig(config IrmaServiceConfig) (irmaConfig *irma.Configuration, er
 			return
 		}
 
-		if !config.SkipAutoUpdateIrmaSchemas {
-			logrus.Infof("Downloading irma schemas. If this annoys you or you want to pin the schemas, set %s", ConfSkipAutoUpdateIrmaSchemas)
-			if err = irmaConfig.DownloadDefaultSchemes(); err != nil {
-				return
-			}
-		} else {
-			logrus.Info("Loading irma schemas.")
-			if err = irmaConfig.ParseFolder(); err != nil {
-				return
-			}
+		logrus.Info("Loading irma schemas.")
+		if err = irmaConfig.ParseFolder(); err != nil {
+			return
 		}
 		_irmaConfig = irmaConfig
 	})

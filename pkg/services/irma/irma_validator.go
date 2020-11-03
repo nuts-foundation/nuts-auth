@@ -88,12 +88,13 @@ func (v IrmaService) ValidateJwt(token string, actingPartyCN *string) (*services
 		}
 
 		pk, err := org.CurrentPublicKey()
-
 		if err != nil {
 			return nil, err
 		}
 
-		return pk.Materialize()
+		var key interface{}
+		err = pk.Raw(&key)
+		return key, err
 	})
 
 	if err != nil {
@@ -229,7 +230,7 @@ func convertPayloadToClaimsLegacy(payload LegacyIdentityToken) (map[string]inter
 	}
 
 	if err := json.Unmarshal(jsonString, &claims); err != nil {
-		return nil, fmt.Errorf("could not unmarshall string: %w", err)
+		return nil, fmt.Errorf("could not unmarshal string: %w", err)
 	}
 
 	return claims, nil
@@ -249,7 +250,7 @@ func convertPayloadToClaims(payload services.NutsIdentityToken) (map[string]inte
 	}
 
 	if err := json.Unmarshal(jsonString, &claims); err != nil {
-		return nil, fmt.Errorf("could not unmarshall string: %w", err)
+		return nil, fmt.Errorf("could not unmarshal string: %w", err)
 	}
 
 	return claims, nil
