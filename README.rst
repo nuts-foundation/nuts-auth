@@ -36,9 +36,17 @@ Tests can be run by executing
 Generating code
 ***************
 
+Generate the api package from the OpenAPI specification
+
 .. code-block:: shell
 
     oapi-codegen -generate server,types -package api docs/_static/nuts-auth.yaml > api/generated.go
+
+Embed files like certificates from the bindata directory
+
+.. code-block:: shell
+
+    go-bindata -ignore=\\.DS_Store -pkg=assets -o=./assets/bindata.go -prefix=bindata ./bindata/...
 
 Generating Mock
 ***************
@@ -47,7 +55,8 @@ When making changes to the client interface run the following command to regener
 
 .. code-block:: shell
 
-    mockgen -destination=mock/mock_client.go -package=mock -source=pkg/auth.go
+    mockgen -destination=mock/mock_auth_client.go -package=mock -source=pkg/auth.go
+    mockgen -destination=mock/services/mock.go -package=services -source=pkg/services/services.go
 
 
 Building

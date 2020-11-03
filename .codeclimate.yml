@@ -12,3 +12,4 @@ exclude_patterns:
   - "**/test.go"
   - "**/mock.go"
   - "**/generated.go"
+  - "assets/bindata.go"

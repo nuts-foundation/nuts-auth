@@ -140,7 +140,7 @@ func (s *service) IntrospectAccessToken(token string) (*services.NutsAccessToken
 	return acClaims, err
 }
 
-// ParseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
+// parseAndValidateJwtBearerToken validates the jwt signature and returns the containing claims
 func (s *service) parseAndValidateJwtBearerToken(acString string) (*services.NutsJwtBearerToken, error) {
 	parser := &jwt.Parser{ValidMethods: services.ValidJWTAlg}
 	token, err := parser.ParseWithClaims(acString, &services.NutsJwtBearerToken{}, func(token *jwt.Token) (i interface{}, e error) {

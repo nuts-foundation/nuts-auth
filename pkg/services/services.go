@@ -3,10 +3,11 @@ package services
 import (
 	"net/http"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 )
 
 // ContractValidator interface must be implemented by contract validators
@@ -28,6 +29,32 @@ type OAuthClient interface {
 	CreateJwtBearerToken(request CreateJwtBearerTokenRequest) (*JwtBearerTokenResult, error)
 	IntrospectAccessToken(token string) (*NutsAccessToken, error)
 	Configure() error
+}
+
+// AuthenticationTokenContainerEncoder defines the interface for Authentication Token Containers services
+type AuthenticationTokenContainerEncoder interface {
+	// Decode accepts a raw token container encoded as a string and decodes it into a NutsAuthenticationTokenContainer
+	Decode(rawTokenContainer string) (*NutsAuthenticationTokenContainer, error)
+
+	// Encode accepts a NutsAuthenticationTokenContainer and encodes in into a string
+	Encode(authTokenContainer NutsAuthenticationTokenContainer) (string, error)
+}
+
+// SignedToken defines the uniform interface to crypto specific implementations such as Irma or x509 tokens.
+type SignedToken interface {
+	// SignerAttributes extracts a map of attribute names and their values from the signature
+	SignerAttributes() (map[string]string, error)
+	// Contract extracts the Contract from the SignedToken
+	Contract() contract.Contract
+}
+
+// AuthenticationTokenParser provides a uniform interface for Authentication services like IRMA or x509 signed tokens
+type AuthenticationTokenParser interface {
+	// Parse accepts a raw Auth token string. The parser tries to parse the token into a SignedToken.
+	Parse(rawAuthToken string) (SignedToken, error)
+
+	// Verify accepts a SignedToken and verifies the signature using the crypto for the specific implementation of this interface.
+	Verify(token SignedToken) error
 }
 
 // ContractClient defines functions for creating and validating signed contracts
