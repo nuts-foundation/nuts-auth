@@ -565,7 +565,7 @@ components:
         iss:
           type: string
           description: |
-            The subject (not a Nuts subject) contains the urn of the custodian.
+            The subject (not a Nuts subject) contains the URN of the custodian.
           example: "urn:oid:2.16.840.1.113883.2.4.6.1:48000000"
         sub:
           type: string
@@ -587,7 +587,7 @@ components:
           description: Jwt encoded user identity.
         osi:
           type: string
-          description: encoded ops signature.
+          description: encoded ops signature. (TBD)
         exp:
           type: integer
         iat:
