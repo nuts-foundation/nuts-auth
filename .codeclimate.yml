@@ -10,7 +10,7 @@ plugins:
   gofmt:
     enabled: true
   golint:
-    enabled: false
+    enabled: true
   govet:
     enabled: true
 exclude_patterns:
