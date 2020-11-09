@@ -538,61 +538,6 @@ components:
       properties:
         bearer_token:
           type: string
-    AccessTokenRequestJWT:
-      description: JWT as described in rfc7523
-      required:
-        - iss
-        - sub
-        - iss
-        - sid
-        - aud
-        - uid
-        - exp
-        - iat
-        - jti
-      properties:
-        iss:
-          type: string
-          description: |
-            The issuer in the JWT is always the actor, thus the care organization doing the request.
-            This is used to find the public key of the issuer from the Nuts registry.
-          example: "urn:oid:2.16.840.1.113883.2.4.6.1:48000000"
-        sub:
-          type: string
-          description: |
-            The subject (not a Nuts subject) contains the urn of the custodian. The
-            custodian information is used to find the relevant consent (together with actor
-            and subject).
-          example: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"
-        sid:
-          type: string
-          description: The Nuts subject id, patient identifier in the form of an oid encoded BSN.
-          example: "urn:oid:2.16.840.1.113883.2.4.6.3:9999990"
-        aud:
-          type: string
-          description: |
-            As per rfc7523 https://tools.ietf.org/html/rfc7523>, the aud must be the
-            token endpoint. This can be taken from the Nuts registry.
-          example: "https://target_token_endpoint"
-        uid:
-          type: string
-          description: Jwt encoded user identity.
-        osi:
-          type: string
-          description: "base64 encoded hardware signature"
-        con:
-          type: string
-          description: Additional context
-        exp:
-          type: number
-          description: max(time_from_irma_sign, some_limited_time)
-          example: 1578910481
-        iat:
-          type: number
-          example: 1578910481
-        jti:
-          type: string
-          description: unique identifier
     TokenIntrospectionRequest:
       description: Token introspection request as described in RFC7662 section 2.1
       required:
@@ -616,15 +561,12 @@ components:
         iss:
           type: string
           description: |
-            The issuer in the JWT is always the acting party, thus the care organization doing the request.
-            This is used to find the public key of the issuer from the Nuts registry.
+            The subject (not a Nuts subject) contains the URN of the custodian.
           example: "urn:oid:2.16.840.1.113883.2.4.6.1:48000000"
         sub:
           type: string
           description: |
-            The subject (not a Nuts subject) contains the urn of the custodian. The
-            custodian information is used to find the relevant consent (together with actor
-            and subject).
+            The subject is always the acting party, thus the care organization requesting access to data.
           example: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248"
         sid:
           type: string
@@ -636,9 +578,12 @@ components:
             As per rfc7523 https://tools.ietf.org/html/rfc7523>, the aud must be the
             token endpoint. This can be taken from the Nuts registry.
           example: "https://target_token_endpoint"
-        uid:
+        usi:
           type: string
           description: Jwt encoded user identity.
+        osi:
+          type: string
+          description: encoded ops signature. (TBD)
         exp:
           type: integer
         iat:
