@@ -507,18 +507,24 @@ type EchoRouter interface {
 
 // RegisterHandlers adds each server route to the EchoRouter.
 func RegisterHandlers(router EchoRouter, si ServerInterface) {
+	RegisterHandlersWithBaseURL(router, si, "")
+}
+
+// Registers handlers, and prepends BaseURL to the paths, so that the paths
+// can be served under a prefix.
+func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL string) {
 
 	wrapper := ServerInterfaceWrapper{
 		Handler: si,
 	}
 
-	router.POST("/auth/accesstoken", wrapper.CreateAccessToken)
-	router.POST("/auth/contract/session", wrapper.CreateSession)
-	router.GET("/auth/contract/session/:id", wrapper.SessionRequestStatus)
-	router.POST("/auth/contract/validate", wrapper.ValidateContract)
-	router.GET("/auth/contract/:contractType", wrapper.GetContractByType)
-	router.POST("/auth/jwtbearertoken", wrapper.CreateJwtBearerToken)
-	router.POST("/auth/token_introspection", wrapper.IntrospectAccessToken)
+	router.POST(baseURL+"/auth/accesstoken", wrapper.CreateAccessToken)
+	router.POST(baseURL+"/auth/contract/session", wrapper.CreateSession)
+	router.GET(baseURL+"/auth/contract/session/:id", wrapper.SessionRequestStatus)
+	router.POST(baseURL+"/auth/contract/validate", wrapper.ValidateContract)
+	router.GET(baseURL+"/auth/contract/:contractType", wrapper.GetContractByType)
+	router.POST(baseURL+"/auth/jwtbearertoken", wrapper.CreateJwtBearerToken)
+	router.POST(baseURL+"/auth/token_introspection", wrapper.IntrospectAccessToken)
 
 }
 
