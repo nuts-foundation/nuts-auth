@@ -323,8 +323,6 @@ components:
           type: string
         signer_attributes:
           type: object
-          additionalProperties:
-            type: string
           example: {
             "irma-demo.MijnOverheid.ageLower.over12": "yes",
             "irma-demo.MijnOverheid.fullName": "present"}
@@ -367,8 +365,6 @@ components:
           type: string
         value:
           type: object
-          additionalProperties:
-            type: string
         identifier:
           type: string
         status:
@@ -459,12 +455,8 @@ components:
           type: number
         a_responses:
           type: object
-          additionalProperties:
-            type: number
         a_disclosed:
           type: object
-          additionalProperties:
-            type: number
     CreateAccessTokenRequest:
       description: Request as described in RFC7523 section 2.1
       required:
