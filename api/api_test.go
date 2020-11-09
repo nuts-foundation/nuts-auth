@@ -651,3 +651,55 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 		}
 	})
 }
+
+func TestWrapper_VerifyAccessToken(t *testing.T) {
+	t.Run("403 - missing header", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		params := VerifyAccessTokenParams{
+			Authorization: "",
+		}
+
+		ctx.echoMock.EXPECT().NoContent(http.StatusForbidden)
+
+		_ = ctx.wrapper.VerifyAccessToken(ctx.echoMock, params)
+	})
+
+	t.Run("403 - incorrect authorization header", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		params := VerifyAccessTokenParams{
+			Authorization: "34987569ytihua",
+		}
+
+		ctx.echoMock.EXPECT().NoContent(http.StatusForbidden)
+
+		_ = ctx.wrapper.VerifyAccessToken(ctx.echoMock, params)
+	})
+
+	t.Run("403 - incorrect token", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		params := VerifyAccessTokenParams{
+			Authorization: "Bearer token",
+		}
+
+		ctx.echoMock.EXPECT().NoContent(http.StatusForbidden)
+		ctx.oauthMock.EXPECT().IntrospectAccessToken("token").Return(nil, errors.New("unauthorized"))
+
+		_ = ctx.wrapper.VerifyAccessToken(ctx.echoMock, params)
+	})
+
+	t.Run("200 - correct token", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		params := VerifyAccessTokenParams{
+			Authorization: "Bearer token",
+		}
+
+		ctx.echoMock.EXPECT().NoContent(http.StatusOK)
+		ctx.oauthMock.EXPECT().IntrospectAccessToken("token").Return(&services.NutsAccessToken{}, nil)
+
+		_ = ctx.wrapper.VerifyAccessToken(ctx.echoMock, params)
+	})
+}

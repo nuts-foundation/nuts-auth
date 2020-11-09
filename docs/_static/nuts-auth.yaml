@@ -160,6 +160,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AccessTokenRequestFailedResponse"
+  /auth/accesstoken/verify:
+    head:
+      operationId: verifyAccessToken
+      summary: |
+        Verifies the access token given in the Authorization header (as bearer token). If it's a valid access token issued by this server, it'll return a 200 status code.
+        If it cannot be verified it'll return 403. Note that it'll not return the contents of the access token. The introspection API is for that.
+      tags:
+        - auth
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The access token is valid. It has been signed by this server.
+          content:
+            text/plain:
+              schema:
+                type: string
+        '403':
+          description: The given access token is invalid.
+          content:
+            text/plain:
+              schema:
+                type: string
   /auth/jwtbearertoken:
     post:
       operationId: createJwtBearerToken

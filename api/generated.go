@@ -4,13 +4,11 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
-	"github.com/pkg/errors"
 )
 
 // AccessTokenRequestFailedResponse defines model for AccessTokenRequestFailedResponse.
@@ -147,22 +145,12 @@ type Proof interface{}
 
 // ProofD defines model for ProofD.
 type ProofD struct {
-	A          *float32           `json:"A,omitempty"`
-	ADisclosed *ProofD_ADisclosed `json:"a_disclosed,omitempty"`
-	AResponses *ProofD_AResponses `json:"a_responses,omitempty"`
-	C          *float32           `json:"c,omitempty"`
-	EResponse  *float32           `json:"e_response,omitempty"`
-	VResponse  *float32           `json:"v_response,omitempty"`
-}
-
-// ProofD_ADisclosed defines model for ProofD.ADisclosed.
-type ProofD_ADisclosed struct {
-	AdditionalProperties map[string]float32 `json:"-"`
-}
-
-// ProofD_AResponses defines model for ProofD.AResponses.
-type ProofD_AResponses struct {
-	AdditionalProperties map[string]float32 `json:"-"`
+	A          *float32                `json:"A,omitempty"`
+	ADisclosed *map[string]interface{} `json:"a_disclosed,omitempty"`
+	AResponses *map[string]interface{} `json:"a_responses,omitempty"`
+	C          *float32                `json:"c,omitempty"`
+	EResponse  *float32                `json:"e_response,omitempty"`
+	VResponse  *float32                `json:"v_response,omitempty"`
 }
 
 // ProofP defines model for ProofP.
@@ -252,13 +240,13 @@ type TokenIntrospectionResponse struct {
 	GivenName *string `json:"given_name,omitempty"`
 	Iat       *int    `json:"iat,omitempty"`
 
-	// The subject (not a Nuts subject) contains the urn of the custodian.
+	// The subject (not a Nuts subject) contains the URN of the custodian.
 	Iss *string `json:"iss,omitempty"`
 
 	// End-User's full name in displayable form including all name parts, possibly including titles and suffixes, ordered according to the End-User's locale and preferences.
 	Name *string `json:"name,omitempty"`
 
-	// encoded ops signature.
+	// encoded ops signature. (TBD)
 	Osi *string `json:"osi,omitempty"`
 
 	// Surname prefix
@@ -310,6 +298,11 @@ type CreateAccessTokenParams struct {
 	XNutsLegalEntity *string `json:"X-Nuts-LegalEntity,omitempty"`
 }
 
+// VerifyAccessTokenParams defines parameters for VerifyAccessToken.
+type VerifyAccessTokenParams struct {
+	Authorization string `json:"Authorization"`
+}
+
 // CreateSessionJSONBody defines parameters for CreateSession.
 type CreateSessionJSONBody ContractSigningRequest
 
@@ -339,112 +332,6 @@ type ValidateContractJSONRequestBody ValidateContractJSONBody
 // CreateJwtBearerTokenRequestBody defines body for CreateJwtBearerToken for application/json ContentType.
 type CreateJwtBearerTokenJSONRequestBody CreateJwtBearerTokenJSONBody
 
-// Getter for additional properties for ProofD_ADisclosed. Returns the specified
-// element and whether it was found
-func (a ProofD_ADisclosed) Get(fieldName string) (value float32, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for ProofD_ADisclosed
-func (a *ProofD_ADisclosed) Set(fieldName string, value float32) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]float32)
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for ProofD_ADisclosed to handle AdditionalProperties
-func (a *ProofD_ADisclosed) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]float32)
-		for fieldName, fieldBuf := range object {
-			var fieldVal float32
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for ProofD_ADisclosed to handle AdditionalProperties
-func (a ProofD_ADisclosed) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
-		}
-	}
-	return json.Marshal(object)
-}
-
-// Getter for additional properties for ProofD_AResponses. Returns the specified
-// element and whether it was found
-func (a ProofD_AResponses) Get(fieldName string) (value float32, found bool) {
-	if a.AdditionalProperties != nil {
-		value, found = a.AdditionalProperties[fieldName]
-	}
-	return
-}
-
-// Setter for additional properties for ProofD_AResponses
-func (a *ProofD_AResponses) Set(fieldName string, value float32) {
-	if a.AdditionalProperties == nil {
-		a.AdditionalProperties = make(map[string]float32)
-	}
-	a.AdditionalProperties[fieldName] = value
-}
-
-// Override default JSON handling for ProofD_AResponses to handle AdditionalProperties
-func (a *ProofD_AResponses) UnmarshalJSON(b []byte) error {
-	object := make(map[string]json.RawMessage)
-	err := json.Unmarshal(b, &object)
-	if err != nil {
-		return err
-	}
-
-	if len(object) != 0 {
-		a.AdditionalProperties = make(map[string]float32)
-		for fieldName, fieldBuf := range object {
-			var fieldVal float32
-			err := json.Unmarshal(fieldBuf, &fieldVal)
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("error unmarshaling field %s", fieldName))
-			}
-			a.AdditionalProperties[fieldName] = fieldVal
-		}
-	}
-	return nil
-}
-
-// Override default JSON handling for ProofD_AResponses to handle AdditionalProperties
-func (a ProofD_AResponses) MarshalJSON() ([]byte, error) {
-	var err error
-	object := make(map[string]json.RawMessage)
-
-	for fieldName, field := range a.AdditionalProperties {
-		object[fieldName], err = json.Marshal(field)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("error marshaling '%s'", fieldName))
-		}
-	}
-	return json.Marshal(object)
-}
-
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Create an access token based on the OAuth JWT Bearer flow.
@@ -453,6 +340,10 @@ type ServerInterface interface {
 	// The client certificate must be passed using a X-Ssl-Client-Cert header, PEM encoded and urlescaped.
 	// (POST /auth/accesstoken)
 	CreateAccessToken(ctx echo.Context, params CreateAccessTokenParams) error
+	// Verifies the access token given in the Authorization header (as bearer token). If it's a valid access token issued by this server, it'll return a 200 status code.
+	// If it cannot be verified it'll return 403. Note that it'll not return the contents of the access token. The introspection API is for that.
+	// (HEAD /auth/accesstoken/verify)
+	VerifyAccessToken(ctx echo.Context, params VerifyAccessTokenParams) error
 	// CreateSessionHandler Initiates an IRMA signing session with the correct contract.
 	// (POST /auth/contract/session)
 	CreateSession(ctx echo.Context) error
@@ -521,6 +412,37 @@ func (w *ServerInterfaceWrapper) CreateAccessToken(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshalled arguments
 	err = w.Handler.CreateAccessToken(ctx, params)
+	return err
+}
+
+// VerifyAccessToken converts echo context to params.
+func (w *ServerInterfaceWrapper) VerifyAccessToken(ctx echo.Context) error {
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params VerifyAccessTokenParams
+
+	headers := ctx.Request().Header
+	// ------------- Required header parameter "Authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for Authorization, got %d", n))
+		}
+
+		err = runtime.BindStyledParameter("simple", false, "Authorization", valueList[0], &Authorization)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter Authorization: %s", err))
+		}
+
+		params.Authorization = Authorization
+	} else {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Header parameter Authorization is required, but not found"))
+	}
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.VerifyAccessToken(ctx, params)
 	return err
 }
 
@@ -637,6 +559,7 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	}
 
 	router.POST(baseURL+"/auth/accesstoken", wrapper.CreateAccessToken)
+	router.HEAD(baseURL+"/auth/accesstoken/verify", wrapper.VerifyAccessToken)
 	router.POST(baseURL+"/auth/contract/session", wrapper.CreateSession)
 	router.GET(baseURL+"/auth/contract/session/:id", wrapper.SessionRequestStatus)
 	router.POST(baseURL+"/auth/contract/validate", wrapper.ValidateContract)
