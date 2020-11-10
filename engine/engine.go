@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"github.com/nuts-foundation/nuts-auth/logging"
 	"net/http"
 	"strings"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 	nutsGo "github.com/nuts-foundation/nuts-go-core"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -66,7 +66,7 @@ func NewAuthEngine() *nutsGo.Engine {
 			config := pkg.AuthInstance().Config
 
 			if config.EnableCORS {
-				logrus.Debug("enabling CORS")
+				logging.Log().Debug("enabling CORS")
 				routerWithAny.Use(middleware.CORS())
 			}
 		},
@@ -126,11 +126,10 @@ func cmd() *cobra.Command {
 
 func checkConfig(config pkg.AuthConfig) {
 	if config.IrmaSchemeManager == "" {
-		logrus.Fatal("IrmaSchemeManager must be set. Valid options are: [pbdf|irma-demo]")
+		logging.Log().Fatal("IrmaSchemeManager must be set. Valid options are: [pbdf|irma-demo]")
 	}
 	if nutsGo.NutsConfig().InStrictMode() && config.IrmaSchemeManager != "pbdf" {
-		logrus.Fatal("In strictmode the only valid irma-scheme-manager is 'pbdf'")
-
+		logging.Log().Fatal("In strictmode the only valid irma-scheme-manager is 'pbdf'")
 	}
 }
 

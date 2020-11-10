@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/nuts-foundation/nuts-auth/logging"
 	"os"
 
 	"github.com/nuts-foundation/nuts-auth/engine"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
-	"github.com/sirupsen/logrus"
 )
 
 var e = engine.NewAuthEngine()
@@ -24,7 +24,7 @@ func Execute() {
 		panic(err)
 	}
 
-	c.PrintConfig(logrus.StandardLogger())
+	c.PrintConfig(logging.Log().Logger)
 
 	if err := c.InjectIntoEngine(e); err != nil {
 		panic(err)

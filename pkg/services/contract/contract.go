@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-auth/logging"
 	"net/http"
 	"os"
 	"strings"
@@ -38,7 +39,6 @@ import (
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
-	"github.com/sirupsen/logrus"
 )
 
 // ContractConfig holds all the configuration params
@@ -111,9 +111,9 @@ var ErrMissingPublicURL = errors.New("missing publicUrl")
 func (s *service) configureContracts() (err error) {
 	if s.config.ActingPartyCn == "" {
 		// todo remove this check in 0.17
-		logrus.Info("no actingPartyCn configured, this is needed for v2 contracts (deprecated)")
+		logging.Log().Info("no actingPartyCn configured, this is needed for v2 contracts (deprecated)")
 	} else {
-		logrus.Warn("actingPartyCn is deprecated, please migrate to v3 contracts and remove the config parameter")
+		logging.Log().Warn("actingPartyCn is deprecated, please migrate to v3 contracts and remove the config parameter")
 	}
 	if s.config.PublicUrl == "" {
 		err = ErrMissingPublicURL
@@ -166,7 +166,7 @@ func (s *service) CreateContractSession(sessionRequest services.CreateSessionReq
 	if err != nil {
 		return nil, fmt.Errorf("could not render template: %w", err)
 	}
-	logrus.Debugf("contractMessage: %v", renderedContract.RawContractText)
+	logging.Log().Debugf("contractMessage: %v", renderedContract.RawContractText)
 	if err := renderedContract.Verify(); err != nil {
 		return nil, err
 	}
@@ -191,12 +191,12 @@ func (s *service) CreateContractSession(sessionRequest services.CreateSessionReq
 
 	// Step 4: Start an IRMA session
 	sessionPointer, token, err := s.contractSessionHandler.StartSession(signatureRequest, func(result *server.SessionResult) {
-		logrus.Debugf("session done, result: %s", server.ToJson(result))
+		logging.Log().Debugf("session done, result: %s", server.ToJson(result))
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error while creating session: %w", err)
 	}
-	logrus.Debugf("session created with token: %s", token)
+	logging.Log().Debugf("session created with token: %s", token)
 
 	// Return the sessionPointer and sessionId
 	createSessionResult := &services.CreateSessionResult{
