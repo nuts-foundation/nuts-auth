@@ -177,16 +177,8 @@ paths:
       responses:
         '200':
           description: The access token is valid. It has been signed by this server.
-          content:
-            text/plain:
-              schema:
-                type: string
         '403':
-          description: The given access token is invalid.
-          content:
-            text/plain:
-              schema:
-                type: string
+          description: The given access token is invalid or couldn't be verified.
   /auth/jwtbearertoken:
     post:
       operationId: createJwtBearerToken
