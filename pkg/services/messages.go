@@ -67,7 +67,7 @@ type CreateJwtBearerTokenRequest struct {
 	Actor         string
 	Custodian     string
 	IdentityToken string
-	Subject       string
+	Subject       *string
 }
 
 // AccessTokenResult defines the return value back to the api for the CreateAccessToken method
@@ -85,7 +85,7 @@ type JwtBearerTokenResult struct {
 type NutsJwtBearerToken struct {
 	jwt.StandardClaims
 	AuthTokenContainer string            `json:"usi"`
-	SubjectID          string            `json:"sid"`
+	SubjectID          *string           `json:"sid"`
 	Scope              string            `json:"scope"`
 	SigningCertificate *x509.Certificate `json:-`
 }
@@ -95,13 +95,13 @@ type NutsJwtBearerToken struct {
 // stripped from the proof to make it compact.
 type NutsAccessToken struct {
 	jwt.StandardClaims
-	SubjectID  string `json:"sid"`
-	Scope      string `json:"scope"`
-	Name       string `json:"name"`
-	GivenName  string `json:"given_name"`
-	Prefix     string `json:"prefix"`
-	FamilyName string `json:"family_name"`
-	Email      string `json:"email"`
+	SubjectID  *string `json:"sid"`
+	Scope      string  `json:"scope"`
+	Name       string  `json:"name"`
+	GivenName  string  `json:"given_name"`
+	Prefix     string  `json:"prefix"`
+	FamilyName string  `json:"family_name"`
+	Email      string  `json:"email"`
 }
 
 // AsMap returns the claims from a NutsJwtBearerToken as a map with the json names as keys
