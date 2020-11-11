@@ -274,8 +274,8 @@ func (s *service) validateSubject(context *validationContext) error {
 func (s *service) validateLegalBase(jwtBearerToken *services.NutsJwtBearerToken) error {
 	validationTime := time.Unix(jwtBearerToken.IssuedAt, 0)
 
-	if jwtBearerToken.SubjectID != "" {
-		legalBase, err := s.consent.QueryConsent(context.Background(), &jwtBearerToken.Issuer, &jwtBearerToken.Subject, &jwtBearerToken.SubjectID, &validationTime)
+	if jwtBearerToken.SubjectID != nil && *jwtBearerToken.SubjectID != "" {
+		legalBase, err := s.consent.QueryConsent(context.Background(), &jwtBearerToken.Issuer, &jwtBearerToken.Subject, jwtBearerToken.SubjectID, &validationTime)
 		if err != nil {
 			return fmt.Errorf("legal base validation failed: %w", err)
 		}

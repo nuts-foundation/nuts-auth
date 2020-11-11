@@ -548,11 +548,11 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 	t.Run("make request", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-
+		subj := "urn:oid:2.16.840.1.113883.2.4.6.3:9999990"
 		body := CreateJwtBearerTokenRequest{
 			Actor:     "urn:oid:2.16.840.1.113883.2.4.6.1:48000000",
 			Custodian: "urn:oid:2.16.840.1.113883.2.4.6.1:12481248",
-			Subject:   "urn:oid:2.16.840.1.113883.2.4.6.3:9999990",
+			Subject:   &subj,
 			Identity:  "irma-token",
 			Scope:     "nuts-sso",
 		}
@@ -623,7 +623,7 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 					Issuer:    iss,
 					Subject:   aid,
 				},
-				SubjectID: sid,
+				SubjectID: &sid,
 				Scope:     scope,
 			}, nil)
 

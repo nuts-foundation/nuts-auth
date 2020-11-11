@@ -260,11 +260,23 @@ func TestService_validateLegalBase(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		tokenCtx := validContext()
-		tokenCtx.jwtBearerToken.SubjectID = ""
+		tokenCtx.jwtBearerToken.SubjectID = nil
 
 		err := ctx.oauthService.validateLegalBase(tokenCtx.jwtBearerToken)
 		assert.NoError(t, err)
 
+	})
+
+	t.Run("valid - empty sid", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		sid := ""
+
+		tokenCtx := validContext()
+		tokenCtx.jwtBearerToken.SubjectID = &sid
+
+		err := ctx.oauthService.validateLegalBase(tokenCtx.jwtBearerToken)
+		assert.NoError(t, err)
 	})
 }
 
@@ -376,10 +388,11 @@ func TestOAuthService_buildAccessToken(t *testing.T) {
 }
 
 func TestOAuthService_CreateJwtBearerToken(t *testing.T) {
+	sid := "789"
 	request := services.CreateJwtBearerTokenRequest{
 		Custodian:     otherOrganizationID.String(),
 		Actor:         organizationID.String(),
-		Subject:       "789",
+		Subject:       &sid,
 		IdentityToken: "irma identity token",
 	}
 
@@ -416,7 +429,7 @@ func TestOAuthService_CreateJwtBearerToken(t *testing.T) {
 
 		request := services.CreateJwtBearerTokenRequest{
 			Actor:         organizationID.String(),
-			Subject:       "789",
+			Subject:       &sid,
 			IdentityToken: "irma identity token",
 		}
 
@@ -443,12 +456,13 @@ func TestOAuthService_CreateJwtBearerToken(t *testing.T) {
 func Test_claimsFromRequest(t *testing.T) {
 	ctx := createContext(t)
 	defer ctx.ctrl.Finish()
+	sid := "789"
 
 	t.Run("ok", func(t *testing.T) {
 		request := services.CreateJwtBearerTokenRequest{
 			Custodian:     otherOrganizationID.String(),
 			Actor:         organizationID.String(),
-			Subject:       "789",
+			Subject:       &sid,
 			IdentityToken: "irma identity token",
 		}
 		audience := "aud"
@@ -546,6 +560,7 @@ func clientCert(t *testing.T) string {
 }
 
 func validContext() *validationContext {
+	sid := "subject"
 	token :=  services.NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "endpoint",
@@ -557,7 +572,7 @@ func validContext() *validationContext {
 			Subject:   "urn:oid:2.16.840.1.113883.2.4.6.1:custodian",
 		},
 		AuthTokenContainer: "authToken",
-		SubjectID:          "subject",
+		SubjectID:          &sid,
 	}
 	return &validationContext{
 		jwtBearerToken: &token,

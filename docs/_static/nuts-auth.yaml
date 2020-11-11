@@ -511,7 +511,6 @@ components:
     CreateJwtBearerTokenRequest:
       description: Request for a JWT Bearer Token. The Bearer Token can be used during a Access Token Request in the assertion field
       required:
-        - subject
         - custodian
         - actor
         - identity
