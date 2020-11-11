@@ -298,6 +298,11 @@ type CreateAccessTokenParams struct {
 	XNutsLegalEntity *string `json:"X-Nuts-LegalEntity,omitempty"`
 }
 
+// VerifyAccessTokenParams defines parameters for VerifyAccessToken.
+type VerifyAccessTokenParams struct {
+	Authorization string `json:"Authorization"`
+}
+
 // CreateSessionJSONBody defines parameters for CreateSession.
 type CreateSessionJSONBody ContractSigningRequest
 
@@ -335,6 +340,10 @@ type ServerInterface interface {
 	// The client certificate must be passed using a X-Ssl-Client-Cert header, PEM encoded and urlescaped.
 	// (POST /auth/accesstoken)
 	CreateAccessToken(ctx echo.Context, params CreateAccessTokenParams) error
+	// Verifies the access token given in the Authorization header (as bearer token). If it's a valid access token issued by this server, it'll return a 200 status code.
+	// If it cannot be verified it'll return 403. Note that it'll not return the contents of the access token. The introspection API is for that.
+	// (HEAD /auth/accesstoken/verify)
+	VerifyAccessToken(ctx echo.Context, params VerifyAccessTokenParams) error
 	// CreateSessionHandler Initiates an IRMA signing session with the correct contract.
 	// (POST /auth/contract/session)
 	CreateSession(ctx echo.Context) error
@@ -403,6 +412,37 @@ func (w *ServerInterfaceWrapper) CreateAccessToken(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshalled arguments
 	err = w.Handler.CreateAccessToken(ctx, params)
+	return err
+}
+
+// VerifyAccessToken converts echo context to params.
+func (w *ServerInterfaceWrapper) VerifyAccessToken(ctx echo.Context) error {
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params VerifyAccessTokenParams
+
+	headers := ctx.Request().Header
+	// ------------- Required header parameter "Authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for Authorization, got %d", n))
+		}
+
+		err = runtime.BindStyledParameter("simple", false, "Authorization", valueList[0], &Authorization)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter Authorization: %s", err))
+		}
+
+		params.Authorization = Authorization
+	} else {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Header parameter Authorization is required, but not found"))
+	}
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.VerifyAccessToken(ctx, params)
 	return err
 }
 
@@ -519,6 +559,7 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	}
 
 	router.POST(baseURL+"/auth/accesstoken", wrapper.CreateAccessToken)
+	router.HEAD(baseURL+"/auth/accesstoken/verify", wrapper.VerifyAccessToken)
 	router.POST(baseURL+"/auth/contract/session", wrapper.CreateSession)
 	router.GET(baseURL+"/auth/contract/session/:id", wrapper.SessionRequestStatus)
 	router.POST(baseURL+"/auth/contract/validate", wrapper.ValidateContract)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -300,7 +301,7 @@ func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
 
 	claims, err := api.Auth.OAuthClient().IntrospectAccessToken(token)
 	if err != nil {
-		logrus.WithError(err).Debug("error while inspecting access token")
+		logrus.WithError(err).Debug("Error while inspecting access token")
 		return ctx.JSON(http.StatusOK, introspectionResponse)
 	}
 
@@ -325,3 +326,30 @@ func (api *Wrapper) IntrospectAccessToken(ctx echo.Context) error {
 
 	return ctx.JSON(http.StatusOK, introspectionResponse)
 }
+
+const bearerPrefix = "bearer "
+
+// VerifyAccessToken verifies if a request contains a valid bearer token issued by this server
+func (api *Wrapper) VerifyAccessToken(ctx echo.Context, params VerifyAccessTokenParams) error {
+	if len(params.Authorization) == 0 {
+		logrus.Warn("No authorization header given")
+		return ctx.NoContent(http.StatusForbidden)
+	}
+
+	index := strings.Index(strings.ToLower(params.Authorization), bearerPrefix)
+	if index != 0 {
+		logrus.Warn("Authorization does not contain bearer token")
+		return ctx.NoContent(http.StatusForbidden)
+	}
+
+	token := params.Authorization[len(bearerPrefix):]
+
+	_, err := api.Auth.OAuthClient().IntrospectAccessToken(token)
+	if err != nil {
+		logrus.WithError(err).Warn("Error while inspecting access token")
+		return ctx.NoContent(http.StatusForbidden)
+	}
+
+	return ctx.NoContent(200)
+}
+
