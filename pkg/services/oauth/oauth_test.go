@@ -266,6 +266,18 @@ func TestService_validateLegalBase(t *testing.T) {
 		assert.NoError(t, err)
 
 	})
+
+	t.Run("valid - empty sid", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		sid := ""
+
+		tokenCtx := validContext()
+		tokenCtx.jwtBearerToken.SubjectID = &sid
+
+		err := ctx.oauthService.validateLegalBase(tokenCtx.jwtBearerToken)
+		assert.NoError(t, err)
+	})
 }
 
 func TestOAuthService_parseAndValidateJwtBearerToken(t *testing.T) {
