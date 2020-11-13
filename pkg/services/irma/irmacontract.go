@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-auth/logging"
 	"strings"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
@@ -12,7 +13,6 @@ import (
 
 	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
-	"github.com/sirupsen/logrus"
 )
 
 // SignedIrmaContract holds the contract and additional methods to parse and validate.
@@ -94,7 +94,7 @@ func (cv *contractVerifier) verifySignature(signedContract *SignedIrmaContract) 
 			// Check schemaManager. Only the pdbf root is accepted in strictMode.
 			schemaManager := att.Identifier.Root()
 			if strictMode && schemaManager != "pbdf" {
-				logrus.Infof("IRMA schemeManager %s is not valid in strictMode", schemaManager)
+				logging.Log().Infof("IRMA schemeManager %s is not valid in strictMode", schemaManager)
 				validationResult = services.Invalid
 			}
 			identifier := att.Identifier.String()
@@ -199,7 +199,7 @@ func (cv *contractVerifier) verifyRequiredAttributes(signedIrmaContract *SignedI
 			disclosedAttributes = append(disclosedAttributes, k)
 		}
 		validationResult.ValidationResult = services.Invalid
-		logrus.Infof("missing required attributes in signature. found: %v, needed: %v, disclosed: %v", foundAttributes, requiredAttributes, disclosedAttributes)
+		logging.Log().Infof("missing required attributes in signature. found: %v, needed: %v, disclosed: %v", foundAttributes, requiredAttributes, disclosedAttributes)
 	}
 
 	return validationResult, nil

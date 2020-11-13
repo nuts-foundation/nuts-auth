@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-auth/logging"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	irmaserver2 "github.com/privacybydesign/irmago/server/irmaserver"
@@ -19,7 +20,6 @@ import (
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irma "github.com/privacybydesign/irmago"
 	irmaserver "github.com/privacybydesign/irmago/server"
-	"github.com/sirupsen/logrus"
 )
 
 // IrmaService validates contracts using the irma logic.
@@ -142,8 +142,8 @@ func (v IrmaService) SessionStatus(id services.SessionID) (*services.SessionStat
 				return nil, err
 			}
 		}
-		result := &services.SessionStatusResult{*result, token}
-		logrus.Info(result.NutsAuthToken)
+		result := &services.SessionStatusResult{SessionResult: *result, NutsAuthToken: token}
+		logging.Log().Info(result.NutsAuthToken)
 		return result, nil
 	}
 	return nil, services.ErrSessionNotFound
@@ -204,14 +204,14 @@ func (v IrmaService) createLegacyIdentityToken(contract *SignedIrmaContract, leg
 	claims, err := convertPayloadToClaimsLegacy(payload)
 	if err != nil {
 		err = fmt.Errorf("could not construct claims: %w", err)
-		logrus.Error(err)
+		logging.Log().Error(err)
 		return "", err
 	}
 
 	tokenString, err := v.Crypto.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: legalEntity}))
 	if err != nil {
 		err = fmt.Errorf("could not sign jwt: %w", err)
-		logrus.Error(err)
+		logging.Log().Error(err)
 		return "", err
 	}
 	return tokenString, nil

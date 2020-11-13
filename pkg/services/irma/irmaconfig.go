@@ -2,6 +2,7 @@ package irma
 
 import (
 	"fmt"
+	"github.com/nuts-foundation/nuts-auth/logging"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -10,7 +11,6 @@ import (
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/privacybydesign/irmago/server/irmaserver"
-	"github.com/sirupsen/logrus"
 )
 
 // The location the irma webserver will mount
@@ -44,7 +44,7 @@ func GetIrmaConfig(config IrmaServiceConfig) (irmaConfig *irma.Configuration, er
 		if err != nil {
 			return
 		}
-		logrus.Infof("Using irma config dir: %s", configDir)
+		logging.Log().Infof("Using irma config dir: %s", configDir)
 
 		options := irma.ConfigurationOptions{}
 		irmaConfig, err = irma.NewConfiguration(configDir, options)
@@ -52,7 +52,7 @@ func GetIrmaConfig(config IrmaServiceConfig) (irmaConfig *irma.Configuration, er
 			return
 		}
 
-		logrus.Info("Loading irma schemas.")
+		logging.Log().Info("Loading irma schemas.")
 		if err = irmaConfig.ParseFolder(); err != nil {
 			return
 		}
@@ -82,13 +82,13 @@ func GetIrmaServer(config IrmaServiceConfig) (irmaServer *irmaserver.Server, err
 		config := &server.Configuration{
 			IrmaConfiguration:    irmaConfig,
 			URL:                  fmt.Sprintf("%s"+IrmaMountPath, baseURL),
-			Logger:               logrus.StandardLogger(),
+			Logger:               logging.Log().Logger,
 			SchemesPath:          configDir,
 			DisableSchemesUpdate: config.SkipAutoUpdateIrmaSchemas,
 		}
 
-		logrus.Info("Initializing IRMA library...")
-		logrus.Infof("irma baseurl: %s", config.URL)
+		logging.Log().Info("Initializing IRMA library...")
+		logging.Log().Infof("irma baseurl: %s", config.URL)
 
 		irmaServer, err = irmaserver.New(config)
 		if err != nil {
@@ -104,7 +104,7 @@ func irmaConfigDir(config IrmaServiceConfig) (string, error) {
 	path := config.IrmaConfigPath
 
 	if path == "" {
-		logrus.Info("irma config dir not set, using tmp dir")
+		logging.Log().Info("irma config dir not set, using tmp dir")
 		var err error
 		path, err = ioutil.TempDir("", "irmaconfig")
 		if err != nil {

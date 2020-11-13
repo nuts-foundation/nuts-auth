@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"github.com/nuts-foundation/nuts-auth/logging"
 	"os"
 	"path"
 	"reflect"
@@ -32,12 +33,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/nuts-foundation/nuts-auth/testdata"
 	irma "github.com/privacybydesign/irmago"
 	irmaservercore "github.com/privacybydesign/irmago/server"
 	irmaserver "github.com/privacybydesign/irmago/server/irmaserver"
-	"github.com/sirupsen/logrus"
-
-	"github.com/nuts-foundation/nuts-auth/testdata"
 )
 
 func TestDefaultValidator_IsInitialized(t *testing.T) {
@@ -255,7 +254,7 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 
 	irmaServer, _ := GetIrmaServer(serviceConfig)
 	_, knownSessionID, _ := irmaServer.StartSession(signatureRequest, func(result *irmaservercore.SessionResult) {
-		logrus.Infof("session done, result: %s", irmaservercore.ToJson(result))
+		logging.Log().Infof("session done, result: %s", irmaservercore.ToJson(result))
 	})
 
 	type fields struct {
@@ -651,10 +650,10 @@ func defaultValidator(t *testing.T) (IrmaService, crypto.Client) {
 		PublicUrl: "http://" + address,
 	}
 	if err := os.MkdirAll(serviceConfig.IrmaConfigPath, 0777); err != nil {
-		logrus.Fatal(err)
+		logging.Log().Fatal(err)
 	}
 	if err := test.CopyDir("../../../testdata/irma", serviceConfig.IrmaConfigPath); err != nil {
-		logrus.Fatal(err)
+		logging.Log().Fatal(err)
 	}
 	serviceConfig.IrmaSchemeManager = "irma-demo"
 

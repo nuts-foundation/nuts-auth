@@ -26,10 +26,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nuts-foundation/nuts-auth/logging"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	nutsConsentClient "github.com/nuts-foundation/nuts-consent-store/client"
 	nutsConsent "github.com/nuts-foundation/nuts-consent-store/pkg"
 	nutsCrypto "github.com/nuts-foundation/nuts-crypto/pkg"
@@ -38,9 +40,6 @@ import (
 	core "github.com/nuts-foundation/nuts-go-core"
 	nutsRegistry "github.com/nuts-foundation/nuts-registry/pkg"
 	errors2 "github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-
-	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
 const oauthKeyQualifier = "oauth"
@@ -92,7 +91,7 @@ func (s *service) Configure() (err error) {
 	s.oauthKeyEntity = nutsCryptoTypes.KeyForEntity(nutsCryptoTypes.LegalEntity{URI: s.vendorID.String()}).WithQualifier(oauthKeyQualifier)
 
 	if !s.crypto.PrivateKeyExists(s.oauthKeyEntity) {
-		logrus.Info("Missing OAuth JWT signing key, generating new one")
+		logging.Log().Info("Missing OAuth JWT signing key, generating new one")
 		s.crypto.GenerateKeyPair(s.oauthKeyEntity, false)
 	}
 
@@ -200,7 +199,7 @@ func (s *service) validateIssuer(context *validationContext) error {
 		root := chain[len(chain)-1]
 		vendor, err = cert.VendorIDFromCertificate(root)
 		if err != nil {
-			logrus.Warnf("no vendorID in SAN for %s", root.Subject.String())
+			logging.Log().Warnf("no vendorID in SAN for %s", root.Subject.String())
 			continue
 		}
 		if vendor.String() == actor.Vendor.String() {
@@ -237,7 +236,7 @@ func (s *service) validateClientCertificate(context *validationContext, pemEncod
 		root := chain[len(chain)-1]
 		vendor, err = cert.VendorIDFromCertificate(root)
 		if err != nil {
-			logrus.Warnf("no vendorID in SAN for %s", root.Subject.String())
+			logging.Log().Warnf("no vendorID in SAN for %s", root.Subject.String())
 			continue
 		}
 		if vendor.String() == context.vendor.String() {

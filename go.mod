@@ -12,6 +12,7 @@ require (
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
 	github.com/labstack/echo/v4 v4.1.17
 	github.com/lestrrat-go/jwx v1.0.5
+	github.com/magiconair/properties v1.8.4
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/nuts-foundation/nuts-consent-store v0.15.1-0.20200929093957-21ccf5e25c74
 	github.com/nuts-foundation/nuts-crypto v0.15.1-0.20201015073554-cbeeb24605c8
