@@ -78,10 +78,10 @@ func TestValidateContract(t *testing.T) {
 			// contract is valid at 1 oct 2019 11:46:00
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
 			&services.ContractValidationResult{
-				ValidationResult: services.Valid,
-				ContractFormat: services.IrmaFormat,
+				ValidationResult:    services.Valid,
+				ContractFormat:      services.IrmaFormat,
 				DisclosedAttributes: map[string]string{"nuts.agb.agbcode": "00000007"},
-				ContractAttributes: map[string]string{"legal_entity": "verpleeghuis De nootjes", "acting_party":"Demo EHR", "valid_from": "dinsdag, 1 oktober 2019 13:30:42", "valid_to": "dinsdag, 1 oktober 2019 14:30:42"},
+				ContractAttributes:  map[string]string{"legal_entity": "verpleeghuis De nootjes", "acting_party": "Demo EHR", "valid_from": "dinsdag, 1 oktober 2019 13:30:42", "valid_to": "dinsdag, 1 oktober 2019 14:30:42"},
 			},
 			false,
 		},
@@ -95,8 +95,8 @@ func TestValidateContract(t *testing.T) {
 			},
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
 			&services.ContractValidationResult{
-				ValidationResult: services.Invalid,
-				ContractFormat: services.IrmaFormat,
+				ValidationResult:    services.Invalid,
+				ContractFormat:      services.IrmaFormat,
 				DisclosedAttributes: map[string]string{"nuts.agb.agbcode": "00000007"},
 			},
 			false,
@@ -123,8 +123,8 @@ func TestValidateContract(t *testing.T) {
 			},
 			time.Date(2019, time.October, 2, 13, 46, 00, 0, location),
 			&services.ContractValidationResult{
-				ValidationResult: services.Invalid,
-				ContractFormat: services.IrmaFormat,
+				ValidationResult:    services.Invalid,
+				ContractFormat:      services.IrmaFormat,
 				DisclosedAttributes: map[string]string{"nuts.agb.agbcode": "00000007"},
 			},
 			false,
@@ -139,8 +139,8 @@ func TestValidateContract(t *testing.T) {
 			},
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
 			&services.ContractValidationResult{
-				ValidationResult: services.Invalid,
-				ContractFormat: services.IrmaFormat,
+				ValidationResult:    services.Invalid,
+				ContractFormat:      services.IrmaFormat,
 				DisclosedAttributes: nil,
 			},
 			false,

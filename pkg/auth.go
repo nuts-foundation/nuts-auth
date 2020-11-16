@@ -51,8 +51,8 @@ type Auth struct {
 
 func DefaultAuthConfig() AuthConfig {
 	return AuthConfig{
-		Address:           "localhost:1323",
-		IrmaSchemeManager: "pbdf",
+		Address:            "localhost:1323",
+		IrmaSchemeManager:  "pbdf",
 		ContractValidators: []string{"irma", "uzi"},
 	}
 }

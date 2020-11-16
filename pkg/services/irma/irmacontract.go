@@ -108,8 +108,8 @@ func (cv *contractVerifier) verifySignature(signedContract *SignedIrmaContract) 
 
 	// Assemble and return the validation response
 	return &services.ContractValidationResult{
-		ValidationResult: validationResult,
-		ContractFormat: services.IrmaFormat,
+		ValidationResult:    validationResult,
+		ContractFormat:      services.IrmaFormat,
 		DisclosedAttributes: disclosedAttributes,
 	}, nil
 

@@ -26,6 +26,7 @@ import (
 type Wrapper struct {
 	Auth pkg.AuthClient
 }
+
 const errOauthInvalidRequest = "invalid_request"
 const errOauthInvalidGrant = "invalid_grant"
 const errOauthUnsupportedGrant = "unsupported_grant_type"
@@ -248,7 +249,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context, params CreateAccessToken
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
 	cert, err := url.PathUnescape(params.XSslClientCert)
-	if (err != nil) {
+	if err != nil {
 		errDesc := "corrupted client certificate header"
 		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidRequest, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
@@ -352,4 +353,3 @@ func (api *Wrapper) VerifyAccessToken(ctx echo.Context, params VerifyAccessToken
 
 	return ctx.NoContent(200)
 }
-

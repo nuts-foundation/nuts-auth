@@ -568,4 +568,3 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	router.POST(baseURL+"/auth/token_introspection", wrapper.IntrospectAccessToken)
 
 }
-
