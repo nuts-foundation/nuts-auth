@@ -25,6 +25,9 @@ const ConfEnableCORS = "enableCORS"
 // ConfActingPartyCN is the config key to provide the Acting party common name
 const ConfActingPartyCN = "actingPartyCn"
 
+// ConfContractValidators is the config key for defining which contract validators to use
+const ConfContractValidators = "contractValidators"
+
 // AuthClient is the interface which should be implemented for clients or mocks
 type AuthClient interface {
 	// OAuthClient returns an instance of OAuthClient
@@ -50,6 +53,7 @@ func DefaultAuthConfig() AuthConfig {
 	return AuthConfig{
 		Address:           "localhost:1323",
 		IrmaSchemeManager: "pbdf",
+		ContractValidators: []string{"irma", "uzi"},
 	}
 }
 

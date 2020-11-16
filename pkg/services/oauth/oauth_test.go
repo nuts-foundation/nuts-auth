@@ -659,7 +659,11 @@ func (tss testTrustStore) VerifiedChain(certificate *x509.Certificate, t time.Ti
 	return [][]*x509.Certificate{{tss.ca, tss.ca}}, nil
 }
 
-func (tss testTrustStore) Pool() *x509.CertPool {
+func (tss testTrustStore) Roots() ([]*x509.Certificate, *x509.CertPool) {
+	panic("implement me")
+}
+
+func (tss testTrustStore) Intermediates() ([]*x509.Certificate, *x509.CertPool) {
 	panic("implement me")
 }
 
