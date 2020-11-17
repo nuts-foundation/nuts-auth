@@ -359,7 +359,7 @@ func TestOAuthService_buildAccessToken(t *testing.T) {
 
 		tokenCtx := &validationContext{
 			contractValidationResult: &services.ContractValidationResult{ValidationResult: services.Valid},
-			jwtBearerToken: &services.NutsJwtBearerToken{},
+			jwtBearerToken:           &services.NutsJwtBearerToken{},
 		}
 
 		token, err := ctx.oauthService.buildAccessToken(tokenCtx)
@@ -375,7 +375,7 @@ func TestOAuthService_buildAccessToken(t *testing.T) {
 
 		tokenCtx := &validationContext{
 			contractValidationResult: &services.ContractValidationResult{ValidationResult: services.Valid},
-			jwtBearerToken: &services.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}},
+			jwtBearerToken:           &services.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}},
 		}
 
 		token, err := ctx.oauthService.buildAccessToken(tokenCtx)
@@ -561,7 +561,7 @@ func clientCert(t *testing.T) string {
 
 func validContext() *validationContext {
 	sid := "subject"
-	token :=  services.NutsJwtBearerToken{
+	token := services.NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "endpoint",
 			ExpiresAt: time.Now().Add(5 * time.Second).Unix(),
@@ -659,7 +659,11 @@ func (tss testTrustStore) VerifiedChain(certificate *x509.Certificate, t time.Ti
 	return [][]*x509.Certificate{{tss.ca, tss.ca}}, nil
 }
 
-func (tss testTrustStore) Pool() *x509.CertPool {
+func (tss testTrustStore) Roots() ([]*x509.Certificate, *x509.CertPool) {
+	panic("implement me")
+}
+
+func (tss testTrustStore) Intermediates() ([]*x509.Certificate, *x509.CertPool) {
 	panic("implement me")
 }
 
