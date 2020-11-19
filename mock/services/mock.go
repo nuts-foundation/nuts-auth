@@ -272,9 +272,9 @@ func (mr *MockContractClientMockRecorder) ContractSessionStatus(sessionID interf
 }
 
 // ContractByType mocks base method
-func (m *MockContractClient) ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error) {
+func (m *MockContractClient) ContractTemplateByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ContractByType", contractType, language, version)
+	ret := m.ctrl.Call(m, "ContractTemplateByType", contractType, language, version)
 	ret0, _ := ret[0].(*contract.Template)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -283,7 +283,7 @@ func (m *MockContractClient) ContractByType(contractType contract.Type, language
 // ContractByType indicates an expected call of ContractByType
 func (mr *MockContractClientMockRecorder) ContractByType(contractType, language, version interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContractByType", reflect.TypeOf((*MockContractClient)(nil).ContractByType), contractType, language, version)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContractTemplateByType", reflect.TypeOf((*MockContractClient)(nil).ContractTemplateByType), contractType, language, version)
 }
 
 // ValidateContract mocks base method

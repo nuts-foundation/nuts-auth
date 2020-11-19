@@ -63,7 +63,7 @@ type AuthenticationTokenParser interface {
 type ContractClient interface {
 	CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error)
 	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
-	ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error)
+	ContractTemplateByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error)
 	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	KeyExistsFor(legalEntity core.PartyID) bool
 	OrganizationNameByID(legalEntity core.PartyID) (string, error)

@@ -222,7 +222,7 @@ func printQrCode(qrcode string) {
 
 // NewByType returns a Contract of a certain type, language and version.
 // If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
-func (s *service) ContractByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error) {
+func (s *service) ContractTemplateByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error) {
 	return s.contractTemplates.Find(contractType, language, version)
 }
 

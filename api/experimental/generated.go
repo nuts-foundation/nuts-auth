@@ -13,12 +13,28 @@ import (
 // ContractLanguage defines model for ContractLanguage.
 type ContractLanguage string
 
-// ContractTemplate defines model for ContractTemplate.
-type ContractTemplate struct {
+// ContractResponse defines model for ContractResponse.
+type ContractResponse struct {
 
 	// Language of the contract in all caps
 	Language ContractLanguage `json:"language"`
-	Template *string          `json:"template,omitempty"`
+
+	// The contract message
+	Message string `json:"message"`
+
+	// Type of which contract to sign
+	Type ContractType `json:"type"`
+
+	// Version of the contract
+	Version ContractVersion `json:"version"`
+}
+
+// ContractTemplateResponse defines model for ContractTemplateResponse.
+type ContractTemplateResponse struct {
+
+	// Language of the contract in all caps
+	Language ContractLanguage `json:"language"`
+	Template string           `json:"template"`
 
 	// Type of which contract to sign
 	Type ContractType `json:"type"`
@@ -58,8 +74,7 @@ type CreateSignSessionResult struct {
 type GetContractTemplateParams struct {
 
 	// The version of this contract. If omitted, the most recent version will be returned
-	Version  *string `json:"version,omitempty"`
-	Language *string `json:"language,omitempty"`
+	Version *string `json:"version,omitempty"`
 }
 
 // CreateSignSessionJSONBody defines parameters for CreateSignSession.
@@ -70,9 +85,12 @@ type CreateSignSessionJSONRequestBody CreateSignSessionJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Draw up a contract using a specified contract template, language and version
+	// (PUT /auth/internal/experimental/contract/drawup)
+	DrawUpContract(ctx echo.Context) error
 	// Get the contract template by version, and type
-	// (GET /auth/internal/experimental/contract/template/{contractType})
-	GetContractTemplate(ctx echo.Context, contractType string, params GetContractTemplateParams) error
+	// (GET /auth/internal/experimental/contract/template/{language}/{contractType})
+	GetContractTemplate(ctx echo.Context, language string, contractType string, params GetContractTemplateParams) error
 	// Create a signing session for a supported means.
 	// (POST /auth/internal/experimental/sign)
 	CreateSignSession(ctx echo.Context) error
@@ -86,9 +104,26 @@ type ServerInterfaceWrapper struct {
 	Handler ServerInterface
 }
 
+// DrawUpContract converts echo context to params.
+func (w *ServerInterfaceWrapper) DrawUpContract(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.DrawUpContract(ctx)
+	return err
+}
+
 // GetContractTemplate converts echo context to params.
 func (w *ServerInterfaceWrapper) GetContractTemplate(ctx echo.Context) error {
 	var err error
+	// ------------- Path parameter "language" -------------
+	var language string
+
+	err = runtime.BindStyledParameter("simple", false, "language", ctx.Param("language"), &language)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter language: %s", err))
+	}
+
 	// ------------- Path parameter "contractType" -------------
 	var contractType string
 
@@ -106,15 +141,8 @@ func (w *ServerInterfaceWrapper) GetContractTemplate(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter version: %s", err))
 	}
 
-	// ------------- Optional query parameter "language" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "language", ctx.QueryParams(), &params.Language)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter language: %s", err))
-	}
-
 	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.GetContractTemplate(ctx, contractType, params)
+	err = w.Handler.GetContractTemplate(ctx, language, contractType, params)
 	return err
 }
 
@@ -160,7 +188,8 @@ func RegisterHandlers(router interface {
 		Handler: si,
 	}
 
-	router.GET("/auth/internal/experimental/contract/template/:contractType", wrapper.GetContractTemplate)
+	router.PUT("/auth/internal/experimental/contract/drawup", wrapper.DrawUpContract)
+	router.GET("/auth/internal/experimental/contract/template/:language/:contractType", wrapper.GetContractTemplate)
 	router.POST("/auth/internal/experimental/sign", wrapper.CreateSignSession)
 	router.GET("/auth/internal/experimental/sign/:sessionPtr", wrapper.GetSignSessionStatus)
 

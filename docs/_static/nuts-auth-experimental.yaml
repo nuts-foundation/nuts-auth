@@ -43,20 +43,30 @@ paths:
 #          description: When the sessionPtr is known and the session was successfully deleted
 #        404:
 #          description: When the sessionPtr was unknown
-#  `/auth/internal/experimental/contract/drawup`:
-#    put:
-#      operationId: drawUpContract
-#      summary: Draw up a contract using a specified contract template, language and version
-#      responses:
-#        200:
-#          description: When the contract was drawed up successfully
-#        404:
-#          description: When the combination of template, language and version was not found
-  /auth/internal/experimental/contract/template/{contractType}:
+  /auth/internal/experimental/contract/drawup:
+    put:
+      operationId: drawUpContract
+      summary: Draw up a contract using a specified contract template, language and version
+      responses:
+        200:
+          description: When the contract was drawed up successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractResponse"
+        404:
+          description: When the combination of template, language and version was not found
+  /auth/internal/experimental/contract/template/{language}/{contractType}:
     get:
       operationId: getContractTemplate
       summary: Get the contract template by version, and type
       parameters:
+        - name: language
+          in: path
+          required: true
+          schema:
+            type: string
+            default: nl
         - name: contractType
           in: path
           required: true
@@ -68,19 +78,13 @@ paths:
           in: query
           schema:
             type: string
-        - name: language
-          in: query
-          required: false
-          schema:
-            type: string
-            default: nl
       responses:
         200:
           description: When the contract template could be found
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ContractTemplate"
+                $ref: "#/components/schemas/ContractTemplateResponse"
         404:
           description: When the contract template for the combination type and version could not be found
 
@@ -129,11 +133,12 @@ components:
       type: string
       description: "Version of the contract"
       example: "v1"
-    ContractTemplate:
+    ContractTemplateResponse:
       required:
         - type
         - version
         - language
+        - template
       properties:
         type:
           $ref: "#/components/schemas/ContractType"
@@ -144,3 +149,20 @@ components:
         template:
           type: string
           example: ik verklaar dat ${acting_party} namens mij request mag maken
+    ContractResponse:
+      required:
+        - message
+        - type
+        - version
+        - language
+      properties:
+        message:
+          type: string
+          description: The contract message
+          example: ik verklaar dat Pro Gen - Italia namens mij request mag maken
+        type:
+          $ref: "#/components/schemas/ContractType"
+        language:
+          $ref: "#/components/schemas/ContractLanguage"
+        version:
+          $ref: "#/components/schemas/ContractVersion"

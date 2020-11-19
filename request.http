@@ -38,3 +38,7 @@ Content-Type: application/json
 }
 
 ###
+
+GET http://localhost:1323/auth/internal/experimental/contract/template/EN/PractitionerLogin?version=v3
+
+###

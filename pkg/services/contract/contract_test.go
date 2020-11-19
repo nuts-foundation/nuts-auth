@@ -78,7 +78,7 @@ func TestService_ContractByType(t *testing.T) {
 	defer ctx.ctrl.Finish()
 
 	t.Run("get contract by type", func(t *testing.T) {
-		result, err := ctx.contractService.ContractByType("BehandelaarLogin", "NL", "v1")
+		result, err := ctx.contractService.ContractTemplateByType("BehandelaarLogin", "NL", "v1")
 
 		if !assert.Nil(t, err) || !assert.NotNil(t, result) {
 			return
@@ -90,7 +90,7 @@ func TestService_ContractByType(t *testing.T) {
 	})
 
 	t.Run("an unknown contract returns an error", func(t *testing.T) {
-		result, err := ctx.contractService.ContractByType("UnknownContract", "NL", "v1")
+		result, err := ctx.contractService.ContractTemplateByType("UnknownContract", "NL", "v1")
 
 		assert.Nil(t, result)
 		assert.NotNil(t, err)
