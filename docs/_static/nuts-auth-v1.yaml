@@ -1,0 +1,148 @@
+openapi: 3.0.0
+info:
+  title: Nuts Auth Service API
+  version: 1.0.0
+servers:
+  - url: '/auth/experimental'
+
+paths:
+  /internal/sign:
+    post:
+      operationId: createSignSession
+      summary: Create a signing session for a supported means.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSignSessionRequest"
+      responses:
+        201:
+          description: When the signing session was successfully created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateSignSessionResult"
+  /internal/sign/{sessionPtr}:
+    get:
+      operationId: getSignSessionStatus
+      summary: Get the current status of a signing session
+      parameters:
+        - name: sessionPtr
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+       200:
+         description:  When the sessionPtr is know. Contains the current session status.
+       404:
+         description: When the sessionPtr in unknown.
+#    delete:
+#      operationId: cancelSignSession
+#      responses:
+#        204:
+#          description: When the sessionPtr is known and the session was successfully deleted
+#        404:
+#          description: When the sessionPtr was unknown
+#  `/internal/contract/drawup`:
+#    put:
+#      operationId: drawUpContract
+#      summary: Draw up a contract using a specified contract template, language and version
+#      responses:
+#        200:
+#          description: When the contract was drawed up successfully
+#        404:
+#          description: When the combination of template, language and version was not found
+  /internal/contract/template/{contractType}:
+    get:
+      operationId: getContractTemplate
+      summary: Get the contract template by version, and type
+      parameters:
+        - name: contractType
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          description: The version of this contract. If omitted, the most recent version will be returned
+          required: false
+          in: query
+          schema:
+            type: string
+        - name: language
+          in: query
+          required: false
+          schema:
+            type: string
+            default: nl
+      responses:
+        200:
+          description: When the contract template could be found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractTemplate"
+        404:
+          description: When the contract template for the combination type and version could not be found
+
+components:
+  schemas:
+    CreateSignSessionRequest:
+      required:
+        - means
+        - payload
+        - params
+      properties:
+        means:
+          type: string
+          enum: [irma, dummy]
+          example: irma
+        params:
+          type: object
+          description: Params are passed to the means. Should be documented in the means documentation.
+        payload:
+          type: string
+          description: base64 encoded payload what needs to be signed
+
+    CreateSignSessionResult:
+      required:
+        - sessionPtr
+        - means
+      properties:
+        sessionPtr:
+          description: A pointer to a signature session. This is an opaque value which only has meaning in the context of the signing means. Can be an URL, base64 encoded image of a QRCode etc.
+          type: string
+        means:
+          description: The means this session uses to sign.
+          type: string
+          enum: [irma, dummy]
+          example: irma
+
+    ContractType:
+      type: string
+      description: "Type of which contract to sign"
+      example: "BehandelaarLogin"
+    ContractLanguage:
+      type: string
+      description: "Language of the contract in all caps"
+      example: "NL"
+    ContractVersion:
+      type: string
+      description: "Version of the contract"
+      example: "v1"
+    ContractTemplate:
+      required:
+        - type
+        - version
+        - language
+      properties:
+        type:
+          $ref: "#/components/schemas/ContractType"
+        language:
+          $ref: "#/components/schemas/ContractLanguage"
+        version:
+          $ref: "#/components/schemas/ContractVersion"
+        template:
+          type: string
+          example: ik verklaar dat ${acting_party} namens mij request mag maken

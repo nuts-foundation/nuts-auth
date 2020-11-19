@@ -3,6 +3,8 @@ info:
   title: Nuts Service API Proxy
   version: 0.0.1
 paths:
+#  '/auth/issuer/':
+#  '/auth/verifier/':
   '/auth/contract/session':
     post:
       operationId: createSession
