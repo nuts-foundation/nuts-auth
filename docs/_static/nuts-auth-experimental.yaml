@@ -4,7 +4,7 @@ info:
   version: 1.0.0
 
 paths:
-  /auth/auth/internal/experimanal/experimental/sign:
+  /auth/auth/internal/experimental/experimental/sign:
     post:
       operationId: createSignSession
       summary: Create a signing session for a supported means.
@@ -43,7 +43,7 @@ paths:
 #          description: When the sessionPtr is known and the session was successfully deleted
 #        404:
 #          description: When the sessionPtr was unknown
-#  `/auth/internal/experimanal/contract/drawup`:
+#  `/auth/internal/experimental/contract/drawup`:
 #    put:
 #      operationId: drawUpContract
 #      summary: Draw up a contract using a specified contract template, language and version
@@ -52,7 +52,7 @@ paths:
 #          description: When the contract was drawed up successfully
 #        404:
 #          description: When the combination of template, language and version was not found
-  /auth/internal/experimanal/contract/template/{contractType}:
+  /auth/internal/experimental/contract/template/{contractType}:
     get:
       operationId: getContractTemplate
       summary: Get the contract template by version, and type
