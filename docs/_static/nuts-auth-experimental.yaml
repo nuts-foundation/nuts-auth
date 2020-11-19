@@ -2,11 +2,9 @@ openapi: 3.0.0
 info:
   title: Nuts Auth Service API
   version: 1.0.0
-servers:
-  - url: '/auth/experimental'
 
 paths:
-  /internal/sign:
+  /auth/auth/internal/experimanal/experimental/sign:
     post:
       operationId: createSignSession
       summary: Create a signing session for a supported means.
@@ -45,7 +43,7 @@ paths:
 #          description: When the sessionPtr is known and the session was successfully deleted
 #        404:
 #          description: When the sessionPtr was unknown
-#  `/internal/contract/drawup`:
+#  `/auth/internal/experimanal/contract/drawup`:
 #    put:
 #      operationId: drawUpContract
 #      summary: Draw up a contract using a specified contract template, language and version
@@ -54,7 +52,7 @@ paths:
 #          description: When the contract was drawed up successfully
 #        404:
 #          description: When the combination of template, language and version was not found
-  /internal/contract/template/{contractType}:
+  /auth/internal/experimanal/contract/template/{contractType}:
     get:
       operationId: getContractTemplate
       summary: Get the contract template by version, and type
