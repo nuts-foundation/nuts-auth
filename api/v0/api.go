@@ -1,14 +1,15 @@
-package api
+package v0
 
 import (
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-auth/logging"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/nuts-foundation/nuts-auth/logging"
 
 	"github.com/labstack/echo/v4"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -92,7 +93,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 
 	// convert internal result back to generated api format
 	answer := CreateSessionResult{
-		QrCodeInfo: IrmaQR{U: string(result.QrCodeInfo.URL), Irmaqr: string(result.QrCodeInfo.Type)},
+		QrCodeInfo: IrmaQR{U: result.QrCodeInfo.URL, Irmaqr: string(result.QrCodeInfo.Type)},
 		SessionId:  result.SessionID,
 	}
 

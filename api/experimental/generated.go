@@ -71,13 +71,13 @@ type CreateSignSessionJSONRequestBody CreateSignSessionJSONBody
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Get the contract template by version, and type
-	// (GET /internal/contract/template/{contractType})
+	// (GET /auth/internal/experimental/contract/template/{contractType})
 	GetContractTemplate(ctx echo.Context, contractType string, params GetContractTemplateParams) error
 	// Create a signing session for a supported means.
-	// (POST /internal/sign)
+	// (POST /auth/internal/experimental/sign)
 	CreateSignSession(ctx echo.Context) error
 	// Get the current status of a signing session
-	// (GET /internal/sign/{sessionPtr})
+	// (GET /auth/internal/experimental/sign/{sessionPtr})
 	GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
 }
 
@@ -160,9 +160,9 @@ func RegisterHandlers(router interface {
 		Handler: si,
 	}
 
-	router.GET("/internal/contract/template/:contractType", wrapper.GetContractTemplate)
-	router.POST("/internal/sign", wrapper.CreateSignSession)
-	router.GET("/internal/sign/:sessionPtr", wrapper.GetSignSessionStatus)
+	router.GET("/auth/internal/experimental/contract/template/:contractType", wrapper.GetContractTemplate)
+	router.POST("/auth/internal/experimental/sign", wrapper.CreateSignSession)
+	router.GET("/auth/internal/experimental/sign/:sessionPtr", wrapper.GetSignSessionStatus)
 
 }
 

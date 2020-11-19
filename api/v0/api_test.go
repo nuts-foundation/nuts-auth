@@ -1,4 +1,4 @@
-package api
+package v0
 
 import (
 	"encoding/json"
@@ -22,11 +22,12 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
-	"github.com/nuts-foundation/nuts-auth/mock"
 	coreMock "github.com/nuts-foundation/nuts-go-core/mock"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/nuts-foundation/nuts-auth/mock"
 )
 
 var careOrgID = test.OrganizationID("987")

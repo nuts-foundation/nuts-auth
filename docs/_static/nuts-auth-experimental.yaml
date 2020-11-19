@@ -4,7 +4,7 @@ info:
   version: 1.0.0
 
 paths:
-  /auth/auth/internal/experimental/experimental/sign:
+  /auth/internal/experimental/sign:
     post:
       operationId: createSignSession
       summary: Create a signing session for a supported means.
@@ -21,7 +21,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CreateSignSessionResult"
-  /internal/sign/{sessionPtr}:
+  /auth/internal/experimental/sign/{sessionPtr}:
     get:
       operationId: getSignSessionStatus
       summary: Get the current status of a signing session

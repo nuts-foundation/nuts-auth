@@ -8,7 +8,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/nuts-foundation/nuts-auth/api"
+	apiExperimental "github.com/nuts-foundation/nuts-auth/api/experimental"
+	apiV0 "github.com/nuts-foundation/nuts-auth/api/v0"
 	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 	nutsGo "github.com/nuts-foundation/nuts-go-core"
@@ -59,7 +60,8 @@ func NewAuthEngine() *nutsGo.Engine {
 			routerWithAny.Any(irma.IrmaMountPath+"/*", irmaEchoHandler)
 
 			// Mount the Auth-api routes
-			api.RegisterHandlers(router, &api.Wrapper{Auth: authBackend})
+			apiV0.RegisterHandlers(router, &apiV0.Wrapper{Auth: authBackend})
+			apiExperimental.RegisterHandlers(router, &apiExperimental.Wrapper{Auth: authBackend})
 
 			checkConfig(authBackend.Config)
 
@@ -93,7 +95,8 @@ func initEcho(auth *pkg.Auth) (*echo.Echo, error) {
 	echoServer.Any(irma.IrmaMountPath+"/*", irmaEchoHandler)
 
 	// Mount the Nuts-Auth routes
-	api.RegisterHandlers(echoServer, &api.Wrapper{Auth: auth})
+	apiV0.RegisterHandlers(echoServer, &apiV0.Wrapper{Auth: auth})
+	apiExperimental.RegisterHandlers(echoServer, &apiExperimental.Wrapper{Auth: auth})
 
 	// Start the server
 	return echoServer, nil
