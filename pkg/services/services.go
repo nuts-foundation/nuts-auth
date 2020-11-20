@@ -3,7 +3,6 @@ package services
 import (
 	"net/http"
 
-	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 
@@ -64,8 +63,6 @@ type ContractClient interface {
 	CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error)
 	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
 	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
-	KeyExistsFor(legalEntity core.PartyID) bool
-	OrganizationNameByID(legalEntity core.PartyID) (string, error)
 	Configure() error
 	ContractValidatorInstance() ContractValidator
 	// HandlerFunc returns the Irma server handler func

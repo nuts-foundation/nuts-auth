@@ -7,6 +7,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 )
@@ -20,7 +21,7 @@ type CreateSessionRequest struct {
 	// Language of the contact such as "NL"
 	Language contract.Language
 	// LegalEntity denotes the organization of the user
-	LegalEntity string
+	LegalEntity core.PartyID
 	// ValidFrom describes the time from which this contract should be considered valid
 	ValidFrom time.Time
 	// ValidFrom describes the time until this contract should be considered valid

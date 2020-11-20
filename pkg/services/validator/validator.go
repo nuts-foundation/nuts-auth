@@ -146,13 +146,27 @@ func (s *service) HandlerFunc() http.HandlerFunc {
 	return s.irmaServer.HandlerFunc()
 }
 
+var ErrMissingOrganizationKey = errors.New("missing organization private key")
+
 // CreateContractSession creates a session based on an IRMA contract. This allows the user to permit the application to
 // use the Nuts Network in its name. The user can limit the application in time and scope. By signing it with IRMA other
 // nodes in the network can verify the validity of the contract.
 func (s *service) CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error) {
 
-	// Step 1: Find the correct template
+	// Step 1a: Find the correct template
 	template, err := contract.StandardContractTemplates.Find(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	// Step 1b find legal entity in crypto
+	// todo this should be deprecated when using the oauth flow
+	if !s.KeyExistsFor(sessionRequest.LegalEntity) {
+		return nil, ErrMissingOrganizationKey
+	}
+
+	// translate legal entity to its name
+	orgName, err := s.OrganizationNameByID(sessionRequest.LegalEntity)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +174,7 @@ func (s *service) CreateContractSession(sessionRequest services.CreateSessionReq
 	// Step 2: Render the template template with all the correct values
 	renderedContract, err := template.Render(map[string]string{
 		contract.ActingPartyAttr: s.config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
-		contract.LegalEntityAttr: sessionRequest.LegalEntity,
+		contract.LegalEntityAttr: orgName,
 	}, 0, 60*time.Minute)
 	if err != nil {
 		return nil, fmt.Errorf("could not render template: %w", err)

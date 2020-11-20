@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/nuts-foundation/nuts-auth/logging"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
+	pkg2 "github.com/nuts-foundation/nuts-registry/pkg"
 
 	"github.com/labstack/echo/v4"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -60,23 +62,13 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid value for param legalEntity: '%s', make sure its in the form 'urn:oid:1.2.3.4:foo'", params.LegalEntity))
 	}
-	// find legal entity in crypto
-	if !api.Auth.ContractClient().KeyExistsFor(orgID) {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity, this Nuts node does not seem to be managing '%s'", orgID))
-	}
-
-	// translate legal entity to its name
-	orgName, err := api.Auth.ContractClient().OrganizationNameByID(orgID)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No organization registered for legalEntity: %v", err))
-	}
 
 	// convert generated api format to internal struct
 	sessionRequest := services.CreateSessionRequest{
 		Type:        contract.Type(params.Type),
 		Version:     contract.Version(params.Version),
 		Language:    contract.Language(params.Language),
-		LegalEntity: orgName,
+		LegalEntity: orgID,
 		ValidFrom:   vf,
 		ValidTo:     vt,
 	}
@@ -87,6 +79,13 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		if errors.Is(err, contract.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
+		if errors.Is(err, validator.ErrMissingOrganizationKey) {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity, this Nuts node does not seem to be managing '%s'", orgID))
+		}
+		if errors.Is(err, pkg2.ErrOrganizationNotFound) {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No organization registered for legalEntity: %v", err))
+		}
+		// todo add errors for MissingOrg
 		logging.Log().WithError(err).Error("error while creating contract session")
 		return err
 	}

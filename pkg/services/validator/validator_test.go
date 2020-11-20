@@ -27,6 +27,7 @@ import (
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registryMock "github.com/nuts-foundation/nuts-registry/mock"
@@ -43,11 +44,14 @@ func TestService_CreateContractSession(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
+		vendorID := test.VendorID("vendorName")
 		request := services.CreateSessionRequest{
 			Type:        contract.Type("BehandelaarLogin"),
 			Language:    contract.Language("NL"),
-			LegalEntity: "vendorName",
+			LegalEntity: vendorID,
 		}
+		ctx.cryptoMock.EXPECT().PrivateKeyExists(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: vendorID.String()})).Return(true)
+		ctx.registryMock.EXPECT().OrganizationById(vendorID).Return(&db.Organization{Name: "vendorName"}, nil)
 		ctx.contractSessionHandler.EXPECT().StartSession(gomock.Any(), gomock.Any()).Return(&irma.Qr{URL: qrURL, Type: irma.ActionSigning}, "abc-sessionid-abc", nil)
 
 		result, err := ctx.contractService.CreateContractSession(request)

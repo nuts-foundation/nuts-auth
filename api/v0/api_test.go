@@ -11,6 +11,8 @@ import (
 
 	servicesMock "github.com/nuts-foundation/nuts-auth/mock/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
+	"github.com/nuts-foundation/nuts-registry/pkg"
 
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 
@@ -40,16 +42,13 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 
 		tt := time.Now().Truncate(time.Second)
 
-		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		ctx.contractMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
-
 		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
 			Type:        "BehandelaarLogin",
 			Version:     "v1",
 			Language:    "NL",
 			ValidFrom:   tt,
 			ValidTo:     tt.Add(time.Hour * 13),
-			LegalEntity: careOrgName,
+			LegalEntity: careOrgID,
 		}).Return(&services.CreateSessionResult{
 			QrCodeInfo: irma.Qr{
 				URL:  "http://example.com" + irmaService.IrmaMountPath + "/123",
@@ -140,14 +139,11 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		ctx.contractMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
-
 		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
 			Type:        contract2.Type(params.Type),
 			Version:     "v1",
 			Language:    "NL",
-			LegalEntity: careOrgName,
+			LegalEntity: careOrgID,
 		}).Return(
 			nil, contract2.ErrContractNotFound)
 
@@ -175,7 +171,12 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(false)
+		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
+			Type:        contract2.Type(params.Type),
+			Version:     "v1",
+			Language:    "NL",
+			LegalEntity: careOrgID,
+		}).Return(nil, validator.ErrMissingOrganizationKey)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
 
@@ -201,8 +202,12 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		ctx.contractMock.EXPECT().OrganizationNameByID(careOrgID).Return("", errors.New("error"))
+		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
+			Type:        contract2.Type(params.Type),
+			Version:     "v1",
+			Language:    "NL",
+			LegalEntity: careOrgID,
+		}).Return(nil, pkg.ErrOrganizationNotFound)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
 
