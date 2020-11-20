@@ -32,6 +32,8 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/golang/mock/gomock"
 	servicesMock "github.com/nuts-foundation/nuts-auth/mock/services"
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	consentMock "github.com/nuts-foundation/nuts-consent-store/mock"
 	pkg2 "github.com/nuts-foundation/nuts-consent-store/pkg"
 	"github.com/nuts-foundation/nuts-crypto/pkg"
@@ -47,8 +49,6 @@ import (
 	registryTest "github.com/nuts-foundation/nuts-registry/test"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
 func TestAuth_CreateAccessToken(t *testing.T) {
@@ -85,7 +85,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		defer ctx.ctrl.Finish()
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Times(2).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().AnyTimes().Return(testTrustStore{ca: vendorCA(t)})
-		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", nil).Return(nil, errors.New("identity validation failed"))
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(nil, errors.New("identity validation failed"))
 
 		tokenCtx := validContext()
 		signToken(tokenCtx)
@@ -116,7 +116,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 	t.Run("invalid identity token", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", nil).Return(&services.ContractValidationResult{ValidationResult: services.Invalid, DisclosedAttributes: map[string]string{}}, nil)
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(&contract.VerificationResult{State: contract.Invalid}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Times(2).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().AnyTimes().Return(testTrustStore{ca: vendorCA(t)})
 
@@ -133,7 +133,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 	t.Run("valid - with legal base", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		ctx.contractValidatorMock.EXPECT().ValidateJwt("authToken", nil).Return(&services.ContractValidationResult{ValidationResult: services.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(&contract.VerificationResult{State: contract.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().AnyTimes().Return(testTrustStore{ca: vendorCA(t)})
@@ -358,8 +358,8 @@ func TestOAuthService_buildAccessToken(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		tokenCtx := &validationContext{
-			contractValidationResult: &services.ContractValidationResult{ValidationResult: services.Valid},
-			jwtBearerToken:           &services.NutsJwtBearerToken{},
+			contractVerificationResult: &contract.VerificationResult{State: contract.Valid},
+			jwtBearerToken:             &services.NutsJwtBearerToken{},
 		}
 
 		token, err := ctx.oauthService.buildAccessToken(tokenCtx)
@@ -374,8 +374,8 @@ func TestOAuthService_buildAccessToken(t *testing.T) {
 		ctx.cryptoMock.EXPECT().SignJWT(gomock.Any(), gomock.Any()).Return("expectedAT", nil)
 
 		tokenCtx := &validationContext{
-			contractValidationResult: &services.ContractValidationResult{ValidationResult: services.Valid},
-			jwtBearerToken:           &services.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}},
+			contractVerificationResult: &contract.VerificationResult{State: contract.Valid},
+			jwtBearerToken:             &services.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}},
 		}
 
 		token, err := ctx.oauthService.buildAccessToken(tokenCtx)
@@ -389,11 +389,12 @@ func TestOAuthService_buildAccessToken(t *testing.T) {
 
 func TestOAuthService_CreateJwtBearerToken(t *testing.T) {
 	sid := "789"
+	usi := "irma identity token"
 	request := services.CreateJwtBearerTokenRequest{
 		Custodian:     otherOrganizationID.String(),
 		Actor:         organizationID.String(),
 		Subject:       &sid,
-		IdentityToken: "irma identity token",
+		IdentityToken: &usi,
 	}
 
 	t.Run("create a JwtBearerToken", func(t *testing.T) {
@@ -430,7 +431,7 @@ func TestOAuthService_CreateJwtBearerToken(t *testing.T) {
 		request := services.CreateJwtBearerTokenRequest{
 			Actor:         organizationID.String(),
 			Subject:       &sid,
-			IdentityToken: "irma identity token",
+			IdentityToken: &usi,
 		}
 
 		token, err := ctx.oauthService.CreateJwtBearerToken(request)
@@ -457,13 +458,14 @@ func Test_claimsFromRequest(t *testing.T) {
 	ctx := createContext(t)
 	defer ctx.ctrl.Finish()
 	sid := "789"
+	usi := "irma identity token"
 
 	t.Run("ok", func(t *testing.T) {
 		request := services.CreateJwtBearerTokenRequest{
 			Custodian:     otherOrganizationID.String(),
 			Actor:         organizationID.String(),
 			Subject:       &sid,
-			IdentityToken: "irma identity token",
+			IdentityToken: &usi,
 		}
 		audience := "aud"
 		timeFunc = func() time.Time {
@@ -481,7 +483,7 @@ func Test_claimsFromRequest(t *testing.T) {
 		assert.Equal(t, request.Actor, claims.Issuer)
 		assert.Equal(t, int64(0), claims.NotBefore)
 		assert.Equal(t, request.Custodian, claims.Subject)
-		assert.Equal(t, request.IdentityToken, claims.AuthTokenContainer)
+		assert.Equal(t, request.IdentityToken, claims.UserIdentity)
 		assert.Equal(t, request.Subject, claims.SubjectID)
 	})
 }
@@ -561,6 +563,7 @@ func clientCert(t *testing.T) string {
 
 func validContext() *validationContext {
 	sid := "subject"
+	usi := "irma identity token"
 	token := services.NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "endpoint",
@@ -571,7 +574,7 @@ func validContext() *validationContext {
 			NotBefore: 0,
 			Subject:   "urn:oid:2.16.840.1.113883.2.4.6.1:custodian",
 		},
-		AuthTokenContainer: "authToken",
+		UserIdentity: &usi,
 		SubjectID:          &sid,
 	}
 	return &validationContext{
@@ -609,7 +612,7 @@ type testContext struct {
 	ctrl                  *gomock.Controller
 	cryptoMock            *cryptoMock.MockClient
 	registryMock          *registryMock.MockRegistryClient
-	contractValidatorMock *servicesMock.MockContractValidator
+	contractClientMock    *servicesMock.MockContractClient
 	consentMock           *consentMock.MockConsentStoreClient
 	oauthService          *service
 }
@@ -623,21 +626,21 @@ var createContext = func(t *testing.T) *testContext {
 	ctrl := gomock.NewController(t)
 	cryptoMock := cryptoMock.NewMockClient(ctrl)
 	registryMock := registryMock.NewMockRegistryClient(ctrl)
-	contractValidatorMock := servicesMock.NewMockContractValidator(ctrl)
+	contractClientMock := servicesMock.NewMockContractClient(ctrl)
 	consentMock := consentMock.NewMockConsentStoreClient(ctrl)
 	return &testContext{
 		ctrl:                  ctrl,
 		cryptoMock:            cryptoMock,
 		registryMock:          registryMock,
-		contractValidatorMock: contractValidatorMock,
+		contractClientMock: contractClientMock,
 		consentMock:           consentMock,
 		oauthService: &service{
 			vendorID:          vendorID,
 			crypto:            cryptoMock,
 			registry:          registryMock,
 			oauthKeyEntity:    oauthKeyEntity,
-			contractValidator: contractValidatorMock,
 			consent:           consentMock,
+			contractClient:    contractClientMock,
 		},
 	}
 }

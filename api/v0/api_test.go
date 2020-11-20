@@ -559,7 +559,7 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 		expectedRequest := services.CreateJwtBearerTokenRequest{
 			Actor:         body.Actor,
 			Custodian:     body.Custodian,
-			IdentityToken: body.Identity,
+			IdentityToken: &body.Identity,
 			Subject:       body.Subject,
 		}
 

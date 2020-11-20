@@ -22,11 +22,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-auth/logging"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/nuts-foundation/nuts-auth/logging"
 
 	"github.com/mdp/qrterminal/v3"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
@@ -60,6 +61,7 @@ type service struct {
 	irmaServer             *irmaserver.Server
 	crypto                 nutscrypto.Client
 	registry               registry.RegistryClient
+	verifiers              map[string]contract.Verifier
 }
 
 func NewContractInstance(config Config, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) services.ContractClient {
@@ -93,11 +95,25 @@ func (s *service) Configure() (err error) {
 	}
 	s.contractSessionHandler = irmaService
 	s.contractValidator = irmaService
+
+
+	s.verifiers = map[string]contract.Verifier{}
+	s.verifiers["irma"] = irmaService
+
 	return
 }
 
-func (s *service) ContractValidatorInstance() services.ContractValidator {
-	return s.contractValidator
+func (s *service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
+	vp := contract.VerifiablePresentation{}
+	if err := json.Unmarshal(rawVerifiablePresentation, &vp); err != nil {
+		return nil, err
+	}
+
+	if _, ok := s.verifiers[vp.Proof.Type]; !ok {
+		return nil, fmt.Errorf("unknown proof type: %s", vp.Proof.Type)
+	}
+
+	return s.verifiers[vp.Proof.Type].VerifyVP(rawVerifiablePresentation)
 }
 
 // ErrMissingActingParty is returned when the actingPartyCn is missing from the config

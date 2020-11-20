@@ -96,7 +96,7 @@ func (auth *Auth) OAuthClient() services.OAuthClient {
 		return auth.OAuth
 	}
 	auth.oneOauthInstance.Do(func() {
-		auth.OAuth = oauth.NewOAuthService(core.NutsConfig().VendorID(), auth.Crypto, auth.Registry, auth.Contract.ContractValidatorInstance())
+		auth.OAuth = oauth.NewOAuthService(core.NutsConfig().VendorID(), auth.Crypto, auth.Registry, auth.Contract)
 	})
 	return auth.OAuth
 }

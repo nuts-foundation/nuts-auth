@@ -59,23 +59,24 @@ type service struct {
 	registry          nutsRegistry.RegistryClient
 	consent           nutsConsent.ConsentStoreClient
 	oauthKeyEntity    nutsCryptoTypes.KeyIdentifier
-	contractValidator services.ContractValidator
+	contractClient	  services.ContractClient
 }
 
 type validationContext struct {
-	rawJwtBearerToken        string
-	jwtBearerToken           *services.NutsJwtBearerToken
-	actorName                string
-	vendor                   core.PartyID
-	contractValidationResult *services.ContractValidationResult
+	rawJwtBearerToken          string
+	jwtBearerToken             *services.NutsJwtBearerToken
+	actorName                  string
+	vendor                     core.PartyID
+	contractVerificationResult *contract.VerificationResult
 }
 
-func NewOAuthService(vendorID core.PartyID, cryptoClient nutsCrypto.Client, registryClient nutsRegistry.RegistryClient, contractValidator services.ContractValidator) services.OAuthClient {
+func NewOAuthService(vendorID core.PartyID, cryptoClient nutsCrypto.Client, registryClient nutsRegistry.RegistryClient, contractClient services.ContractClient) services.OAuthClient {
 	return &service{
 		vendorID:          vendorID,
 		crypto:            cryptoClient,
 		registry:          registryClient,
-		contractValidator: contractValidator,
+		contractClient:    contractClient,
+//		contractValidator: contractValidator,
 	}
 }
 
@@ -135,12 +136,13 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	}
 
 	// Validate the AuthTokenContainer, according to RFC003 §5.2.1.5
-	// todo: request.VendorIdentifier is deprecated, remove in 0.17
 	var err error
-	if context.contractValidationResult, err = s.contractValidator.ValidateJwt(context.jwtBearerToken.AuthTokenContainer, request.VendorIdentifier); err != nil {
-		return nil, fmt.Errorf("identity token validation failed: %w", err)
+	if context.jwtBearerToken.UserIdentity != nil {
+		if context.contractVerificationResult, err = s.contractClient.VerifyVP([]byte(*context.jwtBearerToken.UserIdentity)); err != nil {
+			return nil, fmt.Errorf("identity verification failed: %w", err)
+		}
 	}
-	if context.contractValidationResult.ValidationResult == services.Invalid {
+	if context.contractVerificationResult.State == contract.Invalid {
 		return nil, errors.New("identity validation failed")
 	}
 	// checks if the name from the login contract matches with the registered name of the issuer.
@@ -166,9 +168,23 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	return &services.AccessTokenResult{AccessToken: accessToken}, nil
 }
 
+// ErrLegalEntityNotProvided indicates that the legalEntity is missing
+var ErrLegalEntityNotProvided = errors.New("legalEntity not provided")
+
+func parseTokenIssuer(issuer string) (core.PartyID, error) {
+	if issuer == "" {
+		return core.PartyID{}, ErrLegalEntityNotProvided
+	}
+	if result, err := core.ParsePartyID(issuer); err != nil {
+		return core.PartyID{}, fmt.Errorf("invalid token issuer: %w", err)
+	} else {
+		return result, nil
+	}
+}
+
 // checks if the name from the login contract matches with the registered name of the issuer.
 func (s *service) validateActor(context *validationContext) error {
-	if context.contractValidationResult.ContractAttributes[contract.LegalEntityAttr] != context.actorName {
+	if context.contractVerificationResult.ContractAttributes[contract.LegalEntityAttr] != context.actorName {
 		return errors.New("legal entity mismatch")
 	}
 	return nil
@@ -331,7 +347,7 @@ func claimsFromRequest(request services.CreateJwtBearerTokenRequest, audience st
 			NotBefore: 0,
 			Subject:   request.Custodian,
 		},
-		AuthTokenContainer: request.IdentityToken,
+		UserIdentity:       request.IdentityToken,
 		SubjectID:          request.Subject,
 	}
 }
@@ -415,10 +431,10 @@ func (s *service) IntrospectAccessToken(accessToken string) (*services.NutsAcces
 // BuildAccessToken builds an access token based on the oauth claims and the identity of the user provided by the identityValidationResult
 // The token gets signed with the custodians private key and returned as a string.
 func (s *service) buildAccessToken(context *validationContext) (string, error) {
-	identityValidationResult := context.contractValidationResult
+	identityValidationResult := context.contractVerificationResult
 	jwtBearerToken := context.jwtBearerToken
 
-	if identityValidationResult.ValidationResult != services.Valid {
+	if identityValidationResult.State != contract.Valid {
 		return "", fmt.Errorf("could not build accessToken: %w", errors.New("invalid contract"))
 	}
 

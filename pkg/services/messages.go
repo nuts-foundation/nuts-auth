@@ -44,6 +44,7 @@ type SessionStatusResult struct {
 }
 
 // ValidationRequest is used to pass all information to ValidateContract
+// deprecated, moved to pkg/contract
 type ValidationRequest struct {
 	// ContractFormat specifies the type of format used for the contract, e.g. 'irma'
 	ContractFormat ContractFormat
@@ -67,7 +68,7 @@ type CreateAccessTokenRequest struct {
 type CreateJwtBearerTokenRequest struct {
 	Actor         string
 	Custodian     string
-	IdentityToken string
+	IdentityToken *string
 	Subject       *string
 }
 
@@ -85,7 +86,8 @@ type JwtBearerTokenResult struct {
 // verified by the authorization server.
 type NutsJwtBearerToken struct {
 	jwt.StandardClaims
-	AuthTokenContainer string            `json:"usi"`
+	// Base64 encoded VerifiablePresentation
+	UserIdentity       *string            `json:"usi"`
 	SubjectID          *string           `json:"sid"`
 	Scope              string            `json:"scope"`
 	SigningCertificate *x509.Certificate `json:-`
@@ -116,6 +118,7 @@ func (token NutsJwtBearerToken) AsMap() (map[string]interface{}, error) {
 }
 
 // ContractValidationResult contains the result of a contract validation
+// deprecated, moved to pkg/contract
 type ContractValidationResult struct {
 	ValidationResult ValidationState `json:"validation_result"`
 	ContractFormat   ContractFormat  `json:"contract_format"`
@@ -137,6 +140,7 @@ const IrmaTokenContainerType TokenContainerType = "irma"
 // NutsAuthenticationTokenContainer holds the base64 encoded token and a type which uniquely
 // identifies the means used to sign the contract
 // See the Nuts RFC002 section 6 :Authentication Token Container
+// deprecated, replace with VerifiablePresentation
 type NutsAuthenticationTokenContainer struct {
 	// Type indicates the type of the base64 encoded Token
 	Type TokenContainerType `json:"type"`

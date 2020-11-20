@@ -11,6 +11,7 @@ import (
 )
 
 // ContractValidator interface must be implemented by contract validators
+// todo deprecate
 type ContractValidator interface {
 	// ValidateContract validates a signed login contract, actingPartyCN is deprecated and thus optional
 	ValidateContract(contract string, format ContractFormat, actingPartyCN *string) (*ContractValidationResult, error)
@@ -67,11 +68,15 @@ type ContractNotary interface {
 
 // ContractClient defines functions for creating and validating signed contracts
 type ContractClient interface {
+	// VerifyVP verifies if the proof of the VerifiablePresentation is valid
+	VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error)
+
 	CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error)
 	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
+
+	// todo: deprecate
 	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	Configure() error
-	ContractValidatorInstance() ContractValidator
 	// HandlerFunc returns the Irma server handler func
 	HandlerFunc() http.HandlerFunc
 }

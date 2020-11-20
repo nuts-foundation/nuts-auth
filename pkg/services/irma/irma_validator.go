@@ -52,6 +52,47 @@ func (v IrmaService) IsInitialized() bool {
 	return v.IrmaConfig != nil
 }
 
+// irmaVerifiablePresentation is a specific proof for irma signatures
+type irmaVerifiablePresentation struct {
+	proof irmaVPProof `json:"proof"`
+}
+
+// irmaVPProof is a specific IrmaProof for the specific IrmaVerifiablePresentation
+type irmaVPProof struct {
+	contract.Proof
+	Signature string `json:"signature"`
+}
+
+// VerifyVP expects the given raw VerifiablePresentation to be of the correct type
+// todo: type check?
+func (v IrmaService) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
+	// Extract the Irma message
+	vp := irmaVerifiablePresentation{}
+	if err := json.Unmarshal(rawVerifiablePresentation, &vp); err != nil {
+		return nil, err
+	}
+
+	// Create the irma contract validator
+	contractValidator := contractVerifier{v.IrmaConfig, v.ContractTemplates}
+	signedContract, err := contractValidator.parseSignedIrmaContract(vp.proof.Signature)
+	if err != nil {
+		return nil, err
+	}
+
+	cvr, err := contractValidator.verifyAll(signedContract, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// todo this is because of backwards compatibility
+	return &contract.VerificationResult{
+		State:    contract.State(cvr.ValidationResult),
+		ContractFormat:      contract.Format(cvr.ContractFormat),
+		DisclosedAttributes: cvr.DisclosedAttributes,
+		ContractAttributes:  cvr.ContractAttributes,
+	}, nil
+}
+
 // ValidateContract is the entry point for contract validation.
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
 // Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
