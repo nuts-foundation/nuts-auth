@@ -30,7 +30,7 @@ func (w Wrapper) GetContractTemplate(ctx echo.Context, language string, contract
 		version = contract.Version(*params.Version)
 	}
 
-	c, err := w.Auth.ContractClient().ContractTemplateByType(contract.Type(contractType), contract.Language(language), version)
+	c, err := contract.StandardContractTemplates.Find(contract.Type(contractType), contract.Language(language), version)
 	if err != nil {
 		if errors.Is(err, contract.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, "contract not found")
