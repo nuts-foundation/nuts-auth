@@ -2,13 +2,16 @@ package pkg
 
 import (
 	"sync"
+	"time"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/services"
-	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
-	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
 )
 
 // ConfAddress is the config key for the address the http server listens on
@@ -34,6 +37,8 @@ type AuthClient interface {
 	OAuthClient() services.OAuthClient
 	// ContractClient returns an instance of ContractClient
 	ContractClient() services.ContractClient
+	// ContractNotary returns an instance of ContractNotary
+	ContractNotary() services.ContractNotary
 }
 
 // Auth is the main struct of the Auth service
@@ -47,6 +52,11 @@ type Auth struct {
 	oneContractInstance sync.Once
 	Crypto              nutscrypto.Client
 	Registry            registry.RegistryClient
+	contractNotary      services.ContractNotary
+}
+
+func (auth *Auth) ContractNotary() services.ContractNotary {
+	return auth.contractNotary
 }
 
 func DefaultAuthConfig() AuthConfig {
@@ -73,9 +83,10 @@ func AuthInstance() *Auth {
 
 func NewAuthInstance(config AuthConfig, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) *Auth {
 	return &Auth{
-		Config:   config,
-		Crypto:   cryptoClient,
-		Registry: registryClient,
+		Config:         config,
+		Crypto:         cryptoClient,
+		Registry:       registryClient,
+		contractNotary: contract.NewContractNotary(registryClient, 60*time.Minute),
 	}
 }
 

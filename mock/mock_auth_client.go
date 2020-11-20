@@ -16,6 +16,10 @@ type MockAuthClient struct {
 	recorder *MockAuthClientMockRecorder
 }
 
+func (m *MockAuthClient) ContractNotary() services.ContractNotary {
+	panic("implement me")
+}
+
 // MockAuthClientMockRecorder is the mock recorder for MockAuthClient
 type MockAuthClientMockRecorder struct {
 	mock *MockAuthClient

@@ -70,6 +70,28 @@ type CreateSignSessionResult struct {
 	SessionPtr string `json:"sessionPtr"`
 }
 
+// DrawUpContractRequest defines model for DrawUpContractRequest.
+type DrawUpContractRequest struct {
+
+	// Language of the contract in all caps
+	Language ContractLanguage `json:"language"`
+
+	// Identifier of the legalEntity as registered in the Nuts registry
+	LegalEntity LegalEntity `json:"legalEntity"`
+
+	// Type of which contract to sign
+	Type ContractType `json:"type"`
+
+	// Version of the contract
+	Version ContractVersion `json:"version"`
+}
+
+// LegalEntity defines model for LegalEntity.
+type LegalEntity string
+
+// DrawUpContractJSONBody defines parameters for DrawUpContract.
+type DrawUpContractJSONBody DrawUpContractRequest
+
 // GetContractTemplateParams defines parameters for GetContractTemplate.
 type GetContractTemplateParams struct {
 
@@ -79,6 +101,9 @@ type GetContractTemplateParams struct {
 
 // CreateSignSessionJSONBody defines parameters for CreateSignSession.
 type CreateSignSessionJSONBody CreateSignSessionRequest
+
+// DrawUpContractRequestBody defines body for DrawUpContract for application/json ContentType.
+type DrawUpContractJSONRequestBody DrawUpContractJSONBody
 
 // CreateSignSessionRequestBody defines body for CreateSignSession for application/json ContentType.
 type CreateSignSessionJSONRequestBody CreateSignSessionJSONBody

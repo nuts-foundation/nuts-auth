@@ -3,6 +3,7 @@ package services
 import (
 	"net/http"
 
+	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 
@@ -56,6 +57,12 @@ type AuthenticationTokenParser interface {
 
 	// Verify accepts a SignedToken and verifies the signature using the crypto for the specific implementation of this interface.
 	Verify(token SignedToken) error
+}
+
+// ContractNotary defines the interface to draw up a contract.
+type ContractNotary interface {
+	// DrawUpContract draws up a contract from a template and returns a Contract which than can be signed by the user.
+	DrawUpContract(template contract.Template, orgID core.PartyID) (*contract.Contract, error)
 }
 
 // ContractClient defines functions for creating and validating signed contracts

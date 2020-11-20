@@ -42,3 +42,15 @@ Content-Type: application/json
 GET http://localhost:1323/auth/internal/experimental/contract/template/EN/PractitionerLogin?version=v3
 
 ###
+
+PUT http://localhost:1323/auth/internal/experimental/contract/drawup
+Content-Type: application/json
+
+{
+  "language": "EN",
+  "version":"v3",
+  "type":"PractitionerLogin",
+  "legalEntity": "urn:oid:2.16.840.1.113883.2.4.6.1:12345678"
+}
+
+###
