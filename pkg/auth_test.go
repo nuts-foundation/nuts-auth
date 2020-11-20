@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/services/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
 	crypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
 	testIo "github.com/nuts-foundation/nuts-go-test/io"
@@ -44,7 +44,7 @@ func TestAuth_Configure(t *testing.T) {
 			ActingPartyCn: "url",
 		})
 
-		assert.Equal(t, contract.ErrMissingPublicURL, i.Configure())
+		assert.Equal(t, validator.ErrMissingPublicURL, i.Configure())
 	})
 
 	t.Run("error - IRMA config failure", func(t *testing.T) {

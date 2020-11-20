@@ -320,32 +320,23 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		cType := "KnownContract"
+		cType := "PractitionerLogin"
 		cVersion := "v1"
-		cLanguage := "NL"
+		cLanguage := "EN"
 		params := GetContractByTypeParams{
 			Version:  &cVersion,
 			Language: &cLanguage,
 		}
 
-		contract := contract2.Template{
-			Type:               contract2.Type(cType),
-			Version:            contract2.Version(cVersion),
-			Language:           contract2.Language(cLanguage),
-			TemplateAttributes: []string{"party"},
-			Template:           "ik geen toestemming aan {{party}}",
-		}
-
-		ta := []string{"party"}
+		a, _ := contract2.StandardContractTemplates.Find(contract2.Type(cType), contract2.Language(cLanguage), contract2.Version(cVersion))
 		answer := Contract{
-			Type:               Type(cType),
-			Template:           &contract.Template,
-			Version:            Version(cVersion),
-			TemplateAttributes: &ta,
-			Language:           Language(cLanguage),
+			Language:           Language(a.Language),
+			Template:           &a.Template,
+			TemplateAttributes: &a.TemplateAttributes,
+			Type:               Type(a.Type),
+			Version:            Version(a.Version),
 		}
 
-		ctx.contractMock.EXPECT().ContractByType(contract2.Type(cType), contract2.Language(cLanguage), contract2.Version(cVersion)).Return(&contract, nil)
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, answer)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
@@ -360,8 +351,6 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 
 		cType := "UnknownContract"
 		params := GetContractByTypeParams{}
-
-		ctx.contractMock.EXPECT().ContractByType(contract2.Type(cType), contract2.Language(""), contract2.Version("")).Return(nil, contract2.ErrContractNotFound)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
 		err := wrapper.GetContractByType(ctx.echoMock, cType, params)

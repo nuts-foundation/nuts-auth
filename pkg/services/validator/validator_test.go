@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package contract
+package validator
 
 import (
 	"errors"
@@ -69,31 +69,6 @@ func TestService_CreateContractSession(t *testing.T) {
 
 		assert.Nil(t, result, "result should be nil")
 		assert.NotNil(t, err, "expected an error")
-		assert.True(t, errors.Is(err, contract.ErrContractNotFound), "expected ErrContractNotFound")
-	})
-}
-
-func TestService_ContractByType(t *testing.T) {
-	ctx := createContext(t)
-	defer ctx.ctrl.Finish()
-
-	t.Run("get contract by type", func(t *testing.T) {
-		result, err := ctx.contractService.ContractTemplateByType("BehandelaarLogin", "NL", "v1")
-
-		if !assert.Nil(t, err) || !assert.NotNil(t, result) {
-			return
-		}
-
-		assert.Equal(t, contract.Version("v1"), result.Version)
-		assert.Equal(t, contract.Language("NL"), result.Language)
-		assert.Equal(t, contract.Type("BehandelaarLogin"), result.Type)
-	})
-
-	t.Run("an unknown contract returns an error", func(t *testing.T) {
-		result, err := ctx.contractService.ContractTemplateByType("UnknownContract", "NL", "v1")
-
-		assert.Nil(t, result)
-		assert.NotNil(t, err)
 		assert.True(t, errors.Is(err, contract.ErrContractNotFound), "expected ErrContractNotFound")
 	})
 }
@@ -243,7 +218,6 @@ func createContext(t *testing.T) *testContext {
 			},
 			contractSessionHandler: contractSessionHandler,
 			contractValidator:      contractValidatorMock,
-			contractTemplates:      contract.StandardContractTemplates,
 			crypto:                 cryptoMock,
 			registry:               registryMock,
 		},

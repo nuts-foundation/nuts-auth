@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
-	"github.com/nuts-foundation/nuts-auth/pkg/services/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
@@ -96,7 +96,7 @@ func (auth *Auth) ContractClient() services.ContractClient {
 		return auth.Contract
 	}
 	auth.oneContractInstance.Do(func() {
-		cfg := contract.Config{
+		cfg := validator.Config{
 			Mode:                      auth.Config.Mode,
 			Address:                   auth.Config.Address,
 			PublicUrl:                 auth.Config.PublicUrl,
@@ -105,7 +105,7 @@ func (auth *Auth) ContractClient() services.ContractClient {
 			SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,
 			ActingPartyCn:             auth.Config.ActingPartyCn,
 		}
-		auth.Contract = contract.NewContractInstance(cfg, auth.Crypto, auth.Registry)
+		auth.Contract = validator.NewContractInstance(cfg, auth.Crypto, auth.Registry)
 	})
 	return auth.Contract
 }

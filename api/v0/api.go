@@ -203,7 +203,7 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 	}
 
 	// get contract
-	authContract, err := api.Auth.ContractClient().ContractTemplateByType(contract.Type(contractType), contractLanguage, contractVersion)
+	authContract, err := contract.StandardContractTemplates.Find(contract.Type(contractType), contractLanguage, contractVersion)
 	if errors.Is(err, contract.ErrContractNotFound) {
 		return echo.NewHTTPError(http.StatusNotFound, err.Error())
 	} else if err != nil {

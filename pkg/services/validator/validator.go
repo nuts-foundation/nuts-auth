@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package contract
+package validator
 
 import (
 	"encoding/json"
@@ -41,7 +41,7 @@ import (
 	"github.com/privacybydesign/irmago/server/irmaserver"
 )
 
-// ContractConfig holds all the configuration params
+// Config holds all the configuration params
 type Config struct {
 	Mode                      string
 	Address                   string
@@ -58,7 +58,6 @@ type service struct {
 	contractValidator      services.ContractValidator
 	irmaServiceConfig      irmaService.IrmaServiceConfig
 	irmaServer             *irmaserver.Server
-	contractTemplates      contract.TemplateStore
 	crypto                 nutscrypto.Client
 	registry               registry.RegistryClient
 }
@@ -91,7 +90,6 @@ func (s *service) Configure() (err error) {
 		IrmaConfig:         irmaConfig,
 		Registry:           s.registry,
 		Crypto:             s.crypto,
-		ContractTemplates:  s.contractTemplates,
 	}
 	s.contractSessionHandler = irmaService
 	s.contractValidator = irmaService
@@ -108,6 +106,7 @@ var ErrMissingActingParty = errors.New("missing actingPartyCn")
 // ErrMissingPublicURL is returned when the publicUrl is missing from the config
 var ErrMissingPublicURL = errors.New("missing publicUrl")
 
+// deprecates
 func (s *service) configureContracts() (err error) {
 	if s.config.ActingPartyCn == "" {
 		// todo remove this check in 0.17
@@ -115,11 +114,11 @@ func (s *service) configureContracts() (err error) {
 	} else {
 		logging.Log().Warn("actingPartyCn is deprecated, please migrate to v3 contracts and remove the config parameter")
 	}
+	// todo: this is verifier/signer specific
 	if s.config.PublicUrl == "" {
 		err = ErrMissingPublicURL
 		return
 	}
-	s.contractTemplates = contract.StandardContractTemplates
 	return
 }
 
@@ -153,7 +152,7 @@ func (s *service) HandlerFunc() http.HandlerFunc {
 func (s *service) CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error) {
 
 	// Step 1: Find the correct template
-	template, err := s.contractTemplates.Find(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
+	template, err := contract.StandardContractTemplates.Find(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -218,12 +217,6 @@ func printQrCode(qrcode string) {
 		QuietZone:  1,
 	}
 	qrterminal.GenerateWithConfig(qrcode, config)
-}
-
-// NewByType returns a Contract of a certain type, language and version.
-// If for the combination of type, version and language no contract can be found, the error is of type ErrContractNotFound
-func (s *service) ContractTemplateByType(contractType contract.Type, language contract.Language, version contract.Version) (*contract.Template, error) {
-	return s.contractTemplates.Find(contractType, language, version)
 }
 
 // ContractSessionStatus returns the current session status for a given sessionID.
