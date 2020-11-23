@@ -31,11 +31,11 @@ import (
 // DummyContractFormat is the contract format type
 const DummyContractFormat = "dummy"
 
-// DummyVerifiableCredentialType is the dummy verifiable credential type
-const DummyVerifiableCredentialType = "DummyVerifiableCredential"
-
 // DummyVerifiablePresentationType is the dummy verifiable presentation type
 const DummyVerifiablePresentationType = "DummyVerifiablePresentation"
+
+// NoSignatureType is a VerifiablePresentation Proof type where no signature is given
+const NoSignatureType = "NoSignature"
 
 // SessionCreated represents the session state after creation
 const SessionCreated = "created"
@@ -54,41 +54,60 @@ type Dummy struct {
 	sessionStatus map[string]string
 }
 
-// NutsDummyPresentation is a VerifiablePresentation without valid cryptographic proofs
+// Presentation is a VerifiablePresentation without valid cryptographic proofs
 // It is only usable in non-strict mode.
-type NutsDummyPresentation struct {
+type Presentation struct {
 	contract.VerifiableCredentialBase
-	CredentialSubject NutsDummyCredentialSubject
-	Proof             NutsDummyProof
+	Proof             Proof
 }
 
-// NutsDummyCredentialSubject holds the attributes used for the simulated signature
-type NutsDummyCredentialSubject struct {
-	Initials  NutsDummyCredentialSubjectValue
-	Lastname  NutsDummyCredentialSubjectValue
-	Birthdate NutsDummyCredentialSubjectValue
-	Email     NutsDummyCredentialSubjectValue
-}
-
-// NutsDummyCredentialSubjectValue holds the type and value for a specific attribute within the NutsDummyCredentialSubject
-type NutsDummyCredentialSubjectValue struct {
+// CredentialSubjectValue holds the type and value for a specific attribute within the CredentialSubject
+type CredentialSubjectValue struct {
 	Type  string
-	value string
+	Value string
 }
 
-// NutsDummyProof holds the Proof generated from the dummy Signer
-type NutsDummyProof struct {
-	contract.Proof
-	// The generated contract
+// Proof holds the Proof generated from the dummy Signer
+type Proof struct {
+	// Proof type, mandatory
+	Type string
+	// Contract as how it was presented to the user
 	Contract string
+	// Initials form the signing means
+	Initials  string
+	// Lastname form the signing means
+	Lastname  string
+	// Birthdate form the signing means
+	Birthdate string
+	// Email form the signing means
+	Email     string
 }
 
-type dummySignChallenge struct{}
+type signChallenge struct{}
 
-type dummySigningSessionResult struct {
+type signingSessionResult struct {
 	Id    string
 	State   string
     Request contract.SigningSessionRequest
+}
+
+func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePresentation, error) {
+	// todo: the contract template should be used to select the dummy attributes to add
+	// reqContract := d.Request.Contract()
+
+	return Presentation{
+		VerifiableCredentialBase: contract.VerifiableCredentialBase{
+			Context: contract.VerifiableCredentialContext,
+			Type:    []string{contract.VerifiablePresentationType, DummyVerifiablePresentationType},
+		},
+		Proof: Proof {
+			Type: NoSignatureType,
+			Initials:  "I",
+			Lastname:  "Tester",
+			Birthdate: "1980-01-01",
+			Email:     "tester@example.com",
+		},
+	}, nil
 }
 
 var errNotEnabled = errors.New("not allowed in strict mode")
@@ -100,7 +119,7 @@ func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificatio
 		return nil, errNotEnabled
 	}
 
-	ndp := NutsDummyPresentation{}
+	ndp := Presentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &ndp); err != nil {
 		return nil, err
 	}
@@ -114,10 +133,10 @@ func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificatio
 		State:          contract.Valid,
 		ContractFormat: DummyContractFormat,
 		DisclosedAttributes: map[string]string{
-			"initials":  ndp.CredentialSubject.Initials.value,
-			"lastname":  ndp.CredentialSubject.Lastname.value,
-			"birthdate": ndp.CredentialSubject.Birthdate.value,
-			"email":     ndp.CredentialSubject.Initials.value,
+			"initials":  ndp.Proof.Initials,
+			"lastname":  ndp.Proof.Lastname,
+			"birthdate": ndp.Proof.Birthdate,
+			"email":     ndp.Proof.Initials,
 		},
 		ContractAttributes: c.Params,
 	}, nil
@@ -139,7 +158,7 @@ func (d Dummy) SessionStatus(session contract.SigningSession) (contract.SigningS
 		newState = SessionCompleted
 	}
 
-	return dummySigningSessionResult{
+	return signingSessionResult{
 		Id:      session.ID(),
 		State:   newState,
 		Request: d.sessions[session.ID()],
@@ -157,5 +176,5 @@ func (d Dummy) StartSession(request contract.SigningSessionRequest, handler serv
 	d.sessionStatus[sessionId] = "created"
 	d.sessions[sessionId] = request
 
-	return dummySignChallenge{}, nil
+	return signChallenge{}, nil
 }

@@ -35,10 +35,14 @@ type SignChallenge interface {
 
 // SigningSessionRequest
 type SigningSessionRequest interface {
+	Contract() Contract
 }
 
 // SigningSessionResult holds information in the current status of the SigningSession
 type SigningSessionResult interface {
+	// VerifiablePresentation returns a VerifiablePresentation holding the presentation proof and disclosed attributes or an error if
+	// no proof is present yet
+	VerifiablePresentation() (VerifiablePresentation, error)
 }
 
 // SigningSession represents a ongoing session where a user is going to sign a challenge

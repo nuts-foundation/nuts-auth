@@ -51,9 +51,12 @@ type VerifiableCredentialBase struct {
 // todo: move or use lib
 const VerifiableCredentialContext = "https://www.w3.org/2018/credentials/v1"
 
+// VerifiablePresentationType is used as one of the types for a VerifiablePresentation
+// todo move
+const VerifiablePresentationType = "VerifiablePresentation"
+
 // VerifiablePresentation represents a W3C Verifiable Presentation
-type VerifiablePresentation struct {
-	Proof Proof `json:"Proof"`
+type VerifiablePresentation interface {
 }
 
 // Proof represents the Proof part of a Verifiable Presentation
