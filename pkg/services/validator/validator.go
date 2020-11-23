@@ -96,7 +96,6 @@ func (s *service) Configure() (err error) {
 	s.contractSessionHandler = irmaService
 	s.contractValidator = irmaService
 
-
 	s.verifiers = map[string]contract.Verifier{}
 	s.verifiers["irma"] = irmaService
 

@@ -87,7 +87,7 @@ type JwtBearerTokenResult struct {
 type NutsJwtBearerToken struct {
 	jwt.StandardClaims
 	// Base64 encoded VerifiablePresentation
-	UserIdentity       *string            `json:"usi"`
+	UserIdentity       *string           `json:"usi"`
 	SubjectID          *string           `json:"sid"`
 	Scope              string            `json:"scope"`
 	SigningCertificate *x509.Certificate `json:-`

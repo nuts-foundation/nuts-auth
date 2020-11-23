@@ -86,7 +86,7 @@ func (v IrmaService) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verif
 
 	// todo this is because of backwards compatibility
 	return &contract.VerificationResult{
-		State:    contract.State(cvr.ValidationResult),
+		State:               contract.State(cvr.ValidationResult),
 		ContractFormat:      contract.Format(cvr.ContractFormat),
 		DisclosedAttributes: cvr.DisclosedAttributes,
 		ContractAttributes:  cvr.ContractAttributes,

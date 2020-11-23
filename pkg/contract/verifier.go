@@ -22,10 +22,10 @@ package contract
 type State string
 
 const (
-    // Valid is used to indicate a contract was valid on the time of testing
-    Valid State = "VALID"
-    // Invalid is used to indicate a contract was invalid on the time of testing
-    Invalid State = "INVALID"
+	// Valid is used to indicate a contract was valid on the time of testing
+	Valid State = "VALID"
+	// Invalid is used to indicate a contract was invalid on the time of testing
+	Invalid State = "INVALID"
 )
 
 // VerifierType is the type for a specific verifier
@@ -33,19 +33,33 @@ type VerifierType string
 
 // Verifier defines the funcs needed to verify a VerifiablePresentation
 type Verifier interface {
-    // ValidateVP validates a verifiable presentation, it's up to the caller to select the right verifier for the given VerifiablePresentation type
-    VerifyVP(rawVerifiablePresentation []byte) (*VerificationResult, error)
+	// ValidateVP validates a verifiable presentation, it's up to the caller to select the right verifier for the given VerifiablePresentation type
+	VerifyVP(rawVerifiablePresentation []byte) (*VerificationResult, error)
 }
+
+// VerifiableCredentialBase holds the basic fields for a VerifiableCredential
+// todo: move or use lib
+type VerifiableCredentialBase struct {
+	Context      string `json:"@context"`
+	Id           *string
+	Type         []string
+	Issuer       *string
+	IssuanceDate *string
+}
+
+// VerifiableCredentialContext is the v1 base context for VPs
+// todo: move or use lib
+const VerifiableCredentialContext = "https://www.w3.org/2018/credentials/v1"
 
 // VerifiablePresentation represents a W3C Verifiable Presentation
 type VerifiablePresentation struct {
-    Proof Proof `json:"Proof"`
+	Proof Proof `json:"Proof"`
 }
 
 // Proof represents the Proof part of a Verifiable Presentation
 // specific verifiers may extend upon this Proof
 type Proof struct {
-    Type string `json:"type"`
+	Type string `json:"type"`
 }
 
 // ContractFormat describes the format of a signed contract. Based on the format an appropriate validator can be selected.
@@ -53,10 +67,10 @@ type Format string
 
 // ContractValidationResult contains the result of a contract validation
 type VerificationResult struct {
-    State          State `json:"state"`
-    ContractFormat Format            `json:"contract_format"`
-    // DisclosedAttributes contain the attributes used to sign this contract
-    DisclosedAttributes map[string]string `json:"disclosed_attributes"`
-    // ContractAttributes contain the attributes used to fill the contract
-    ContractAttributes map[string]string `json:"contract_attributes"`
+	State          State  `json:"state"`
+	ContractFormat Format `json:"contract_format"`
+	// DisclosedAttributes contain the attributes used to sign this contract
+	DisclosedAttributes map[string]string `json:"disclosed_attributes"`
+	// ContractAttributes contain the attributes used to fill the contract
+	ContractAttributes map[string]string `json:"contract_attributes"`
 }

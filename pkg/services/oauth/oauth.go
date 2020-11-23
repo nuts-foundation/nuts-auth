@@ -54,12 +54,12 @@ const errInvalidIssuerFmt = "invalid jwt.issuer: %w"
 const errInvalidSubjectFmt = "invalid jwt.subject: %w"
 
 type service struct {
-	vendorID          core.PartyID
-	crypto            nutsCrypto.Client
-	registry          nutsRegistry.RegistryClient
-	consent           nutsConsent.ConsentStoreClient
-	oauthKeyEntity    nutsCryptoTypes.KeyIdentifier
-	contractClient	  services.ContractClient
+	vendorID       core.PartyID
+	crypto         nutsCrypto.Client
+	registry       nutsRegistry.RegistryClient
+	consent        nutsConsent.ConsentStoreClient
+	oauthKeyEntity nutsCryptoTypes.KeyIdentifier
+	contractClient services.ContractClient
 }
 
 type validationContext struct {
@@ -72,11 +72,10 @@ type validationContext struct {
 
 func NewOAuthService(vendorID core.PartyID, cryptoClient nutsCrypto.Client, registryClient nutsRegistry.RegistryClient, contractClient services.ContractClient) services.OAuthClient {
 	return &service{
-		vendorID:          vendorID,
-		crypto:            cryptoClient,
-		registry:          registryClient,
-		contractClient:    contractClient,
-//		contractValidator: contractValidator,
+		vendorID:       vendorID,
+		crypto:         cryptoClient,
+		registry:       registryClient,
+		contractClient: contractClient,
 	}
 }
 
@@ -347,8 +346,8 @@ func claimsFromRequest(request services.CreateJwtBearerTokenRequest, audience st
 			NotBefore: 0,
 			Subject:   request.Custodian,
 		},
-		UserIdentity:       request.IdentityToken,
-		SubjectID:          request.Subject,
+		UserIdentity: request.IdentityToken,
+		SubjectID:    request.Subject,
 	}
 }
 

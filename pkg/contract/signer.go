@@ -19,32 +19,30 @@
 package contract
 
 import (
-    "github.com/privacybydesign/irmago/server"
+	"github.com/privacybydesign/irmago/server"
 )
 
 // Signer is responsible for signing contract signing requests. Signing is done by making use of asynchronous SigningSessions.
 type Signer interface {
-    SessionStatus(session SigningSession) (SigningSessionResult, error)
-    StartSession(request SigningSessionRequest, handler server.SessionHandler) (SignChallenge, error)
+	SessionStatus(session SigningSession) (SigningSessionResult, error)
+	// todo what was the handler for?
+	StartSession(request SigningSessionRequest, handler server.SessionHandler) (SignChallenge, error)
 }
 
 // SignChallenge is the signing challenge that must be presented to the user
 type SignChallenge interface {
-
 }
 
 // SigningSessionRequest
 type SigningSessionRequest interface {
-
 }
 
 // SigningSessionResult holds information in the current status of the SigningSession
 type SigningSessionResult interface {
-
 }
 
 // SigningSession represents a ongoing session where a user is going to sign a challenge
 type SigningSession interface {
-    // ID returns the session identifier
-    ID() string
+	// ID returns the session identifier
+	ID() string
 }

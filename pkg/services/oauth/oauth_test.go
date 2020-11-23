@@ -575,7 +575,7 @@ func validContext() *validationContext {
 			Subject:   "urn:oid:2.16.840.1.113883.2.4.6.1:custodian",
 		},
 		UserIdentity: &usi,
-		SubjectID:          &sid,
+		SubjectID:    &sid,
 	}
 	return &validationContext{
 		jwtBearerToken: &token,
@@ -609,12 +609,12 @@ func signTokenWithHeader(context *validationContext, chain []string) {
 }
 
 type testContext struct {
-	ctrl                  *gomock.Controller
-	cryptoMock            *cryptoMock.MockClient
-	registryMock          *registryMock.MockRegistryClient
-	contractClientMock    *servicesMock.MockContractClient
-	consentMock           *consentMock.MockConsentStoreClient
-	oauthService          *service
+	ctrl               *gomock.Controller
+	cryptoMock         *cryptoMock.MockClient
+	registryMock       *registryMock.MockRegistryClient
+	contractClientMock *servicesMock.MockContractClient
+	consentMock        *consentMock.MockConsentStoreClient
+	oauthService       *service
 }
 
 var createContext = func(t *testing.T) *testContext {
@@ -629,18 +629,18 @@ var createContext = func(t *testing.T) *testContext {
 	contractClientMock := servicesMock.NewMockContractClient(ctrl)
 	consentMock := consentMock.NewMockConsentStoreClient(ctrl)
 	return &testContext{
-		ctrl:                  ctrl,
-		cryptoMock:            cryptoMock,
-		registryMock:          registryMock,
+		ctrl:               ctrl,
+		cryptoMock:         cryptoMock,
+		registryMock:       registryMock,
 		contractClientMock: contractClientMock,
-		consentMock:           consentMock,
+		consentMock:        consentMock,
 		oauthService: &service{
-			vendorID:          vendorID,
-			crypto:            cryptoMock,
-			registry:          registryMock,
-			oauthKeyEntity:    oauthKeyEntity,
-			consent:           consentMock,
-			contractClient:    contractClientMock,
+			vendorID:       vendorID,
+			crypto:         cryptoMock,
+			registry:       registryMock,
+			oauthKeyEntity: oauthKeyEntity,
+			consent:        consentMock,
+			contractClient: contractClientMock,
 		},
 	}
 }
