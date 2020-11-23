@@ -87,7 +87,8 @@ type dummySignChallenge struct{}
 
 type dummySigningSessionResult struct {
 	Id    string
-	State string
+	State   string
+    Request contract.SigningSessionRequest
 }
 
 var errNotEnabled = errors.New("not allowed in strict mode")
@@ -139,8 +140,9 @@ func (d Dummy) SessionStatus(session contract.SigningSession) (contract.SigningS
 	}
 
 	return dummySigningSessionResult{
-		Id:    session.ID(),
-		State: newState,
+		Id:      session.ID(),
+		State:   newState,
+		Request: d.sessions[session.ID()],
 	}, nil
 }
 
