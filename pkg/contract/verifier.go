@@ -59,6 +59,11 @@ const VerifiablePresentationType = "VerifiablePresentation"
 type VerifiablePresentation interface {
 }
 
+// BaseVerifiablePresentation represents a W3C Verifiable Presentation with only its Type attribute
+type BaseVerifiablePresentation struct {
+	Type []string
+}
+
 // Proof represents the Proof part of a Verifiable Presentation
 // specific verifiers may extend upon this Proof
 type Proof struct {

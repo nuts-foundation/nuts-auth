@@ -26,8 +26,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-auth/logging"
 	"time"
+
+	"github.com/nuts-foundation/nuts-auth/logging"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"

@@ -1,3 +1,21 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package irma
 
 import (
@@ -22,10 +40,16 @@ import (
 	irmaserver "github.com/privacybydesign/irmago/server"
 )
 
+// todo rename to verifier
+
+// VerifiablePresentationType is the irma verifiable presentation type
+const VerifiablePresentationType = "IrmaVerifiablePresentation"
+
 // IrmaService validates contracts using the irma logic.
 type IrmaService struct {
 	IrmaSessionHandler IrmaSessionHandler
 	IrmaConfig         *irma.Configuration
+	IrmaServiceConfig  IrmaServiceConfig
 	Registry           registry.RegistryClient
 	Crypto             nutscrypto.Client
 	ContractTemplates  contract.TemplateStore
@@ -96,6 +120,7 @@ func (v IrmaService) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verif
 // ValidateContract is the entry point for contract validation.
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
 // Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
+// deprecated
 func (v IrmaService) ValidateContract(b64EncodedContract string, format services.ContractFormat, actingPartyCN *string) (*services.ContractValidationResult, error) {
 	if format == services.IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
@@ -114,6 +139,7 @@ func (v IrmaService) ValidateContract(b64EncodedContract string, format services
 }
 
 // ValidateJwt validates a JWT formatted identity token
+// deprecated
 func (v IrmaService) ValidateJwt(token string, actingPartyCN *string) (*services.ContractValidationResult, error) {
 	parser := &jwt.Parser{ValidMethods: services.ValidJWTAlg}
 	parsedToken, err := parser.ParseWithClaims(token, &services.NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
@@ -159,8 +185,9 @@ func (v IrmaService) ValidateJwt(token string, actingPartyCN *string) (*services
 	return contractValidator.verifyAll(signedContract, actingPartyCN)
 }
 
-// SessionStatus returns the current status of a certain session.
+// IrmaSessionStatus returns the current status of a certain session.
 // It returns nil if the session is not found
+// deprecated
 func (v IrmaService) SessionStatus(id services.SessionID) (*services.SessionStatusResult, error) {
 	if result := v.IrmaSessionHandler.GetSessionResult(string(id)); result != nil {
 		var (

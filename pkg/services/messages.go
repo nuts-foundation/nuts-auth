@@ -28,6 +28,8 @@ type CreateSessionRequest struct {
 	ValidTo time.Time
 	// TemplateAttributes is an object containing extra template values. example: {"reason":"providing care"}
 	TemplateAttributes map[string]string
+	// todo correct Signing means type
+	SigningMeans string
 }
 
 // CreateSessionResult contains the results needed to setup an irma flow
@@ -37,6 +39,7 @@ type CreateSessionResult struct {
 }
 
 // SessionStatusResult contains the current state of a session. If the session is DONE it also contains a JWT in the NutsAuthToken
+// deprecated
 type SessionStatusResult struct {
 	server.SessionResult
 	// NutsAuthToken contains the JWT if the sessionStatus is DONE

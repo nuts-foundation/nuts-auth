@@ -4,12 +4,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"github.com/nuts-foundation/nuts-auth/logging"
 	"os"
 	"path"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/nuts-foundation/nuts-auth/logging"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
@@ -36,7 +37,7 @@ import (
 	"github.com/nuts-foundation/nuts-auth/testdata"
 	irma "github.com/privacybydesign/irmago"
 	irmaservercore "github.com/privacybydesign/irmago/server"
-	irmaserver "github.com/privacybydesign/irmago/server/irmaserver"
+	"github.com/privacybydesign/irmago/server/irmaserver"
 )
 
 func TestDefaultValidator_IsInitialized(t *testing.T) {

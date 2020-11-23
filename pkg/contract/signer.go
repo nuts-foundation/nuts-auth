@@ -18,24 +18,25 @@
 
 package contract
 
-import (
-	"github.com/privacybydesign/irmago/server"
-)
+import "errors"
+
+// ErrUnknownSessionID is returned when the session id is not known
+var ErrUnknownSessionID = errors.New("unknown sessionId")
 
 // Signer is responsible for signing contract signing requests. Signing is done by making use of asynchronous SigningSessions.
 type Signer interface {
-	SessionStatus(session SigningSession) (SigningSessionResult, error)
-	// todo what was the handler for?
-	StartSession(request SigningSessionRequest, handler server.SessionHandler) (SignChallenge, error)
+	// SigningSessionStatus returns the current status of the signing session or services.ErrSessionNotFound if not found
+	// todo: name should have been SessionStatus, but its currently in use by the old interface
+	SigningSessionStatus(sessionID string) (SigningSessionResult, error)
+	// StartSession starts a session for the implementing signer
+	// todo: name should have been StartSession, but its currently in use by the old interface
+	StartSigningSession(rawContractText string) (SignChallenge, error)
 }
 
 // SignChallenge is the signing challenge that must be presented to the user
 type SignChallenge interface {
-}
-
-// SigningSessionRequest
-type SigningSessionRequest interface {
-	Contract() Contract
+	SessionID() string
+	Payload()   []byte
 }
 
 // SigningSessionResult holds information in the current status of the SigningSession
@@ -43,10 +44,4 @@ type SigningSessionResult interface {
 	// VerifiablePresentation returns a VerifiablePresentation holding the presentation proof and disclosed attributes or an error if
 	// no proof is present yet
 	VerifiablePresentation() (VerifiablePresentation, error)
-}
-
-// SigningSession represents a ongoing session where a user is going to sign a challenge
-type SigningSession interface {
-	// ID returns the session identifier
-	ID() string
 }

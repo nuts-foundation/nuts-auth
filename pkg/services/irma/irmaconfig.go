@@ -2,10 +2,11 @@ package irma
 
 import (
 	"fmt"
-	"github.com/nuts-foundation/nuts-auth/logging"
 	"io/ioutil"
 	"os"
 	"sync"
+
+	"github.com/nuts-foundation/nuts-auth/logging"
 
 	"github.com/pkg/errors"
 	irma "github.com/privacybydesign/irmago"

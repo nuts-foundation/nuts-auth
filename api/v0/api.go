@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nuts-foundation/nuts-auth/logging"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
 	pkg2 "github.com/nuts-foundation/nuts-registry/pkg"
 
@@ -74,7 +75,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	}
 
 	// Initiate the actual session
-	result, err := api.Auth.ContractClient().CreateContractSession(sessionRequest)
+	result, err := api.Auth.ContractClient().CreateSigningSession(sessionRequest)
 	if err != nil {
 		if errors.Is(err, contract.ErrContractNotFound) {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
@@ -90,10 +91,13 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		return err
 	}
 
+	// backwards compatibility
+	irmaResult := result.(irma.SignChallenge)
+
 	// convert internal result back to generated api format
 	answer := CreateSessionResult{
-		QrCodeInfo: IrmaQR{U: result.QrCodeInfo.URL, Irmaqr: string(result.QrCodeInfo.Type)},
-		SessionId:  result.SessionID,
+		QrCodeInfo: IrmaQR{U: irmaResult.QrCodeInfo.URL, Irmaqr: string(irmaResult.QrCodeInfo.Type)},
+		SessionId:  result.SessionID(),
 	}
 
 	return ctx.JSON(http.StatusCreated, answer)

@@ -8,6 +8,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	contract "github.com/nuts-foundation/nuts-auth/pkg/contract"
 	services "github.com/nuts-foundation/nuts-auth/pkg/services"
+	nuts_go_core "github.com/nuts-foundation/nuts-go-core"
 	irmago "github.com/privacybydesign/irmago"
 	server "github.com/privacybydesign/irmago/server"
 	http "net/http"
@@ -374,6 +375,44 @@ func (mr *MockAuthenticationTokenParserMockRecorder) Verify(token interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockAuthenticationTokenParser)(nil).Verify), token)
 }
 
+// MockContractNotary is a mock of ContractNotary interface
+type MockContractNotary struct {
+	ctrl     *gomock.Controller
+	recorder *MockContractNotaryMockRecorder
+}
+
+// MockContractNotaryMockRecorder is the mock recorder for MockContractNotary
+type MockContractNotaryMockRecorder struct {
+	mock *MockContractNotary
+}
+
+// NewMockContractNotary creates a new mock instance
+func NewMockContractNotary(ctrl *gomock.Controller) *MockContractNotary {
+	mock := &MockContractNotary{ctrl: ctrl}
+	mock.recorder = &MockContractNotaryMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockContractNotary) EXPECT() *MockContractNotaryMockRecorder {
+	return m.recorder
+}
+
+// DrawUpContract mocks base method
+func (m *MockContractNotary) DrawUpContract(template contract.Template, orgID nuts_go_core.PartyID) (*contract.Contract, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DrawUpContract", template, orgID)
+	ret0, _ := ret[0].(*contract.Contract)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DrawUpContract indicates an expected call of DrawUpContract
+func (mr *MockContractNotaryMockRecorder) DrawUpContract(template, orgID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DrawUpContract", reflect.TypeOf((*MockContractNotary)(nil).DrawUpContract), template, orgID)
+}
+
 // MockContractClient is a mock of ContractClient interface
 type MockContractClient struct {
 	ctrl     *gomock.Controller
@@ -412,19 +451,48 @@ func (mr *MockContractClientMockRecorder) VerifyVP(rawVerifiablePresentation int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyVP", reflect.TypeOf((*MockContractClient)(nil).VerifyVP), rawVerifiablePresentation)
 }
 
-// CreateContractSession mocks base method
-func (m *MockContractClient) CreateContractSession(sessionRequest services.CreateSessionRequest) (*services.CreateSessionResult, error) {
+// CreateSigningSession mocks base method
+func (m *MockContractClient) CreateSigningSession(sessionRequest services.CreateSessionRequest) (contract.SignChallenge, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateContractSession", sessionRequest)
-	ret0, _ := ret[0].(*services.CreateSessionResult)
+	ret := m.ctrl.Call(m, "CreateSigningSession", sessionRequest)
+	ret0, _ := ret[0].(contract.SignChallenge)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CreateContractSession indicates an expected call of CreateContractSession
-func (mr *MockContractClientMockRecorder) CreateContractSession(sessionRequest interface{}) *gomock.Call {
+// CreateSigningSession indicates an expected call of CreateSigningSession
+func (mr *MockContractClientMockRecorder) CreateSigningSession(sessionRequest interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateContractSession", reflect.TypeOf((*MockContractClient)(nil).CreateContractSession), sessionRequest)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSigningSession", reflect.TypeOf((*MockContractClient)(nil).CreateSigningSession), sessionRequest)
+}
+
+// SigningSessionStatus mocks base method
+func (m *MockContractClient) SigningSessionStatus(sessionID string) (contract.SigningSessionResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SigningSessionStatus", sessionID)
+	ret0, _ := ret[0].(contract.SigningSessionResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SigningSessionStatus indicates an expected call of SigningSessionStatus
+func (mr *MockContractClientMockRecorder) SigningSessionStatus(sessionID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SigningSessionStatus", reflect.TypeOf((*MockContractClient)(nil).SigningSessionStatus), sessionID)
+}
+
+// Configure mocks base method
+func (m *MockContractClient) Configure() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Configure")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Configure indicates an expected call of Configure
+func (mr *MockContractClientMockRecorder) Configure() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Configure", reflect.TypeOf((*MockContractClient)(nil).Configure))
 }
 
 // ContractSessionStatus mocks base method
@@ -455,20 +523,6 @@ func (m *MockContractClient) ValidateContract(request services.ValidationRequest
 func (mr *MockContractClientMockRecorder) ValidateContract(request interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateContract", reflect.TypeOf((*MockContractClient)(nil).ValidateContract), request)
-}
-
-// Configure mocks base method
-func (m *MockContractClient) Configure() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Configure")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Configure indicates an expected call of Configure
-func (mr *MockContractClientMockRecorder) Configure() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Configure", reflect.TypeOf((*MockContractClient)(nil).Configure))
 }
 
 // HandlerFunc mocks base method

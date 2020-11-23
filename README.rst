@@ -57,6 +57,7 @@ When making changes to the client interface run the following command to regener
 
     mockgen -destination=mock/mock_auth_client.go -package=mock -source=pkg/auth.go
     mockgen -destination=mock/services/mock.go -package=services -source=pkg/services/services.go
+    mockgen -destination=mock/contract/signer_mock.go -package=contract -source=pkg/contract/signer.go
 
 
 Building

@@ -42,18 +42,18 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 
 		tt := time.Now().Truncate(time.Second)
 
-		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
+		ctx.contractMock.EXPECT().CreateSigningSession(services.CreateSessionRequest{
 			Type:        "BehandelaarLogin",
 			Version:     "v1",
 			Language:    "NL",
 			ValidFrom:   tt,
 			ValidTo:     tt.Add(time.Hour * 13),
 			LegalEntity: careOrgID,
-		}).Return(&services.CreateSessionResult{
+		}).Return(irmaService.SignChallenge{
 			QrCodeInfo: irma.Qr{
 				URL:  "http://example.com" + irmaService.IrmaMountPath + "/123",
 				Type: "signing"},
-			SessionID: "abc-sessionid",
+			ID: "abc-sessionid",
 		}, nil)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
@@ -139,7 +139,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
+		ctx.contractMock.EXPECT().CreateSigningSession(services.CreateSessionRequest{
 			Type:        contract2.Type(params.Type),
 			Version:     "v1",
 			Language:    "NL",
@@ -171,7 +171,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
+		ctx.contractMock.EXPECT().CreateSigningSession(services.CreateSessionRequest{
 			Type:        contract2.Type(params.Type),
 			Version:     "v1",
 			Language:    "NL",
@@ -202,7 +202,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
+		ctx.contractMock.EXPECT().CreateSigningSession(services.CreateSessionRequest{
 			Type:        contract2.Type(params.Type),
 			Version:     "v1",
 			Language:    "NL",

@@ -25,14 +25,14 @@ import (
 	"errors"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
-	"github.com/privacybydesign/irmago/server"
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
-// DummyContractFormat is the contract format type
-const DummyContractFormat = "dummy"
+// ContractFormat is the contract format type
+const ContractFormat = "dummy"
 
-// DummyVerifiablePresentationType is the dummy verifiable presentation type
-const DummyVerifiablePresentationType = "DummyVerifiablePresentation"
+// VerifiablePresentationType is the dummy verifiable presentation type
+const VerifiablePresentationType = "DummyVerifiablePresentation"
 
 // NoSignatureType is a VerifiablePresentation Proof type where no signature is given
 const NoSignatureType = "NoSignature"
@@ -49,9 +49,9 @@ const SessionCompleted = "completed"
 // Dummy is a contract signer and verifier that always succeeds unless you try to use it in strict mode
 // The dummy signer is not supposed to be used in a clustered context unless consecutive calls arrive at the same instance
 type Dummy struct {
-	inStrictMode  bool
-	sessions      map[string]contract.SigningSessionRequest
-	sessionStatus map[string]string
+	InStrictMode bool
+	Sessions     map[string]string
+	Status       map[string]string
 }
 
 // Presentation is a VerifiablePresentation without valid cryptographic proofs
@@ -83,12 +83,22 @@ type Proof struct {
 	Email     string
 }
 
-type signChallenge struct{}
+type signChallenge struct{
+	sessionID string
+}
+
+func (s signChallenge) SessionID() string {
+	return s.sessionID
+}
+
+func (s signChallenge) Payload() []byte {
+	return []byte("dummy")
+}
 
 type signingSessionResult struct {
 	Id    string
 	State   string
-    Request contract.SigningSessionRequest
+    Request string
 }
 
 func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePresentation, error) {
@@ -98,7 +108,7 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 	return Presentation{
 		VerifiableCredentialBase: contract.VerifiableCredentialBase{
 			Context: contract.VerifiableCredentialContext,
-			Type:    []string{contract.VerifiablePresentationType, DummyVerifiablePresentationType},
+			Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
 		},
 		Proof: Proof {
 			Type: NoSignatureType,
@@ -112,10 +122,8 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 
 var errNotEnabled = errors.New("not allowed in strict mode")
 
-var errUnknownSession = errors.New("session unknown")
-
 func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
-	if d.inStrictMode {
+	if d.InStrictMode {
 		return nil, errNotEnabled
 	}
 
@@ -131,7 +139,7 @@ func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificatio
 
 	return &contract.VerificationResult{
 		State:          contract.Valid,
-		ContractFormat: DummyContractFormat,
+		ContractFormat: ContractFormat,
 		DisclosedAttributes: map[string]string{
 			"initials":  ndp.Proof.Initials,
 			"lastname":  ndp.Proof.Lastname,
@@ -142,14 +150,14 @@ func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificatio
 	}, nil
 }
 
-func (d Dummy) SessionStatus(session contract.SigningSession) (contract.SigningSessionResult, error) {
-	if d.inStrictMode {
+func (d Dummy) SigningSessionStatus(sessionID string) (contract.SigningSessionResult, error) {
+	if d.InStrictMode {
 		return nil, errNotEnabled
 	}
 
-	state, ok := d.sessionStatus[session.ID()]
+	state, ok := d.Status[sessionID]
 	if !ok {
-		return nil, errUnknownSession
+		return nil, services.ErrSessionNotFound
 	}
 
 	newState := SessionInProgress
@@ -159,22 +167,24 @@ func (d Dummy) SessionStatus(session contract.SigningSession) (contract.SigningS
 	}
 
 	return signingSessionResult{
-		Id:      session.ID(),
+		Id:      sessionID,
 		State:   newState,
-		Request: d.sessions[session.ID()],
+		Request: d.Sessions[sessionID],
 	}, nil
 }
 
-func (d Dummy) StartSession(request contract.SigningSessionRequest, handler server.SessionHandler) (contract.SignChallenge, error) {
-	if d.inStrictMode {
+func (d Dummy) StartSigningSession(rawContractText string) (contract.SignChallenge, error) {
+	if d.InStrictMode {
 		return nil, errNotEnabled
 	}
 	sessionBytes := make([]byte, 16)
 	rand.Reader.Read(sessionBytes)
 
 	sessionId := hex.EncodeToString(sessionBytes)
-	d.sessionStatus[sessionId] = "created"
-	d.sessions[sessionId] = request
+	d.Status[sessionId] = SessionCreated
+	d.Sessions[sessionId] = rawContractText
 
-	return signChallenge{}, nil
+	return signChallenge{
+		sessionID: sessionId,
+	}, nil
 }

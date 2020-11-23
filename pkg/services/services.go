@@ -12,7 +12,7 @@ import (
 )
 
 // ContractValidator interface must be implemented by contract validators
-// todo deprecate
+// deprecated
 type ContractValidator interface {
 	// ValidateContract validates a signed login contract, actingPartyCN is deprecated and thus optional
 	ValidateContract(contract string, format ContractFormat, actingPartyCN *string) (*ContractValidationResult, error)
@@ -22,6 +22,7 @@ type ContractValidator interface {
 }
 
 // ContractSessionHandler interface must be implemented by ContractSessionHandlers
+// deprecated
 type ContractSessionHandler interface {
 	SessionStatus(session SessionID) (*SessionStatusResult, error)
 	StartSession(request interface{}, handler server.SessionHandler) (*irma.Qr, string, error)
@@ -74,12 +75,18 @@ type ContractClient interface {
 	// VerifyVP verifies if the proof of the VerifiablePresentation is valid
 	VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error)
 
-	CreateContractSession(sessionRequest CreateSessionRequest) (*CreateSessionResult, error)
-	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
+	// CreateSigningSession creates a signing session for the requested contract and means
+	CreateSigningSession(sessionRequest CreateSessionRequest) (contract.SignChallenge, error)
+	// SigningSessionStatus returns the status of the current signing session or ErrSessionNotFound is sessionID is unknown
+	SigningSessionStatus(sessionID string) (contract.SigningSessionResult, error)
 
-	// todo: deprecate
-	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	Configure() error
+
+	// deprecated
+	ContractSessionStatus(sessionID string) (*SessionStatusResult, error)
+	// deprecated
+	ValidateContract(request ValidationRequest) (*ContractValidationResult, error)
 	// HandlerFunc returns the Irma server handler func
+	// deprecated
 	HandlerFunc() http.HandlerFunc
 }
