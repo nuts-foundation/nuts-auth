@@ -59,8 +59,7 @@ func (sc *Contract) initParams() error {
 
 var ErrInvalidPeriod = fmt.Errorf("%w: invalid period", ErrInvalidContractText)
 
-// Verify verifies the params with the template
-func (sc Contract) Verify() error {
+func (sc Contract) VerifyForGivenTime(checkTime time.Time) error {
 	var (
 		err                      error
 		ok                       bool
@@ -93,16 +92,21 @@ func (sc Contract) Verify() error {
 	}
 
 	amsterdamLocation, _ := time.LoadLocation(AmsterdamTimeZone)
-	now := NowFunc()
-
-	if now.In(amsterdamLocation).Before(*validFrom) {
+	if checkTime.In(amsterdamLocation).Before(*validFrom) {
 		return fmt.Errorf("%w: contract is not yet valid", ErrInvalidPeriod)
 	}
-	if now.In(amsterdamLocation).After(*validTo) {
+	if checkTime.In(amsterdamLocation).After(*validTo) {
 		return fmt.Errorf("%w: contract is expired", ErrInvalidPeriod)
 	}
 
 	return nil
+
+}
+
+// Verify verifies the params with the template
+func (sc Contract) Verify() error {
+	now := NowFunc()
+	return sc.VerifyForGivenTime(now)
 }
 
 // parseTime parses the given timeStr in context of the Europe/Amsterdam time zone and uses the given language.

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -34,6 +35,10 @@ func (m mockAuthClient) ContractClient() services.ContractClient {
 }
 
 type mockContractNotary struct {
+}
+
+func (m mockContractNotary) ValidateContract(contractToValidate contract.Contract, orgID core.PartyID, checkTime time.Time) (bool, error) {
+	panic("implement me")
 }
 
 func (m mockContractNotary) DrawUpContract(template contract.Template, orgID core.PartyID) (*contract.Contract, error) {

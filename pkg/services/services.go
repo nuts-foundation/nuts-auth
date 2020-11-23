@@ -2,6 +2,7 @@ package services
 
 import (
 	"net/http"
+	"time"
 
 	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
@@ -64,6 +65,8 @@ type AuthenticationTokenParser interface {
 type ContractNotary interface {
 	// DrawUpContract draws up a contract from a template and returns a Contract which than can be signed by the user.
 	DrawUpContract(template contract.Template, orgID core.PartyID) (*contract.Contract, error)
+
+	ValidateContract(contractToValidate contract.Contract, orgID core.PartyID, checkTime time.Time) (bool, error)
 }
 
 // ContractClient defines functions for creating and validating signed contracts
