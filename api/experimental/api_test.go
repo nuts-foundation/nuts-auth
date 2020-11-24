@@ -2,7 +2,9 @@ package experimental
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	pkg2 "github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/dummy"
 )
 
 type TestContext struct {
@@ -24,6 +27,16 @@ type TestContext struct {
 }
 
 type mockAuthClient struct {
+}
+
+func (m mockAuthClient) Signer(signerID string) contract.Signer {
+	return map[string]contract.Signer{
+		"dummy": dummy.Dummy{
+			InStrictMode: false,
+			Sessions:     make(map[string]string),
+			Status:       make(map[string]string),
+		},
+	}[signerID]
 }
 
 func (m mockAuthClient) OAuthClient() services.OAuthClient {
@@ -114,6 +127,63 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, expectedResponse)
 		err := ctx.wrapper.DrawUpContract(ctx.echoMock)
 		assert.NoError(t, err)
+
+	})
+}
+
+type signSessionResponseMatcher struct {
+	means string
+}
+
+func (s signSessionResponseMatcher) Matches(x interface{}) bool {
+	if !reflect.TypeOf(x).AssignableTo(reflect.TypeOf(x)) {
+		return false
+	}
+
+	return x.(CreateSignSessionResult).Means == s.means && x.(CreateSignSessionResult).SessionPtr != ""
+}
+
+func (s signSessionResponseMatcher) String() string {
+	return fmt.Sprintf("{%v somePtr}", s.means)
+}
+
+func TestWrapper_CreateSignSession(t *testing.T) {
+	bindPostBody := func(ctx *TestContext, body CreateSignSessionRequest) {
+		jsonData, _ := json.Marshal(body)
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+			_ = json.Unmarshal(jsonData, f)
+		})
+	}
+
+	t.Run("create a dummy signing session", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		postParams := CreateSignSessionRequest{
+			Means:   "dummy",
+			Payload: "this is the contract message to agree to",
+		}
+		bindPostBody(&ctx, postParams)
+
+		ctx.echoMock.EXPECT().JSON(http.StatusCreated, signSessionResponseMatcher{means: "dummy"})
+		err := ctx.wrapper.CreateSignSession(ctx.echoMock)
+		assert.NoError(t, err)
+	})
+
+	t.Run("nok - create a sign session with unknown means", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		postParams := CreateSignSessionRequest{
+			Means:   "unknown means",
+			Payload: "this is the contract message to agree to",
+		}
+		bindPostBody(&ctx, postParams)
+
+		err := ctx.wrapper.CreateSignSession(ctx.echoMock)
+		if assert.Error(t, err) {
+			assert.Contains(t, err.Error(), "sign means not supported")
+		}
 
 	})
 }

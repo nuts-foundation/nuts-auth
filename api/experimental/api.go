@@ -19,7 +19,24 @@ type Wrapper struct {
 }
 
 func (w Wrapper) CreateSignSession(ctx echo.Context) error {
-	return echo.NewHTTPError(http.StatusNotImplemented)
+	requestParams := new(CreateSignSessionRequest)
+	if err := ctx.Bind(requestParams); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
+	}
+	signer := w.Auth.Signer(requestParams.Means)
+	if signer == nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("sign means not supported"))
+	}
+
+	challenge, err := signer.StartSigningSession(requestParams.Payload)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to create sign challenge: %s", err.Error()))
+	}
+	response := CreateSignSessionResult{
+		Means:      requestParams.Means,
+		SessionPtr: challenge.SessionID(),
+	}
+	return ctx.JSON(http.StatusCreated, response)
 }
 
 func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error {

@@ -54,3 +54,11 @@ Content-Type: application/json
 }
 
 ###
+
+POST http://localhost:1323/auth/internal/experimental/sign
+Content-Type: application/json
+
+{
+  "means": "dummy",
+  "payload": "ik verklaar dit"
+}
