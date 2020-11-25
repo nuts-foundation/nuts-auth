@@ -33,7 +33,7 @@ return contract
 
 EPD -> IrmaServer : startSignSession(contract)
 activate IrmaServer
-IrmaServer --> EPD : sesessionPtr
+IrmaServer --> EPD : sessionPtr
 loop Status not in (DONE, CANCELLED, TIMEOUT)
     EPD -> IrmaServer : GET sessionStatus(sessionPtr)
     IrmaServer --> EPD : status (optionally with signature)
@@ -48,7 +48,7 @@ deactivate EPD
 
 User -> IrmaApp : Scan(sessionPtr)
 activate IrmaApp
-IrmaApp -> IrmaServer : GET sessionInfo(sessionPtr)
+IrmaApp -> IrmaServer : GET signInformation(sessionPtr)
 activate IrmaServer
 return sessionInfo
 User -> IrmaApp : Sign(sessionInfo)
