@@ -67,7 +67,7 @@ type CreateSignSessionResult struct {
 	Means string `json:"means"`
 
 	// A pointer to a signature session. This is an opaque value which only has meaning in the context of the signing means. Can be an URL, base64 encoded image of a QRCode etc.
-	SessionPtr string `json:"sessionPtr"`
+	SessionPtr map[string]interface{} `json:"sessionPtr"`
 }
 
 // DrawUpContractRequest defines model for DrawUpContractRequest.
@@ -84,6 +84,13 @@ type DrawUpContractRequest struct {
 
 	// Version of the contract
 	Version ContractVersion `json:"version"`
+}
+
+// GetSignSessionStatusResult defines model for GetSignSessionStatusResult.
+type GetSignSessionStatusResult struct {
+
+	// Status indicates the status of the signing proces. Values depend on the implementation of the signing means.
+	Status string `json:"status"`
 }
 
 // LegalEntity defines model for LegalEntity.

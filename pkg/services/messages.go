@@ -30,6 +30,8 @@ type CreateSessionRequest struct {
 	TemplateAttributes map[string]string
 	// todo correct Signing means type
 	SigningMeans string
+	// Message to sign
+	Message string
 }
 
 // CreateSessionResult contains the results needed to setup an irma flow

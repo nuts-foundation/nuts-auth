@@ -1,6 +1,7 @@
 package experimental
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
 var _ ServerInterface = (*Wrapper)(nil)
@@ -23,24 +25,44 @@ func (w Wrapper) CreateSignSession(ctx echo.Context) error {
 	if err := ctx.Bind(requestParams); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
 	}
-	signer := w.Auth.Signer(requestParams.Means)
-	if signer == nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("sign means not supported"))
+	createSessionRequest := services.CreateSessionRequest{
+		SigningMeans: requestParams.Means,
+		Message:      requestParams.Payload,
 	}
-
-	challenge, err := signer.StartSigningSession(requestParams.Payload)
+	pointer, err := w.Auth.ContractClient().CreateSigningSession(createSessionRequest)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to create sign challenge: %s", err.Error()))
 	}
+
+	// Convert the session pointer to a map[string]interface{} using json conversion
+	// todo: put into separate method
+	jsonPointer, err := json.Marshal(pointer)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert sessionpointer: %s", err.Error()))
+	}
+	var keyValPointer map[string]interface{}
+	err = json.Unmarshal(jsonPointer, &keyValPointer)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert sessionpointer: %s", err.Error()))
+	}
+
 	response := CreateSignSessionResult{
 		Means:      requestParams.Means,
-		SessionPtr: challenge.SessionID(),
+		SessionPtr: keyValPointer,
 	}
 	return ctx.JSON(http.StatusCreated, response)
 }
 
 func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error {
-	return echo.NewHTTPError(http.StatusNotImplemented)
+	sessionStatus, err := w.Auth.ContractClient().SigningSessionStatus(sessionPtr)
+	if err != nil {
+		if errors.Is(err, services.ErrSessionNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("no active signing session for this sessionPtr found"))
+		}
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to retrieve a session status: %s", err.Error()))
+	}
+	response := GetSignSessionStatusResult{Status: sessionStatus.Status()}
+	return ctx.JSON(http.StatusOK, response)
 }
 
 func (w Wrapper) GetContractTemplate(ctx echo.Context, language string, contractType string, params GetContractTemplateParams) error {

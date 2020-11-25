@@ -49,7 +49,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			ValidFrom:   tt,
 			ValidTo:     tt.Add(time.Hour * 13),
 			LegalEntity: careOrgID,
-		}).Return(irmaService.SignChallenge{
+		}).Return(irmaService.SessionPtr{
 			QrCodeInfo: irma.Qr{
 				URL:  "http://example.com" + irmaService.IrmaMountPath + "/123",
 				Type: "signing"},

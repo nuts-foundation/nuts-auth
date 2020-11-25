@@ -62,3 +62,16 @@ Content-Type: application/json
   "means": "dummy",
   "payload": "ik verklaar dit"
 }
+
+###
+POST http://localhost:1323/auth/internal/experimental/sign
+Content-Type: application/json
+
+{
+  "means": "irma",
+  "payload": "NL:BehandelaarLogin:v3 Hierbij verklaar ik te handelen in naam van Zorghuis de goude hand. Deze verklaring is geldig van vandaag tot morgen."
+}
+
+###
+
+GET http://localhost:1323/auth/internal/experimental/sign/Dd6zVqtYEJRJ7hJOtgUD

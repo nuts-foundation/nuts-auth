@@ -58,7 +58,7 @@ type Dummy struct {
 // It is only usable in non-strict mode.
 type Presentation struct {
 	contract.VerifiableCredentialBase
-	Proof             Proof
+	Proof Proof
 }
 
 // CredentialSubjectValue holds the type and value for a specific attribute within the CredentialSubject
@@ -74,31 +74,41 @@ type Proof struct {
 	// Contract as how it was presented to the user
 	Contract string
 	// Initials form the signing means
-	Initials  string
+	Initials string
 	// Lastname form the signing means
-	Lastname  string
+	Lastname string
 	// Birthdate form the signing means
 	Birthdate string
 	// Email form the signing means
-	Email     string
+	Email string
 }
 
-type signChallenge struct{
+type sessionPointer struct {
 	sessionID string
 }
 
-func (s signChallenge) SessionID() string {
+func (s sessionPointer) SessionID() string {
 	return s.sessionID
 }
 
-func (s signChallenge) Payload() []byte {
+func (s sessionPointer) Payload() []byte {
 	return []byte("dummy")
 }
 
+func (s sessionPointer) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		SessionID string `json:"sessionId"`
+	}{SessionID: s.sessionID})
+}
+
 type signingSessionResult struct {
-	Id    string
+	Id      string
 	State   string
-    Request string
+	Request string
+}
+
+func (d signingSessionResult) Status() string {
+	return d.State
 }
 
 func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePresentation, error) {
@@ -110,8 +120,8 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 			Context: contract.VerifiableCredentialContext,
 			Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
 		},
-		Proof: Proof {
-			Type: NoSignatureType,
+		Proof: Proof{
+			Type:      NoSignatureType,
 			Initials:  "I",
 			Lastname:  "Tester",
 			Birthdate: "1980-01-01",
@@ -173,7 +183,7 @@ func (d Dummy) SigningSessionStatus(sessionID string) (contract.SigningSessionRe
 	}, nil
 }
 
-func (d Dummy) StartSigningSession(rawContractText string) (contract.SignChallenge, error) {
+func (d Dummy) StartSigningSession(rawContractText string) (contract.SessionPointer, error) {
 	if d.InStrictMode {
 		return nil, errNotEnabled
 	}
@@ -184,7 +194,7 @@ func (d Dummy) StartSigningSession(rawContractText string) (contract.SignChallen
 	d.Status[sessionId] = SessionCreated
 	d.Sessions[sessionId] = rawContractText
 
-	return signChallenge{
+	return sessionPointer{
 		sessionID: sessionId,
 	}, nil
 }

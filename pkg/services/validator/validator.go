@@ -92,6 +92,7 @@ func (s *service) Configure() (err error) {
 		IrmaConfig:         irmaConfig,
 		Registry:           s.registry,
 		Crypto:             s.crypto,
+		IrmaServiceConfig:  s.irmaServiceConfig,
 	}
 	// todo refactor and use signer/verifier
 	s.contractSessionHandler = irmaService
@@ -108,16 +109,16 @@ func (s *service) Configure() (err error) {
 	// todo config to VP types
 	if _, ok := cvMap["irma"]; ok {
 		s.verifiers[irma.VerifiablePresentationType] = irmaService
-		s.signers[irma.VerifiablePresentationType] = irmaService
+		s.signers[irma.ContractFormat] = irmaService
 	}
 
 	if _, ok := cvMap["dummy"]; ok && !core.NutsConfig().InStrictMode() {
 		d := dummy.Dummy{
-			Sessions:     map[string]string{},
-			Status:       map[string]string{},
+			Sessions: map[string]string{},
+			Status:   map[string]string{},
 		}
 		s.verifiers[dummy.VerifiablePresentationType] = d
-		s.signers[dummy.VerifiablePresentationType] = d
+		s.signers[dummy.ContractFormat] = d
 	}
 
 	return
@@ -215,31 +216,37 @@ var ErrUnknownSigningMeans = errors.New("unknown signing means")
 // CreateSigningSession creates a session based on a contract. This allows the user to permit the application to
 // use the Nuts Network in its name. By signing it with a cryptographic means other
 // nodes in the network can verify the validity of the contract.
-func (s *service) CreateSigningSession(sessionRequest services.CreateSessionRequest) (contract.SignChallenge, error) {
+func (s *service) CreateSigningSession(sessionRequest services.CreateSessionRequest) (contract.SessionPointer, error) {
+	payload := sessionRequest.Message
 
-	// Step 1a: Find the correct template
-	template, err := contract.StandardContractTemplates.Find(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
-	if err != nil {
-		return nil, err
-	}
+	// for api/v0 the contract rendering was combined with the create session.
+	// todo: move to the api/v0 logic.
+	if payload == "" {
+		// Step 1a: Find the correct template
+		template, err := contract.StandardContractTemplates.Find(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
+		if err != nil {
+			return nil, err
+		}
 
-	// Step 1b: translate legal entity to its name
-	orgName, err := s.OrganizationNameByID(sessionRequest.LegalEntity)
-	if err != nil {
-		return nil, err
-	}
+		// Step 1b: translate legal entity to its name
+		orgName, err := s.OrganizationNameByID(sessionRequest.LegalEntity)
+		if err != nil {
+			return nil, err
+		}
 
-	// Step 2: Render the template template with all the correct values
-	renderedContract, err := template.Render(map[string]string{
-		contract.ActingPartyAttr: s.config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
-		contract.LegalEntityAttr: orgName,
-	}, 0, 60*time.Minute)
-	if err != nil {
-		return nil, fmt.Errorf("could not render template: %w", err)
-	}
-	logging.Log().Debugf("contractMessage: %v", renderedContract.RawContractText)
-	if err := renderedContract.Verify(); err != nil {
-		return nil, err
+		// Step 2: Render the template template with all the correct values
+		renderedContract, err := template.Render(map[string]string{
+			contract.ActingPartyAttr: s.config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
+			contract.LegalEntityAttr: orgName,
+		}, 0, 60*time.Minute)
+		if err != nil {
+			return nil, fmt.Errorf("could not render template: %w", err)
+		}
+		logging.Log().Debugf("contractMessage: %v", renderedContract.RawContractText)
+		if err := renderedContract.Verify(); err != nil {
+			return nil, err
+		}
+		payload = renderedContract.RawContractText
 	}
 
 	// find correct signer
@@ -249,7 +256,7 @@ func (s *service) CreateSigningSession(sessionRequest services.CreateSessionRequ
 		// todo remove backwards compatibility
 		signer = s.signers["irma"]
 	}
-	return signer.StartSigningSession(renderedContract.RawContractText)
+	return signer.StartSigningSession(payload)
 }
 
 // ContractSessionStatus returns the current session status for a given sessionID.

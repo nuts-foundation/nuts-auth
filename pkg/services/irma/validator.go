@@ -45,6 +45,8 @@ import (
 // VerifiablePresentationType is the irma verifiable presentation type
 const VerifiablePresentationType = "IrmaVerifiablePresentation"
 
+const ContractFormat = "irma"
+
 // IrmaService validates contracts using the irma logic.
 type IrmaService struct {
 	IrmaSessionHandler IrmaSessionHandler

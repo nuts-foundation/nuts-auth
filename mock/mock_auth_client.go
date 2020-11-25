@@ -6,7 +6,6 @@ package mock
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	contract "github.com/nuts-foundation/nuts-auth/pkg/contract"
 	services "github.com/nuts-foundation/nuts-auth/pkg/services"
 	reflect "reflect"
 )
@@ -74,18 +73,4 @@ func (m *MockAuthClient) ContractNotary() services.ContractNotary {
 func (mr *MockAuthClientMockRecorder) ContractNotary() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ContractNotary", reflect.TypeOf((*MockAuthClient)(nil).ContractNotary))
-}
-
-// Signer mocks base method
-func (m *MockAuthClient) Signer(signerID string) contract.Signer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Signer", signerID)
-	ret0, _ := ret[0].(contract.Signer)
-	return ret0
-}
-
-// Signer indicates an expected call of Signer
-func (mr *MockAuthClientMockRecorder) Signer(signerID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Signer", reflect.TypeOf((*MockAuthClient)(nil).Signer), signerID)
 }

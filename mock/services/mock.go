@@ -452,10 +452,10 @@ func (mr *MockContractClientMockRecorder) VerifyVP(rawVerifiablePresentation int
 }
 
 // CreateSigningSession mocks base method
-func (m *MockContractClient) CreateSigningSession(sessionRequest services.CreateSessionRequest) (contract.SignChallenge, error) {
+func (m *MockContractClient) CreateSigningSession(sessionRequest services.CreateSessionRequest) (contract.SessionPointer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateSigningSession", sessionRequest)
-	ret0, _ := ret[0].(contract.SignChallenge)
+	ret0, _ := ret[0].(contract.SessionPointer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

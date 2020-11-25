@@ -30,17 +30,20 @@ type Signer interface {
 	SigningSessionStatus(sessionID string) (SigningSessionResult, error)
 	// StartSession starts a session for the implementing signer
 	// todo: name should have been StartSession, but its currently in use by the old interface
-	StartSigningSession(rawContractText string) (SignChallenge, error)
+	StartSigningSession(rawContractText string) (SessionPointer, error)
 }
 
-// SignChallenge is the signing challenge that must be presented to the user
-type SignChallenge interface {
+// SessionPointer contains session information for the means how to sign the payload
+type SessionPointer interface {
 	SessionID() string
-	Payload()   []byte
+	Payload() []byte
+	MarshalJSON() ([]byte, error)
 }
 
 // SigningSessionResult holds information in the current status of the SigningSession
 type SigningSessionResult interface {
+	// Status returns the current state of the SigningSession
+	Status() string
 	// VerifiablePresentation returns a VerifiablePresentation holding the presentation proof and disclosed attributes or an error if
 	// no proof is present yet
 	VerifiablePresentation() (VerifiablePresentation, error)

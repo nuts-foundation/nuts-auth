@@ -34,6 +34,10 @@ paths:
       responses:
        200:
          description:  When the sessionPtr is know. Contains the current session status.
+         content:
+           application/json:
+             schema:
+               $ref: "#/components/schemas/GetSignSessionStatusResult"
        404:
          description: When the sessionPtr in unknown.
 #    delete:
@@ -120,12 +124,21 @@ components:
       properties:
         sessionPtr:
           description: A pointer to a signature session. This is an opaque value which only has meaning in the context of the signing means. Can be an URL, base64 encoded image of a QRCode etc.
-          type: string
+          type: object
         means:
           description: The means this session uses to sign.
           type: string
           enum: [irma, dummy]
           example: irma
+
+    GetSignSessionStatusResult:
+      required:
+        - status
+#        - verifiablePresentation
+      properties:
+        status:
+          description: Status indicates the status of the signing proces. Values depend on the implementation of the signing means.
+          type: string
 
     ContractType:
       type: string

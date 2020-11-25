@@ -8,10 +8,8 @@ import (
 	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 
-	contract2 "github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/contract"
-	"github.com/nuts-foundation/nuts-auth/pkg/services/dummy"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/oauth"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
 )
@@ -41,8 +39,6 @@ type AuthClient interface {
 	ContractClient() services.ContractClient
 	// ContractNotary returns an instance of ContractNotary
 	ContractNotary() services.ContractNotary
-	// Signer returns a signer for a given signerID
-	Signer(signerID string) contract2.Signer
 }
 
 // Auth is the main struct of the Auth service
@@ -57,11 +53,6 @@ type Auth struct {
 	Crypto              nutscrypto.Client
 	Registry            registry.RegistryClient
 	contractNotary      services.ContractNotary
-	signerBackends      map[string]contract2.Signer
-}
-
-func (auth *Auth) Signer(signerID string) contract2.Signer {
-	return auth.signerBackends[signerID]
 }
 
 func (auth *Auth) ContractNotary() services.ContractNotary {
@@ -72,7 +63,7 @@ func DefaultAuthConfig() AuthConfig {
 	return AuthConfig{
 		Address:            "localhost:1323",
 		IrmaSchemeManager:  "pbdf",
-		ContractValidators: []string{"irma", "uzi"},
+		ContractValidators: []string{"irma", "uzi", "dummy"},
 	}
 }
 
@@ -96,8 +87,6 @@ func NewAuthInstance(config AuthConfig, cryptoClient nutscrypto.Client, registry
 		Crypto:         cryptoClient,
 		Registry:       registryClient,
 		contractNotary: contract.NewContractNotary(registryClient, 60*time.Minute),
-		// todo: put in separate init function
-		signerBackends: map[string]contract2.Signer{"dummy": dummy.Dummy{InStrictMode: false, Sessions: make(map[string]string), Status: make(map[string]string)}},
 	}
 }
 
@@ -114,9 +103,6 @@ func (auth *Auth) OAuthClient() services.OAuthClient {
 
 // ContractClient returns an instance of ContractClient
 func (auth *Auth) ContractClient() services.ContractClient {
-	if auth.Contract != nil {
-		return auth.Contract
-	}
 	auth.oneContractInstance.Do(func() {
 		cfg := validator.Config{
 			Mode:                      auth.Config.Mode,
@@ -126,6 +112,7 @@ func (auth *Auth) ContractClient() services.ContractClient {
 			IrmaSchemeManager:         auth.Config.IrmaSchemeManager,
 			SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,
 			ActingPartyCn:             auth.Config.ActingPartyCn,
+			ContractValidators:        auth.Config.ContractValidators,
 		}
 		auth.Contract = validator.NewContractInstance(cfg, auth.Crypto, auth.Registry)
 	})

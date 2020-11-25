@@ -13,6 +13,7 @@ import (
 	coreMock "github.com/nuts-foundation/nuts-go-core/mock"
 	"github.com/stretchr/testify/assert"
 
+	services2 "github.com/nuts-foundation/nuts-auth/mock/services"
 	pkg2 "github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
@@ -27,16 +28,7 @@ type TestContext struct {
 }
 
 type mockAuthClient struct {
-}
-
-func (m mockAuthClient) Signer(signerID string) contract.Signer {
-	return map[string]contract.Signer{
-		"dummy": dummy.Dummy{
-			InStrictMode: false,
-			Sessions:     make(map[string]string),
-			Status:       make(map[string]string),
-		},
-	}[signerID]
+	ctrl gomock.Controller
 }
 
 func (m mockAuthClient) OAuthClient() services.OAuthClient {
@@ -44,7 +36,18 @@ func (m mockAuthClient) OAuthClient() services.OAuthClient {
 }
 
 func (m mockAuthClient) ContractClient() services.ContractClient {
-	panic("implement me")
+	dummyMeans := dummy.Dummy{
+		InStrictMode: false,
+		Sessions:     map[string]string{},
+		Status:       map[string]string{},
+	}
+
+	contractClient := services2.NewMockContractClient(&m.ctrl)
+	contractClient.EXPECT().CreateSigningSession(gomock.Any()).DoAndReturn(
+		func(sessionRequest services.CreateSessionRequest) (contract.SessionPointer, error) {
+			return dummyMeans.StartSigningSession(sessionRequest.Message)
+		})
+	return contractClient
 }
 
 type mockContractNotary struct {
@@ -69,7 +72,7 @@ func (m mockAuthClient) ContractNotary() services.ContractNotary {
 func createContext(t *testing.T) TestContext {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	authMock := mockAuthClient{}
+	authMock := mockAuthClient{ctrl: *ctrl}
 	return TestContext{
 		ctrl:     ctrl,
 		echoMock: coreMock.NewMockContext(ctrl),
@@ -140,7 +143,7 @@ func (s signSessionResponseMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	return x.(CreateSignSessionResult).Means == s.means && x.(CreateSignSessionResult).SessionPtr != ""
+	return x.(CreateSignSessionResult).Means == s.means && x.(CreateSignSessionResult).SessionPtr["sessionID"] != ""
 }
 
 func (s signSessionResponseMatcher) String() string {
@@ -168,22 +171,5 @@ func TestWrapper_CreateSignSession(t *testing.T) {
 		ctx.echoMock.EXPECT().JSON(http.StatusCreated, signSessionResponseMatcher{means: "dummy"})
 		err := ctx.wrapper.CreateSignSession(ctx.echoMock)
 		assert.NoError(t, err)
-	})
-
-	t.Run("nok - create a sign session with unknown means", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-
-		postParams := CreateSignSessionRequest{
-			Means:   "unknown means",
-			Payload: "this is the contract message to agree to",
-		}
-		bindPostBody(&ctx, postParams)
-
-		err := ctx.wrapper.CreateSignSession(ctx.echoMock)
-		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "sign means not supported")
-		}
-
 	})
 }

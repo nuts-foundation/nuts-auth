@@ -51,7 +51,7 @@ func TestService_CreateContractSession(t *testing.T) {
 			LegalEntity: vendorID,
 		}
 		ctx.registryMock.EXPECT().OrganizationById(vendorID).Return(&db.Organization{Name: "vendorName"}, nil)
-		ctx.signerMock.EXPECT().StartSigningSession(gomock.Any()).Return(irmaService.SignChallenge{ID: "abc-sessionid-abc", QrCodeInfo: irma.Qr{URL: qrURL, Type: irma.ActionSigning}}, nil)
+		ctx.signerMock.EXPECT().StartSigningSession(gomock.Any()).Return(irmaService.SessionPtr{ID: "abc-sessionid-abc", QrCodeInfo: irma.Qr{URL: qrURL, Type: irma.ActionSigning}}, nil)
 
 		result, err := ctx.contractService.CreateSigningSession(request)
 
@@ -59,7 +59,7 @@ func TestService_CreateContractSession(t *testing.T) {
 			return
 		}
 
-		irmaResult := result.(irmaService.SignChallenge)
+		irmaResult := result.(irmaService.SessionPtr)
 
 		assert.Equal(t, irmaResult.QrCodeInfo.URL, qrURL, "qrCode should contain the correct URL")
 		assert.Equal(t, irmaResult.QrCodeInfo.Type, irma.ActionSigning, "qrCode type should be signing")

@@ -92,7 +92,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	}
 
 	// backwards compatibility
-	irmaResult := result.(irma.SignChallenge)
+	irmaResult := result.(irma.SessionPtr)
 
 	// convert internal result back to generated api format
 	answer := CreateSessionResult{

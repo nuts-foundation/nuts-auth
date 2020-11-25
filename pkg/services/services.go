@@ -76,7 +76,7 @@ type ContractClient interface {
 	VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error)
 
 	// CreateSigningSession creates a signing session for the requested contract and means
-	CreateSigningSession(sessionRequest CreateSessionRequest) (contract.SignChallenge, error)
+	CreateSigningSession(sessionRequest CreateSessionRequest) (contract.SessionPointer, error)
 	// SigningSessionStatus returns the status of the current signing session or ErrSessionNotFound is sessionID is unknown
 	SigningSessionStatus(sessionID string) (contract.SigningSessionResult, error)
 

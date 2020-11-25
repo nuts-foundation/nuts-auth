@@ -49,10 +49,10 @@ func (mr *MockSignerMockRecorder) SigningSessionStatus(sessionID interface{}) *g
 }
 
 // StartSigningSession mocks base method
-func (m *MockSigner) StartSigningSession(rawContractText string) (contract.SignChallenge, error) {
+func (m *MockSigner) StartSigningSession(rawContractText string) (contract.SessionPointer, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartSigningSession", rawContractText)
-	ret0, _ := ret[0].(contract.SignChallenge)
+	ret0, _ := ret[0].(contract.SessionPointer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -63,7 +63,7 @@ func (mr *MockSignerMockRecorder) StartSigningSession(rawContractText interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSigningSession", reflect.TypeOf((*MockSigner)(nil).StartSigningSession), rawContractText)
 }
 
-// MockSignChallenge is a mock of SignChallenge interface
+// MockSignChallenge is a mock of SessionPointer interface
 type MockSignChallenge struct {
 	ctrl     *gomock.Controller
 	recorder *MockSignChallengeMockRecorder
