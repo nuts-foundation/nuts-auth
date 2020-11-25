@@ -52,9 +52,9 @@ func (c Template) timeLocation() *time.Location {
 	return loc
 }
 
-func (c Template) Render(vars map[string]string, validFromOffset, validToOffset time.Duration) (*Contract, error) {
-	vars[ValidFromAttr] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
-	vars[ValidToAttr] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
+func (c Template) Render(vars map[string]string, validFrom time.Time, validDuration time.Duration) (*Contract, error) {
+	vars[ValidFromAttr] = monday.Format(validFrom.In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
+	vars[ValidToAttr] = monday.Format(validFrom.Add(validDuration).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 
 	rawContractText, err := mustache.Render(c.Template, vars)
 	if err != nil {

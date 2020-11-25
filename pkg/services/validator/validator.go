@@ -23,20 +23,19 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/nuts-foundation/nuts-auth/logging"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/dummy"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
-	"github.com/nuts-foundation/nuts-auth/pkg/services"
-	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
-	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 	irmago "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server/irmaserver"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 )
 
 // Config holds all the configuration params
@@ -59,9 +58,10 @@ type service struct {
 	irmaServiceConfig      irma.IrmaServiceConfig
 	irmaServer             *irmaserver.Server
 	crypto                 nutscrypto.Client
-	registry               registry.RegistryClient
-	verifiers              map[string]contract.Verifier
-	signers                map[string]contract.Signer
+	// todo: remove this when the deprecated ValidateJwt is removed
+	registry  registry.RegistryClient
+	verifiers map[string]contract.Verifier
+	signers   map[string]contract.Signer
 }
 
 func NewContractInstance(config Config, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) services.ContractClient {
@@ -90,9 +90,10 @@ func (s *service) Configure() (err error) {
 	irmaService := irma.IrmaService{
 		IrmaSessionHandler: &irma.DefaultIrmaSessionHandler{I: irmaServer},
 		IrmaConfig:         irmaConfig,
-		Registry:           s.registry,
-		Crypto:             s.crypto,
-		IrmaServiceConfig:  s.irmaServiceConfig,
+		// todo: remove this when the deprecated irmaValidatorValidateJwt is removed
+		Registry:          s.registry,
+		Crypto:            s.crypto,
+		IrmaServiceConfig: s.irmaServiceConfig,
 	}
 	// todo refactor and use signer/verifier
 	s.contractSessionHandler = irmaService
@@ -217,38 +218,9 @@ var ErrUnknownSigningMeans = errors.New("unknown signing means")
 // use the Nuts Network in its name. By signing it with a cryptographic means other
 // nodes in the network can verify the validity of the contract.
 func (s *service) CreateSigningSession(sessionRequest services.CreateSessionRequest) (contract.SessionPointer, error) {
-	payload := sessionRequest.Message
-
-	// for api/v0 the contract rendering was combined with the create session.
-	// todo: move to the api/v0 logic.
-	if payload == "" {
-		// Step 1a: Find the correct template
-		template, err := contract.StandardContractTemplates.Find(sessionRequest.Type, sessionRequest.Language, sessionRequest.Version)
-		if err != nil {
-			return nil, err
-		}
-
-		// Step 1b: translate legal entity to its name
-		orgName, err := s.OrganizationNameByID(sessionRequest.LegalEntity)
-		if err != nil {
-			return nil, err
-		}
-
-		// Step 2: Render the template template with all the correct values
-		renderedContract, err := template.Render(map[string]string{
-			contract.ActingPartyAttr: s.config.ActingPartyCn, // use the acting party from the config as long there is not way of providing it via the api request
-			contract.LegalEntityAttr: orgName,
-		}, 0, 60*time.Minute)
-		if err != nil {
-			return nil, fmt.Errorf("could not render template: %w", err)
-		}
-		logging.Log().Debugf("contractMessage: %v", renderedContract.RawContractText)
-		if err := renderedContract.Verify(); err != nil {
-			return nil, err
-		}
-		payload = renderedContract.RawContractText
+	if sessionRequest.Message == "" {
+		return nil, errors.New("can not sign an empty message")
 	}
-
 	// find correct signer
 	signer, ok := s.signers[sessionRequest.SigningMeans]
 	if !ok {
@@ -256,7 +228,7 @@ func (s *service) CreateSigningSession(sessionRequest services.CreateSessionRequ
 		// todo remove backwards compatibility
 		signer = s.signers["irma"]
 	}
-	return signer.StartSigningSession(payload)
+	return signer.StartSigningSession(sessionRequest.Message)
 }
 
 // ContractSessionStatus returns the current session status for a given sessionID.
@@ -289,18 +261,4 @@ func (s *service) ValidateContract(request services.ValidationRequest) (*service
 		return s.contractValidator.ValidateJwt(request.ContractString, actingPartyCN)
 	}
 	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, contract.ErrUnknownContractFormat)
-}
-
-// KeyExistsFor check if the private key exists on this node by calling the same function on the CryptoClient
-func (s *service) KeyExistsFor(legalEntity core.PartyID) bool {
-	return s.crypto.PrivateKeyExists(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: legalEntity.String()}))
-}
-
-// OrganizationNameByID returns the name of an organisation from the registry
-func (s *service) OrganizationNameByID(legalEntity core.PartyID) (string, error) {
-	org, err := s.registry.OrganizationById(legalEntity)
-	if err != nil {
-		return "", err
-	}
-	return org.Name, nil
 }

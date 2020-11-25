@@ -97,7 +97,7 @@ func (s sessionPointer) Payload() []byte {
 
 func (s sessionPointer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		SessionID string `json:"sessionId"`
+		SessionID string `json:"sessionID"`
 	}{SessionID: s.sessionID})
 }
 

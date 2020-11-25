@@ -15,8 +15,8 @@ plugins:
     enabled: true
 exclude_patterns:
   - "docs/"
+  - "mock/"
   - "**/*_test.go"
   - "**/test.go"
-  - "**/mock.go"
   - "**/generated.go"
   - "assets/bindata.go"

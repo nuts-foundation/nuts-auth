@@ -52,9 +52,10 @@ type IrmaService struct {
 	IrmaSessionHandler IrmaSessionHandler
 	IrmaConfig         *irma.Configuration
 	IrmaServiceConfig  IrmaServiceConfig
-	Registry           registry.RegistryClient
-	Crypto             nutscrypto.Client
-	ContractTemplates  contract.TemplateStore
+	// todo: remove this when the deprecated ValidateJwt is removed
+	Registry          registry.RegistryClient
+	Crypto            nutscrypto.Client
+	ContractTemplates contract.TemplateStore
 }
 
 type IrmaServiceConfig struct {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -20,6 +21,7 @@ type Wrapper struct {
 	Auth pkg.AuthClient
 }
 
+// CreateSignSession handles the CreateSignSession http request. It parses the parameters, finds the means handler and returns a session pointer which can be used to monitor the session.
 func (w Wrapper) CreateSignSession(ctx echo.Context) error {
 	requestParams := new(CreateSignSessionRequest)
 	if err := ctx.Bind(requestParams); err != nil {
@@ -53,6 +55,7 @@ func (w Wrapper) CreateSignSession(ctx echo.Context) error {
 	return ctx.JSON(http.StatusCreated, response)
 }
 
+// GetSignSessionStatus handles the http requests for getting the current status of a signing session.
 func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error {
 	sessionStatus, err := w.Auth.ContractClient().SigningSessionStatus(sessionPtr)
 	if err != nil {
@@ -65,6 +68,7 @@ func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
 	return ctx.JSON(http.StatusOK, response)
 }
 
+// GetContractTemplate handles http requests for a contract template. The contract is find by language and type.
 func (w Wrapper) GetContractTemplate(ctx echo.Context, language string, contractType string, params GetContractTemplateParams) error {
 	var version contract.Version
 	if params.Version != nil {
@@ -87,10 +91,32 @@ func (w Wrapper) GetContractTemplate(ctx echo.Context, language string, contract
 	return ctx.JSON(http.StatusOK, response)
 }
 
+// DrawUpContract handles the http request for drawing up a contract for a given contract template identified by type, language and version.
 func (w Wrapper) DrawUpContract(ctx echo.Context) error {
 	params := new(DrawUpContractRequest)
 	if err := ctx.Bind(params); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
+	}
+
+	var (
+		vf            time.Time
+		validDuration time.Duration
+		err           error
+	)
+	if params.ValidFrom != nil {
+		vf, err = time.Parse("2006-01-02T15:04:05-07:00", *params.ValidFrom)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validFrom: %v", err))
+		}
+	} else {
+		vf = time.Now()
+	}
+
+	if params.ValidDuration != nil {
+		validDuration, err = time.ParseDuration(*params.ValidDuration)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validDuration: %v", err))
+		}
 	}
 
 	template, err := contract.StandardContractTemplates.Find(contract.Type(params.Type), contract.Language(params.Language), contract.Version(params.Version))
@@ -105,7 +131,7 @@ func (w Wrapper) DrawUpContract(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid value for param legalEntity: '%s', make sure its in the form 'urn:oid:1.2.3.4:foo'", params.LegalEntity))
 	}
 
-	drawnUpContract, err := w.Auth.ContractNotary().DrawUpContract(*template, orgID)
+	drawnUpContract, err := w.Auth.ContractNotary().DrawUpContract(*template, orgID, vf, validDuration)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("error while drawing up the contract: %s", err.Error()))
 	}

@@ -43,20 +43,23 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
 	}
 
-	var vf, vt time.Time
+	var (
+		vf, vt        time.Time
+		err           error
+		validDuration time.Duration
+	)
 	if params.ValidFrom != nil {
-		vft, err := time.Parse("2006-01-02T15:04:05-07:00", *params.ValidFrom)
+		vf, err = time.Parse("2006-01-02T15:04:05-07:00", *params.ValidFrom)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validFrom: %v", err))
 		}
-		vf = vft
 	}
 	if params.ValidTo != nil {
-		vft, err := time.Parse("2006-01-02T15:04:05-07:00", *params.ValidTo)
+		vt, err = time.Parse("2006-01-02T15:04:05-07:00", *params.ValidTo)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validTo: %v", err))
 		}
-		vt = vft
+		validDuration = vt.Sub(vt)
 	}
 
 	orgID, err := core.ParsePartyID(string(params.LegalEntity))
@@ -64,22 +67,20 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid value for param legalEntity: '%s', make sure its in the form 'urn:oid:1.2.3.4:foo'", params.LegalEntity))
 	}
 
-	// convert generated api format to internal struct
-	sessionRequest := services.CreateSessionRequest{
-		Type:        contract.Type(params.Type),
-		Version:     contract.Version(params.Version),
-		Language:    contract.Language(params.Language),
-		LegalEntity: orgID,
-		ValidFrom:   vf,
-		ValidTo:     vt,
+	template, err := contract.StandardContractTemplates.Find(contract.Type(params.Type), contract.Language(params.Language), contract.Version(params.Version))
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unable to find contract: %s", err.Error()))
 	}
+	drawnUpContract, err := api.Auth.ContractNotary().DrawUpContract(*template, orgID, vf, validDuration)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unable to draw up contract: %s", err.Error()))
+	}
+
+	sessionRequest := services.CreateSessionRequest{SigningMeans: "irma", Message: drawnUpContract.RawContractText}
 
 	// Initiate the actual session
 	result, err := api.Auth.ContractClient().CreateSigningSession(sessionRequest)
 	if err != nil {
-		if errors.Is(err, contract.ErrContractNotFound) {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		}
 		if errors.Is(err, validator.ErrMissingOrganizationKey) {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity, this Nuts node does not seem to be managing '%s'", orgID))
 		}

@@ -10,7 +10,7 @@ import (
 
 func TestContract_RenderTemplate(t *testing.T) {
 	template := &Template{Type: "Simple", Template: "ga je akkoord met {{wat}} van {{valid_from}} tot {{valid_to}}?"}
-	result, err := template.Render(map[string]string{"wat": "alles"}, 0, 60*time.Minute)
+	result, err := template.Render(map[string]string{"wat": "alles"}, time.Now(), 60*time.Minute)
 	if err != nil {
 		t.Error(err)
 	}

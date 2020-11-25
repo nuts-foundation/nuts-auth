@@ -5,19 +5,23 @@ import (
 	"fmt"
 	"time"
 
+	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
+	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
 	registry "github.com/nuts-foundation/nuts-registry/pkg"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
 )
 
 type contractNotaryService struct {
 	Registry         registry.RegistryClient
+	Crypto           nutscrypto.Client
 	ContractValidity time.Duration
 }
 
-func NewContractNotary(reg registry.RegistryClient, contractValidity time.Duration) *contractNotaryService {
-	return &contractNotaryService{reg, contractValidity}
+func NewContractNotary(reg registry.RegistryClient, crypto nutscrypto.Client, contractValidity time.Duration) *contractNotaryService {
+	return &contractNotaryService{Registry: reg, ContractValidity: contractValidity, Crypto: crypto}
 }
 
 // organizationNameByID returns the name of an organisation from the registry
@@ -29,8 +33,21 @@ func (s contractNotaryService) organizationNameByID(legalEntity core.PartyID) (s
 	return org.Name, nil
 }
 
-// DrawUpContract draws up a contract for a specific organisation from a template
-func (s contractNotaryService) DrawUpContract(template contract.Template, orgID core.PartyID) (*contract.Contract, error) {
+// KeyExistsFor check if the private key exists on this node by calling the same function on the CryptoClient
+func (s *contractNotaryService) KeyExistsFor(legalEntity core.PartyID) bool {
+	return s.Crypto.PrivateKeyExists(cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: legalEntity.String()}))
+}
+
+// DrawUpContract accepts a template and fills in the Party, validFrom time and its duration.
+// If validFrom is zero, the current time is used.
+// If the duration is 0 than the default duration is used.
+func (s contractNotaryService) DrawUpContract(template contract.Template, orgID core.PartyID, validFrom time.Time, validDuration time.Duration) (*contract.Contract, error) {
+	// Test if the org in managed by this node:
+	if !s.KeyExistsFor(orgID) {
+		return nil, fmt.Errorf("could not draw up contract: organization is not managed by this node: %w", validator.ErrMissingOrganizationKey)
+	}
+
+	// DrawUpContract draws up a contract for a specific organisation from a template
 	orgName, err := s.organizationNameByID(orgID)
 	if err != nil {
 		return nil, fmt.Errorf("could not draw up contract: %w", err)
@@ -38,7 +55,15 @@ func (s contractNotaryService) DrawUpContract(template contract.Template, orgID 
 	contractAttrs := map[string]string{
 		contract.LegalEntityAttr: orgName,
 	}
-	drawnUpContract, err := template.Render(contractAttrs, 0, s.ContractValidity)
+
+	if validDuration == 0 {
+		validDuration = s.ContractValidity
+	}
+	if validFrom.IsZero() {
+		validFrom = time.Now()
+	}
+
+	drawnUpContract, err := template.Render(contractAttrs, validFrom, validDuration)
 	if err != nil {
 		return nil, fmt.Errorf("could not draw up contract: %w", err)
 	}

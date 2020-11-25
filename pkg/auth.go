@@ -86,7 +86,7 @@ func NewAuthInstance(config AuthConfig, cryptoClient nutscrypto.Client, registry
 		Config:         config,
 		Crypto:         cryptoClient,
 		Registry:       registryClient,
-		contractNotary: contract.NewContractNotary(registryClient, 60*time.Minute),
+		contractNotary: contract.NewContractNotary(registryClient, cryptoClient, 60*time.Minute),
 	}
 }
 

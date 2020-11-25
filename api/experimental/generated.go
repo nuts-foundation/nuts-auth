@@ -82,6 +82,12 @@ type DrawUpContractRequest struct {
 	// Type of which contract to sign
 	Type ContractType `json:"type"`
 
+	// The duration this contract is valid, starting from validFrom or current time if validFrom is omitted. Uses this node default when omitted. Valid time units are: 's', 'm', 'h'
+	ValidDuration *string `json:"validDuration,omitempty"`
+
+	// validFrom describes the time from which this contract should be considered valid. Current time is used when omitted.
+	ValidFrom *string `json:"validFrom,omitempty"`
+
 	// Version of the contract
 	Version ContractVersion `json:"version"`
 }

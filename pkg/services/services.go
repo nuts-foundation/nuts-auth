@@ -65,7 +65,7 @@ type AuthenticationTokenParser interface {
 // ContractNotary defines the interface to draw up a contract.
 type ContractNotary interface {
 	// DrawUpContract draws up a contract from a template and returns a Contract which than can be signed by the user.
-	DrawUpContract(template contract.Template, orgID core.PartyID) (*contract.Contract, error)
+	DrawUpContract(template contract.Template, orgID core.PartyID, validFrom time.Time, validDuration time.Duration) (*contract.Contract, error)
 
 	ValidateContract(contractToValidate contract.Contract, orgID core.PartyID, checkTime time.Time) (bool, error)
 }

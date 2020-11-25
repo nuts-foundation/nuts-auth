@@ -23,18 +23,17 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
+	core "github.com/nuts-foundation/nuts-go-core"
+	registryMock "github.com/nuts-foundation/nuts-registry/mock"
+	irma "github.com/privacybydesign/irmago"
+	"github.com/stretchr/testify/assert"
+
 	contractMock "github.com/nuts-foundation/nuts-auth/mock/contract"
 	servicesMock "github.com/nuts-foundation/nuts-auth/mock/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
-	cryptoMock "github.com/nuts-foundation/nuts-crypto/test/mock"
-	core "github.com/nuts-foundation/nuts-go-core"
-	registryMock "github.com/nuts-foundation/nuts-registry/mock"
-	"github.com/nuts-foundation/nuts-registry/pkg/db"
-	"github.com/nuts-foundation/nuts-registry/test"
-	irma "github.com/privacybydesign/irmago"
-	"github.com/stretchr/testify/assert"
 )
 
 const qrURL = "https://api.nuts-test.example" + irmaService.IrmaMountPath + "/123-session-ref-123"
@@ -44,13 +43,9 @@ func TestService_CreateContractSession(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		vendorID := test.VendorID("vendorName")
 		request := services.CreateSessionRequest{
-			Type:        contract.Type("BehandelaarLogin"),
-			Language:    contract.Language("NL"),
-			LegalEntity: vendorID,
+			Message: "message to sign",
 		}
-		ctx.registryMock.EXPECT().OrganizationById(vendorID).Return(&db.Organization{Name: "vendorName"}, nil)
 		ctx.signerMock.EXPECT().StartSigningSession(gomock.Any()).Return(irmaService.SessionPtr{ID: "abc-sessionid-abc", QrCodeInfo: irma.Qr{URL: qrURL, Type: irma.ActionSigning}}, nil)
 
 		result, err := ctx.contractService.CreateSigningSession(request)
@@ -63,18 +58,6 @@ func TestService_CreateContractSession(t *testing.T) {
 
 		assert.Equal(t, irmaResult.QrCodeInfo.URL, qrURL, "qrCode should contain the correct URL")
 		assert.Equal(t, irmaResult.QrCodeInfo.Type, irma.ActionSigning, "qrCode type should be signing")
-	})
-
-	t.Run("Unknown contract returns an error", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-
-		request := services.CreateSessionRequest{Type: contract.Type("ShadyDeal"), Language: contract.Language("NL")}
-		result, err := ctx.contractService.CreateSigningSession(request)
-
-		assert.Nil(t, result, "result should be nil")
-		assert.NotNil(t, err, "expected an error")
-		assert.True(t, errors.Is(err, contract.ErrContractNotFound), "expected ErrContractNotFound")
 	})
 }
 
@@ -136,45 +119,6 @@ func TestService_ValidateContract(t *testing.T) {
 	})
 }
 
-func TestService_KeyExistsFor(t *testing.T) {
-	ctx := createContext(t)
-	defer ctx.ctrl.Finish()
-
-	t.Run("false when nutsCrypto returns false", func(t *testing.T) {
-		ctx.cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).Return(false)
-
-		orgID := ctx.contractService.KeyExistsFor(organizationID)
-		assert.False(t, orgID)
-	})
-
-	t.Run("true when nutsCrypto returns false", func(t *testing.T) {
-		ctx.cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).Return(true)
-
-		assert.True(t, ctx.contractService.KeyExistsFor(organizationID))
-	})
-}
-
-func TestService_OrganizationNameById(t *testing.T) {
-	ctx := createContext(t)
-	defer ctx.ctrl.Finish()
-
-	t.Run("returns name", func(t *testing.T) {
-		ctx.registryMock.EXPECT().OrganizationById(organizationID).Return(&db.Organization{Name: "name"}, nil)
-
-		name, err := ctx.contractService.OrganizationNameByID(organizationID)
-		if assert.NoError(t, err) {
-			assert.Equal(t, "name", name)
-		}
-	})
-
-	t.Run("returns error", func(t *testing.T) {
-		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, errors.New("error"))
-
-		_, err := ctx.contractService.OrganizationNameByID(organizationID)
-		assert.Error(t, err)
-	})
-}
-
 func TestContract_Configure(t *testing.T) {
 	t.Run("ok - config valid", func(t *testing.T) {
 		c := service{
@@ -194,8 +138,6 @@ func TestContract_Configure(t *testing.T) {
 	})
 }
 
-var organizationID = test.OrganizationID("00000001")
-
 type testContext struct {
 	ctrl                   *gomock.Controller
 	cryptoMock             *cryptoMock.MockClient
@@ -208,8 +150,8 @@ type testContext struct {
 
 func createContext(t *testing.T) *testContext {
 	ctrl := gomock.NewController(t)
-	cryptoMock := cryptoMock.NewMockClient(ctrl)
-	registryMock := registryMock.NewMockRegistryClient(ctrl)
+	cryptoClient := cryptoMock.NewMockClient(ctrl)
+	registryClient := registryMock.NewMockRegistryClient(ctrl)
 	contractValidatorMock := servicesMock.NewMockContractValidator(ctrl)
 	contractSessionHandler := servicesMock.NewMockContractSessionHandler(ctrl)
 
@@ -219,8 +161,8 @@ func createContext(t *testing.T) *testContext {
 
 	return &testContext{
 		ctrl:                   ctrl,
-		cryptoMock:             cryptoMock,
-		registryMock:           registryMock,
+		cryptoMock:             cryptoClient,
+		registryMock:           registryClient,
 		contractValidatorMock:  contractValidatorMock,
 		contractSessionHandler: contractSessionHandler,
 		signerMock:             signerMock,
@@ -230,8 +172,8 @@ func createContext(t *testing.T) *testContext {
 			},
 			contractSessionHandler: contractSessionHandler,
 			contractValidator:      contractValidatorMock,
-			crypto:                 cryptoMock,
-			registry:               registryMock,
+			crypto:                 cryptoClient,
+			registry:               registryClient,
 			signers:                signers,
 		},
 	}

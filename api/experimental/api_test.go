@@ -57,7 +57,7 @@ func (m mockContractNotary) ValidateContract(contractToValidate contract.Contrac
 	panic("implement me")
 }
 
-func (m mockContractNotary) DrawUpContract(template contract.Template, orgID core.PartyID) (*contract.Contract, error) {
+func (m mockContractNotary) DrawUpContract(template contract.Template, orgID core.PartyID, validFrom time.Time, validDuration time.Duration) (*contract.Contract, error) {
 	return &contract.Contract{
 		RawContractText: "drawn up contract text",
 		Template:        &template,

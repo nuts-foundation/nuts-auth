@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/nuts-foundation/nuts-registry/pkg"
+
 	servicesMock "github.com/nuts-foundation/nuts-auth/mock/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
-	"github.com/nuts-foundation/nuts-registry/pkg"
 
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 
@@ -42,13 +43,16 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 
 		tt := time.Now().Truncate(time.Second)
 
+		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			&contract2.Contract{
+				RawContractText: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan ZorgDossier om namens Verpleeghuis de Hoeksteen en ondergetekende het Nuts netwerk te bevragen",
+				Template:        nil,
+				Params:          nil,
+			}, nil)
+
 		ctx.contractMock.EXPECT().CreateSigningSession(services.CreateSessionRequest{
-			Type:        "BehandelaarLogin",
-			Version:     "v1",
-			Language:    "NL",
-			ValidFrom:   tt,
-			ValidTo:     tt.Add(time.Hour * 13),
-			LegalEntity: careOrgID,
+			Message:      "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan ZorgDossier om namens Verpleeghuis de Hoeksteen en ondergetekende het Nuts netwerk te bevragen",
+			SigningMeans: "irma",
 		}).Return(irmaService.SessionPtr{
 			QrCodeInfo: irma.Qr{
 				URL:  "http://example.com" + irmaService.IrmaMountPath + "/123",
@@ -139,14 +143,6 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.contractMock.EXPECT().CreateSigningSession(services.CreateSessionRequest{
-			Type:        contract2.Type(params.Type),
-			Version:     "v1",
-			Language:    "NL",
-			LegalEntity: careOrgID,
-		}).Return(
-			nil, contract2.ErrContractNotFound)
-
 		wrapper := Wrapper{Auth: ctx.authMock}
 
 		jsonData, _ := json.Marshal(params)
@@ -158,6 +154,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
+		assert.Contains(t, httpError.Message, "Unable to find contract: type UnknownContract")
 	})
 
 	t.Run("for an unknown legalEntity", func(t *testing.T) {
@@ -165,48 +162,22 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		params := ContractSigningRequest{
-			Type:        "UnknownContract",
+			Type:        "BehandelaarLogin",
 			Language:    "NL",
 			Version:     "v1",
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.contractMock.EXPECT().CreateSigningSession(services.CreateSessionRequest{
-			Type:        contract2.Type(params.Type),
-			Version:     "v1",
-			Language:    "NL",
-			LegalEntity: careOrgID,
-		}).Return(nil, validator.ErrMissingOrganizationKey)
-
-		wrapper := Wrapper{Auth: ctx.authMock}
-
-		jsonData, _ := json.Marshal(params)
-		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
-			_ = json.Unmarshal(jsonData, f)
-		})
-
-		err := wrapper.CreateSession(ctx.echoMock)
-		assert.IsType(t, &echo.HTTPError{}, err)
-		httpError := err.(*echo.HTTPError)
-		assert.Equal(t, http.StatusBadRequest, httpError.Code)
-	})
-
-	t.Run("for an unregistered legal entity", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-
-		params := ContractSigningRequest{
-			Type:        "UnknownContract",
-			Language:    "NL",
-			Version:     "v1",
-			LegalEntity: LegalEntity(careOrgID.String()),
-		}
+		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			&contract2.Contract{
+				RawContractText: "NL:BehandelaarLogin:v1 Ondergetekende",
+				Template:        nil,
+				Params:          nil,
+			}, nil)
 
 		ctx.contractMock.EXPECT().CreateSigningSession(services.CreateSessionRequest{
-			Type:        contract2.Type(params.Type),
-			Version:     "v1",
-			Language:    "NL",
-			LegalEntity: careOrgID,
+			Message:      "NL:BehandelaarLogin:v1 Ondergetekende",
+			SigningMeans: "irma",
 		}).Return(nil, pkg.ErrOrganizationNotFound)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
@@ -220,6 +191,34 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
+		assert.Equal(t, "No organization registered for legalEntity: organization not found", httpError.Message)
+	})
+
+	t.Run("for an unregistered legal entity", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		params := ContractSigningRequest{
+			Type:        "BehandelaarLogin",
+			Language:    "NL",
+			Version:     "v1",
+			LegalEntity: LegalEntity(careOrgID.String()),
+		}
+
+		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, validator.ErrMissingOrganizationKey)
+
+		wrapper := Wrapper{Auth: ctx.authMock}
+
+		jsonData, _ := json.Marshal(params)
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+			_ = json.Unmarshal(jsonData, f)
+		})
+
+		err := wrapper.CreateSession(ctx.echoMock)
+		assert.IsType(t, &echo.HTTPError{}, err)
+		httpError := err.(*echo.HTTPError)
+		assert.Equal(t, http.StatusBadRequest, httpError.Code)
+		assert.Equal(t, "Unable to draw up contract: missing organization private key", httpError.Message)
 	})
 }
 
@@ -389,6 +388,7 @@ type TestContext struct {
 	echoMock     *coreMock.MockContext
 	authMock     *mock.MockAuthClient
 	oauthMock    *servicesMock.MockOAuthClient
+	notaryMock   *servicesMock.MockContractNotary
 	contractMock *servicesMock.MockContractClient
 	wrapper      Wrapper
 }
@@ -397,15 +397,20 @@ var createContext = func(t *testing.T) *TestContext {
 	ctrl := gomock.NewController(t)
 	authMock := mock.NewMockAuthClient(ctrl)
 	oauthMock := servicesMock.NewMockOAuthClient(ctrl)
-	authMock.EXPECT().OAuthClient().AnyTimes().Return(oauthMock)
+	notaryMock := servicesMock.NewMockContractNotary(ctrl)
 	contractMock := servicesMock.NewMockContractClient(ctrl)
+
+	authMock.EXPECT().OAuthClient().AnyTimes().Return(oauthMock)
 	authMock.EXPECT().ContractClient().AnyTimes().Return(contractMock)
+	authMock.EXPECT().ContractNotary().AnyTimes().Return(notaryMock)
+
 	return &TestContext{
 		ctrl:         ctrl,
 		echoMock:     coreMock.NewMockContext(ctrl),
 		authMock:     authMock,
 		oauthMock:    oauthMock,
 		contractMock: contractMock,
+		notaryMock:   notaryMock,
 		wrapper:      Wrapper{Auth: authMock},
 	}
 }

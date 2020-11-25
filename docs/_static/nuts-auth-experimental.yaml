@@ -207,11 +207,11 @@ components:
           $ref: "#/components/schemas/ContractVersion"
         legalEntity:
           $ref: "#/components/schemas/LegalEntity"
-#        valid_from:
-#          type: string
-#          description: "ValidFrom describes the time from which this contract should be considered valid"
-#          example: "2019-06-24T14:32:00+02:00"
-#        valid_to:
-#          type: string
-#          description: "ValidTo describes the time until this contract should be considered valid"
-#          example: "2019-12-24T14:32:00+02:00"
+        validFrom:
+          type: string
+          description: "validFrom describes the time from which this contract should be considered valid. Current time is used when omitted."
+          example: "2019-06-24T14:32:00+02:00"
+        validDuration:
+          type: string
+          description: "The duration this contract is valid, starting from validFrom or current time if validFrom is omitted. Uses this node default when omitted. Valid time units are: 's', 'm', 'h'"
+          example: "2h"
