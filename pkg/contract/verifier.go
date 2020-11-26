@@ -40,7 +40,7 @@ type Verifier interface {
 // VerifiableCredentialBase holds the basic fields for a VerifiableCredential
 // todo: move or use lib
 type VerifiableCredentialBase struct {
-	Context      string `json:"@context"`
+	Context      []string `json:"@context"`
 	Id           *string
 	Type         []string
 	Issuer       *string

@@ -115,9 +115,13 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 	// todo: the contract template should be used to select the dummy attributes to add
 	// reqContract := d.Request.Contract()
 
+	if d.Status() != SessionCompleted {
+		return nil, nil
+	}
+
 	return Presentation{
 		VerifiableCredentialBase: contract.VerifiableCredentialBase{
-			Context: contract.VerifiableCredentialContext,
+			Context: []string{contract.VerifiableCredentialContext},
 			Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
 		},
 		Proof: Proof{
@@ -170,16 +174,25 @@ func (d Dummy) SigningSessionStatus(sessionID string) (contract.SigningSessionRe
 		return nil, services.ErrSessionNotFound
 	}
 
-	newState := SessionInProgress
-	switch state {
-	case SessionInProgress, SessionCompleted:
-		newState = SessionCompleted
+	session, ok := d.Sessions[sessionID]
+	if !ok {
+		return nil, services.ErrSessionNotFound
 	}
 
+	// increase session status everytime this request is made
+	switch state {
+	case SessionCreated:
+		d.Status[sessionID] = SessionInProgress
+	case SessionInProgress:
+		d.Status[sessionID] = SessionCompleted
+	case SessionCompleted:
+		delete(d.Status, sessionID)
+		delete(d.Sessions, sessionID)
+	}
 	return signingSessionResult{
 		Id:      sessionID,
-		State:   newState,
-		Request: d.Sessions[sessionID],
+		State:   state,
+		Request: session,
 	}, nil
 }
 

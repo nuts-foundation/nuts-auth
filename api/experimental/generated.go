@@ -97,10 +97,20 @@ type GetSignSessionStatusResult struct {
 
 	// Status indicates the status of the signing proces. Values depend on the implementation of the signing means.
 	Status string `json:"status"`
+
+	// If the signature session is completed, this property contains the signature embedded in an w3c verifiable presentation
+	VerifiablePresentation *VerifiablePresentation `json:"verifiablePresentation,omitempty"`
 }
 
 // LegalEntity defines model for LegalEntity.
 type LegalEntity string
+
+// VerifiablePresentation defines model for VerifiablePresentation.
+type VerifiablePresentation struct {
+	Context []string               `json:"@context"`
+	Proof   map[string]interface{} `json:"proof"`
+	Type    []string               `json:"type"`
+}
 
 // DrawUpContractJSONBody defines parameters for DrawUpContract.
 type DrawUpContractJSONBody DrawUpContractRequest

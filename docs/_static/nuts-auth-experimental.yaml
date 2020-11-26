@@ -32,21 +32,21 @@ paths:
           schema:
             type: string
       responses:
-       200:
-         description:  When the sessionPtr is know. Contains the current session status.
-         content:
-           application/json:
-             schema:
-               $ref: "#/components/schemas/GetSignSessionStatusResult"
-       404:
-         description: When the sessionPtr in unknown.
-#    delete:
-#      operationId: cancelSignSession
-#      responses:
-#        204:
-#          description: When the sessionPtr is known and the session was successfully deleted
-#        404:
-#          description: When the sessionPtr was unknown
+        200:
+          description: When the sessionPtr is know. Contains the current session status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetSignSessionStatusResult"
+        404:
+          description: When the sessionPtr in unknown.
+  #    delete:
+  #      operationId: cancelSignSession
+  #      responses:
+  #        204:
+  #          description: When the sessionPtr is known and the session was successfully deleted
+  #        404:
+  #          description: When the sessionPtr was unknown
   /auth/internal/experimental/contract/drawup:
     put:
       operationId: drawUpContract
@@ -108,7 +108,7 @@ components:
       properties:
         means:
           type: string
-          enum: [irma, dummy]
+          enum: [ irma, dummy ]
           example: irma
         params:
           type: object
@@ -128,17 +128,37 @@ components:
         means:
           description: The means this session uses to sign.
           type: string
-          enum: [irma, dummy]
+          enum: [ irma, dummy ]
           example: irma
 
     GetSignSessionStatusResult:
       required:
         - status
-#        - verifiablePresentation
       properties:
         status:
           description: Status indicates the status of the signing proces. Values depend on the implementation of the signing means.
           type: string
+        verifiablePresentation:
+          $ref: "#/components/schemas/VerifiablePresentation"
+
+    VerifiablePresentation:
+      description: If the signature session is completed, this property contains the signature embedded in an w3c verifiable presentation
+      type: object
+      required:
+        - "@context"
+        - type
+        - proof
+      properties:
+        "@context":
+          type: array
+          items:
+            type: string
+        type:
+          type: array
+          items:
+            type: string
+        proof:
+          type: object
 
     ContractType:
       type: string

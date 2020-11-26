@@ -64,7 +64,25 @@ func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to retrieve a session status: %s", err.Error()))
 	}
-	response := GetSignSessionStatusResult{Status: sessionStatus.Status()}
+	vp, err := sessionStatus.VerifiablePresentation()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("error while building verifiable presentation: %s", err.Error()))
+	}
+	var apiVp *VerifiablePresentation
+	if vp != nil {
+		// Convert the verifiable presentation to a map[string]interface{} using json conversion
+		// todo: put into separate method
+		jsonVp, err := json.Marshal(vp)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert verifiable presentation: %s", err.Error()))
+		}
+		apiVp = new(VerifiablePresentation)
+		err = json.Unmarshal(jsonVp, apiVp)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert verifiable presentation: %s", err.Error()))
+		}
+	}
+	response := GetSignSessionStatusResult{Status: sessionStatus.Status(), VerifiablePresentation: apiVp}
 	return ctx.JSON(http.StatusOK, response)
 }
 
