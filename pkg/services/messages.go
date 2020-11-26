@@ -3,31 +3,14 @@ package services
 import (
 	"crypto/x509"
 	"encoding/json"
-	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
-	core "github.com/nuts-foundation/nuts-go-core"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 )
 
 // CreateSessionRequest is used to create a contract signing session.
 type CreateSessionRequest struct {
-	// Type such as "BehandelaarLogin"
-	Type contract.Type
-	// Version of the contract such as "v1"
-	Version contract.Version
-	// Language of the contact such as "NL"
-	Language contract.Language
-	// LegalEntity denotes the organization of the user
-	LegalEntity core.PartyID
-	// ValidFrom describes the time from which this contract should be considered valid
-	ValidFrom time.Time
-	// ValidFrom describes the time until this contract should be considered valid
-	ValidTo time.Time
-	// TemplateAttributes is an object containing extra template values. example: {"reason":"providing care"}
-	TemplateAttributes map[string]string
 	// todo correct Signing means type
 	SigningMeans string
 	// Message to sign
