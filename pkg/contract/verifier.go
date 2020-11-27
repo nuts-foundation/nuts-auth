@@ -61,7 +61,9 @@ type VerifiablePresentation interface {
 
 // BaseVerifiablePresentation represents a W3C Verifiable Presentation with only its Type attribute
 type BaseVerifiablePresentation struct {
-	Type []string
+	Context []string               `json:"@context"`
+	Proof   map[string]interface{} `json:"proof"`
+	Type    []string               `json:"type"`
 }
 
 // Proof represents the Proof part of a Verifiable Presentation

@@ -48,14 +48,14 @@ Content-Type: application/json
 
 {
   "language": "EN",
-  "version":"v3",
-  "type":"PractitionerLogin",
+  "version": "v3",
+  "type": "PractitionerLogin",
   "legalEntity": "urn:oid:2.16.840.1.113883.2.4.6.1:12345678"
 }
 
 ###
 
-POST http://localhost:1323/auth/internal/experimental/sign
+POST http://localhost:1323/auth/internal/experimental/signature/session
 Content-Type: application/json
 
 {
@@ -74,4 +74,29 @@ Content-Type: application/json
 
 ###
 
-GET http://localhost:1323/auth/internal/experimental/sign/Dd6zVqtYEJRJ7hJOtgUD
+GET http://localhost:1323/auth/internal/experimental/signature/session/473c5341dd2cb8ac238125f4e38e9394
+
+###
+
+PUT http://localhost:1323/auth/internal/experimental/signature/verify
+Content-Type: application/json
+
+{
+  "verifiablePresentation": {
+    "@context": [
+      "https://www.w3.org/2018/credentials/v1"
+    ],
+    "proof": {
+      "Birthdate": "1980-01-01",
+      "Contract": "NL:BehandelaarLogin:v3 Hierbij verklaar ik te handelen in naam van Zorghuis de goude hand. Deze verklaring is geldig van vandaag tot morgen",
+      "Email": "tester@example.com",
+      "Initials": "I",
+      "Lastname": "Tester",
+      "Type": "NoSignature"
+    },
+    "type": [
+      "VerifiablePresentation",
+      "DummyVerifiablePresentation"
+    ]
+  }
+}

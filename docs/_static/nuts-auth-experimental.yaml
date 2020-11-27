@@ -4,7 +4,7 @@ info:
   version: 1.0.0
 
 paths:
-  /auth/internal/experimental/sign:
+  /auth/internal/experimental/signature/session:
     post:
       operationId: createSignSession
       summary: Create a signing session for a supported means.
@@ -21,7 +21,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CreateSignSessionResult"
-  /auth/internal/experimental/sign/{sessionPtr}:
+  /auth/internal/experimental/signature/session/{sessionPtr}:
     get:
       operationId: getSignSessionStatus
       summary: Get the current status of a signing session
@@ -47,6 +47,24 @@ paths:
   #          description: When the sessionPtr is known and the session was successfully deleted
   #        404:
   #          description: When the sessionPtr was unknown
+  /auth/internal/experimental/signature/verify:
+    put:
+      operationId: verifySignature
+      summary: Verify a signature in the form of a verifiable credential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignatureVerificationRequest"
+      responses:
+        200:
+          description: "When the verification could be performed. The response contains the verification result. Note: This status code does not indicate the validity of the signature."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureVerificationResponse"
+
   /auth/internal/experimental/contract/drawup:
     put:
       operationId: drawUpContract
@@ -159,6 +177,18 @@ components:
             type: string
         proof:
           type: object
+
+    SignatureVerificationRequest:
+      type: object
+      required:
+        - VerifiablePresentation
+      properties:
+        VerifiablePresentation:
+          $ref: "#/components/schemas/VerifiablePresentation"
+
+    SignatureVerificationResponse:
+      description: Contains the verification result.
+      type: boolean
 
     ContractType:
       type: string

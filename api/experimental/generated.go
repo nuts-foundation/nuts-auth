@@ -105,6 +105,16 @@ type GetSignSessionStatusResult struct {
 // LegalEntity defines model for LegalEntity.
 type LegalEntity string
 
+// SignatureVerificationRequest defines model for SignatureVerificationRequest.
+type SignatureVerificationRequest struct {
+
+	// If the signature session is completed, this property contains the signature embedded in an w3c verifiable presentation
+	VerifiablePresentation VerifiablePresentation `json:"VerifiablePresentation"`
+}
+
+// SignatureVerificationResponse defines model for SignatureVerificationResponse.
+type SignatureVerificationResponse bool
+
 // VerifiablePresentation defines model for VerifiablePresentation.
 type VerifiablePresentation struct {
 	Context []string               `json:"@context"`
@@ -125,11 +135,17 @@ type GetContractTemplateParams struct {
 // CreateSignSessionJSONBody defines parameters for CreateSignSession.
 type CreateSignSessionJSONBody CreateSignSessionRequest
 
+// VerifySignatureJSONBody defines parameters for VerifySignature.
+type VerifySignatureJSONBody SignatureVerificationRequest
+
 // DrawUpContractRequestBody defines body for DrawUpContract for application/json ContentType.
 type DrawUpContractJSONRequestBody DrawUpContractJSONBody
 
 // CreateSignSessionRequestBody defines body for CreateSignSession for application/json ContentType.
 type CreateSignSessionJSONRequestBody CreateSignSessionJSONBody
+
+// VerifySignatureRequestBody defines body for VerifySignature for application/json ContentType.
+type VerifySignatureJSONRequestBody VerifySignatureJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -140,11 +156,14 @@ type ServerInterface interface {
 	// (GET /auth/internal/experimental/contract/template/{language}/{contractType})
 	GetContractTemplate(ctx echo.Context, language string, contractType string, params GetContractTemplateParams) error
 	// Create a signing session for a supported means.
-	// (POST /auth/internal/experimental/sign)
+	// (POST /auth/internal/experimental/signature/session)
 	CreateSignSession(ctx echo.Context) error
 	// Get the current status of a signing session
-	// (GET /auth/internal/experimental/sign/{sessionPtr})
+	// (GET /auth/internal/experimental/signature/session/{sessionPtr})
 	GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
+	// Verify a signature in the form of a verifiable credential
+	// (PUT /auth/internal/experimental/signature/verify)
+	VerifySignature(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -219,6 +238,15 @@ func (w *ServerInterfaceWrapper) GetSignSessionStatus(ctx echo.Context) error {
 	return err
 }
 
+// VerifySignature converts echo context to params.
+func (w *ServerInterfaceWrapper) VerifySignature(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshalled arguments
+	err = w.Handler.VerifySignature(ctx)
+	return err
+}
+
 // RegisterHandlers adds each server route to the EchoRouter.
 func RegisterHandlers(router interface {
 	CONNECT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
@@ -238,8 +266,9 @@ func RegisterHandlers(router interface {
 
 	router.PUT("/auth/internal/experimental/contract/drawup", wrapper.DrawUpContract)
 	router.GET("/auth/internal/experimental/contract/template/:language/:contractType", wrapper.GetContractTemplate)
-	router.POST("/auth/internal/experimental/sign", wrapper.CreateSignSession)
-	router.GET("/auth/internal/experimental/sign/:sessionPtr", wrapper.GetSignSessionStatus)
+	router.POST("/auth/internal/experimental/signature/session", wrapper.CreateSignSession)
+	router.GET("/auth/internal/experimental/signature/session/:sessionPtr", wrapper.GetSignSessionStatus)
+	router.PUT("/auth/internal/experimental/signature/verify", wrapper.VerifySignature)
 
 }
 

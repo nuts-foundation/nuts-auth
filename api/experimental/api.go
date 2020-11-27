@@ -21,6 +21,24 @@ type Wrapper struct {
 	Auth pkg.AuthClient
 }
 
+func (w Wrapper) VerifySignature(ctx echo.Context) error {
+	requestParams := new(SignatureVerificationRequest)
+	if err := ctx.Bind(requestParams); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
+	}
+	rawVP, err := json.Marshal(requestParams.VerifiablePresentation)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert the verifiable presentation: %s", err.Error()))
+	}
+
+	validationResult, err := w.Auth.ContractClient().VerifyVP(rawVP)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to verify the verifiable presentation: %s", err.Error()))
+	}
+	var result SignatureVerificationResponse = validationResult.State == contract.Valid
+	return ctx.JSON(http.StatusOK, result)
+}
+
 // CreateSignSession handles the CreateSignSession http request. It parses the parameters, finds the means handler and returns a session pointer which can be used to monitor the session.
 func (w Wrapper) CreateSignSession(ctx echo.Context) error {
 	requestParams := new(CreateSignSessionRequest)
