@@ -239,11 +239,17 @@ func (s *service) validateClientCertificate(context *validationContext, pemEncod
 
 	c, err := cert.PemToX509([]byte(pemEncodedCertificate))
 	if err != nil {
+		logging.Log().Warnf("failed to decoded PEM encoded certificate %s", err.Error())
 		return errInvalidClientCert
 	}
 
 	chains, err := s.crypto.TrustStore().VerifiedChain(c, validationTime)
 	if err != nil || len(chains) == 0 {
+		e := ""
+		if err != nil {
+			e = err.Error()
+		}
+		logging.Log().Warnf("failed to verify certificate, chains: %d, err: %s", len(chains), e)
 		return errInvalidClientCert
 	}
 

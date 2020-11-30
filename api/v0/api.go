@@ -252,9 +252,8 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context, params CreateAccessToken
 		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidRequest, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
-	logging.Log().Debugf("got client certificate: %s", params.XSslClientCert)
+
 	cert, err := url.PathUnescape(params.XSslClientCert)
-	logging.Log().Debugf("after unescape: %s", cert)
 	if err != nil {
 		errDesc := "corrupted client certificate header"
 		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidRequest, ErrorDescription: errDesc}
