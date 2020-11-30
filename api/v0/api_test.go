@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"reflect"
 	"testing"
 	"time"
@@ -515,17 +517,19 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 	t.Run("valid request", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
+		pemBytes, _ := ioutil.ReadFile("../../testdata/certs/example.pem")
+		escaped := url.PathEscape(string(pemBytes))
 
 		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
 		bindPostBody(ctx, params)
 
 		pkgResponse := &services.AccessTokenResult{AccessToken: "foo"}
-		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, ClientCert: "cert"}).Return(pkgResponse, nil)
+		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, ClientCert: string(pemBytes)}).Return(pkgResponse, nil)
 
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
 		expectStatusOK(ctx, apiResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: "cert"})
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: escaped})
 
 		assert.Nil(t, err)
 

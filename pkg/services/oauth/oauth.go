@@ -234,6 +234,7 @@ func (s *service) validateIssuer(context *validationContext) error {
 }
 
 func (s *service) validateClientCertificate(context *validationContext, pemEncodedCertificate string) error {
+	logging.Log().Debugf("validating certificate: %s", pemEncodedCertificate)
 	validationTime := time.Unix(context.jwtBearerToken.IssuedAt, 0)
 	var vendor core.PartyID
 
