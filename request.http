@@ -39,11 +39,11 @@ Content-Type: application/json
 
 ###
 
-GET http://localhost:1323/auth/internal/experimental/contract/template/EN/PractitionerLogin?version=v3
+GET http://localhost:1323/internal/auth/experimental/contract/template/EN/PractitionerLogin?version=v3
 
 ###
 
-PUT http://localhost:1323/auth/internal/experimental/contract/drawup
+PUT http://localhost:1323/internal/auth/experimental/contract/drawup
 Content-Type: application/json
 
 {
@@ -55,7 +55,7 @@ Content-Type: application/json
 
 ###
 
-POST http://localhost:1323/auth/internal/experimental/signature/session
+POST http://localhost:1323/internal/auth/experimental/signature/session
 Content-Type: application/json
 
 {
@@ -64,7 +64,7 @@ Content-Type: application/json
 }
 
 ###
-POST http://localhost:1323/auth/internal/experimental/sign
+POST http://localhost:1323/internal/auth/experimental/sign
 Content-Type: application/json
 
 {
@@ -74,11 +74,11 @@ Content-Type: application/json
 
 ###
 
-GET http://localhost:1323/auth/internal/experimental/signature/session/473c5341dd2cb8ac238125f4e38e9394
+GET http://localhost:1323/internal/auth/experimental/signature/session/473c5341dd2cb8ac238125f4e38e9394
 
 ###
 
-PUT http://localhost:1323/auth/internal/experimental/signature/verify
+PUT http://localhost:1323/internal/auth/experimental/signature/verify
 Content-Type: application/json
 
 {

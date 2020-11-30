@@ -150,19 +150,19 @@ type VerifySignatureJSONRequestBody VerifySignatureJSONBody
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Draw up a contract using a specified contract template, language and version
-	// (PUT /auth/internal/experimental/contract/drawup)
+	// (PUT /internal/auth/experimental/contract/drawup)
 	DrawUpContract(ctx echo.Context) error
 	// Get the contract template by version, and type
-	// (GET /auth/internal/experimental/contract/template/{language}/{contractType})
+	// (GET /internal/auth/experimental/contract/template/{language}/{contractType})
 	GetContractTemplate(ctx echo.Context, language string, contractType string, params GetContractTemplateParams) error
 	// Create a signing session for a supported means.
-	// (POST /auth/internal/experimental/signature/session)
+	// (POST /internal/auth/experimental/signature/session)
 	CreateSignSession(ctx echo.Context) error
 	// Get the current status of a signing session
-	// (GET /auth/internal/experimental/signature/session/{sessionPtr})
+	// (GET /internal/auth/experimental/signature/session/{sessionPtr})
 	GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
 	// Verify a signature in the form of a verifiable credential
-	// (PUT /auth/internal/experimental/signature/verify)
+	// (PUT /internal/auth/experimental/signature/verify)
 	VerifySignature(ctx echo.Context) error
 }
 
@@ -264,11 +264,11 @@ func RegisterHandlers(router interface {
 		Handler: si,
 	}
 
-	router.PUT("/auth/internal/experimental/contract/drawup", wrapper.DrawUpContract)
-	router.GET("/auth/internal/experimental/contract/template/:language/:contractType", wrapper.GetContractTemplate)
-	router.POST("/auth/internal/experimental/signature/session", wrapper.CreateSignSession)
-	router.GET("/auth/internal/experimental/signature/session/:sessionPtr", wrapper.GetSignSessionStatus)
-	router.PUT("/auth/internal/experimental/signature/verify", wrapper.VerifySignature)
+	router.PUT("/internal/auth/experimental/contract/drawup", wrapper.DrawUpContract)
+	router.GET("/internal/auth/experimental/contract/template/:language/:contractType", wrapper.GetContractTemplate)
+	router.POST("/internal/auth/experimental/signature/session", wrapper.CreateSignSession)
+	router.GET("/internal/auth/experimental/signature/session/:sessionPtr", wrapper.GetSignSessionStatus)
+	router.PUT("/internal/auth/experimental/signature/verify", wrapper.VerifySignature)
 
 }
 
