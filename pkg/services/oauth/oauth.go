@@ -284,7 +284,7 @@ func (s *service) validateSubject(context *validationContext) error {
 		return fmt.Errorf(errInvalidSubjectFmt, err)
 	}
 	if custodian.Vendor.String() != context.vendor.String() {
-		return fmt.Errorf(errInvalidSubjectFmt, errors.New("organisation.vendor doesn't match with vendorID of this node"))
+		return fmt.Errorf(errInvalidSubjectFmt, fmt.Errorf("subject.vendor: %s doesn't match with vendorID of this node: %s", custodian.Vendor.String(), context.vendor.String()))
 	}
 
 	return nil
