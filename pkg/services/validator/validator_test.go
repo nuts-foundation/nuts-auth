@@ -44,7 +44,8 @@ func TestService_CreateContractSession(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		request := services.CreateSessionRequest{
-			Message: "message to sign",
+			Message:      "message to sign",
+			SigningMeans: irmaService.ContractFormat,
 		}
 		ctx.signerMock.EXPECT().StartSigningSession(gomock.Any()).Return(irmaService.SessionPtr{ID: "abc-sessionid-abc", QrCodeInfo: irma.Qr{URL: qrURL, Type: irma.ActionSigning}}, nil)
 
