@@ -45,20 +45,21 @@ import (
 // VerifiablePresentationType is the irma verifiable presentation type
 const VerifiablePresentationType = "IrmaVerifiablePresentation"
 
+// ContractFormat holds the readable identifier of this signing means.
 const ContractFormat = "irma"
 
 // IrmaService validates contracts using the irma logic.
 type IrmaService struct {
 	IrmaSessionHandler IrmaSessionHandler
 	IrmaConfig         *irma.Configuration
-	IrmaServiceConfig  IrmaServiceConfig
+	IrmaServiceConfig  ValidatorConfig
 	// todo: remove this when the deprecated ValidateJwt is removed
 	Registry          registry.RegistryClient
 	Crypto            nutscrypto.Client
 	ContractTemplates contract.TemplateStore
 }
 
-type IrmaServiceConfig struct {
+type ValidatorConfig struct {
 	Mode string
 	// Address to bind the http server to. Default localhost:1323
 	Address                   string

@@ -55,7 +55,7 @@ type service struct {
 	config                 Config
 	contractSessionHandler services.ContractSessionHandler
 	contractValidator      services.ContractValidator
-	irmaServiceConfig      irma.IrmaServiceConfig
+	irmaServiceConfig      irma.ValidatorConfig
 	irmaServer             *irmaserver.Server
 	crypto                 nutscrypto.Client
 	// todo: remove this when the deprecated ValidateJwt is removed
@@ -186,7 +186,7 @@ func (s *service) configureContracts() (err error) {
 }
 
 func (s *service) configureIrma(config Config) (irmaServer *irmaserver.Server, irmaConfig *irmago.Configuration, err error) {
-	s.irmaServiceConfig = irma.IrmaServiceConfig{
+	s.irmaServiceConfig = irma.ValidatorConfig{
 		Mode:                      config.Mode,
 		Address:                   config.Address,
 		PublicUrl:                 config.PublicUrl,

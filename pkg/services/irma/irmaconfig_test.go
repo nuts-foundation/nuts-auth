@@ -8,14 +8,14 @@ import (
 )
 
 func TestGetIrmaServer(t *testing.T) {
-	irmaServiceConfig := IrmaServiceConfig{
+	validatorConfig := ValidatorConfig{
 		IrmaConfigPath:            "../../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 
 	t.Run("when the config in initialized, the server can be fetched", func(t *testing.T) {
 		serverOnce = new(sync.Once)
-		irmaServer, err := GetIrmaServer(irmaServiceConfig)
+		irmaServer, err := GetIrmaServer(validatorConfig)
 		if !assert.NoError(t, err) {
 			return
 		}

@@ -207,7 +207,7 @@ func TestValidateContract(t *testing.T) {
 		},
 	}
 
-	authConfig := IrmaServiceConfig{
+	authConfig := ValidatorConfig{
 		IrmaConfigPath:            "../../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
@@ -232,7 +232,7 @@ func TestValidateContract(t *testing.T) {
 }
 
 func TestDefaultValidator_SessionStatus(t *testing.T) {
-	serviceConfig := IrmaServiceConfig{
+	serviceConfig := ValidatorConfig{
 		IrmaConfigPath:            "../../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
@@ -324,7 +324,7 @@ func (m *mockIrmaClient) StartSession(request interface{}, handler irmaservercor
 
 // tests using mocks
 func TestDefaultValidator_SessionStatus2(t *testing.T) {
-	serviceConfig := IrmaServiceConfig{
+	serviceConfig := ValidatorConfig{
 		IrmaConfigPath:            "../../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
@@ -642,7 +642,7 @@ func defaultValidator(t *testing.T) (IrmaService, crypto.Client) {
 		t.Fatal(err)
 	}
 	address := "localhost:1323"
-	serviceConfig := IrmaServiceConfig{
+	serviceConfig := ValidatorConfig{
 		Address:                   address,
 		IrmaSchemeManager:         "pbdf",
 		SkipAutoUpdateIrmaSchemas: true,
