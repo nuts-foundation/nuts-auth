@@ -187,7 +187,6 @@ func (s *service) configureContracts() (err error) {
 
 func (s *service) configureIrma(config Config) (irmaServer *irmaserver.Server, irmaConfig *irmago.Configuration, err error) {
 	s.irmaServiceConfig = irma.ValidatorConfig{
-		Mode:                      config.Mode,
 		Address:                   config.Address,
 		PublicUrl:                 config.PublicUrl,
 		IrmaConfigPath:            config.IrmaConfigPath,

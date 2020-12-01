@@ -60,7 +60,6 @@ type IrmaService struct {
 }
 
 type ValidatorConfig struct {
-	Mode string
 	// Address to bind the http server to. Default localhost:1323
 	Address                   string
 	PublicUrl                 string
