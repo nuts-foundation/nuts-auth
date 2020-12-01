@@ -140,8 +140,12 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	// Validate the AuthTokenContainer, according to RFC003 §5.2.1.5
 	var err error
 	if context.jwtBearerToken.UserIdentity != nil {
-		if context.contractVerificationResult, err = s.contractClient.VerifyVP([]byte(*context.jwtBearerToken.UserIdentity)); err != nil {
-			return nil, fmt.Errorf("identity verification failed: %w", err)
+		if decoded, err := base64.StdEncoding.DecodeString(*context.jwtBearerToken.UserIdentity); err != nil {
+			return nil, fmt.Errorf("failed to decode base64 usi field: %w", err)
+		} else {
+			if context.contractVerificationResult, err = s.contractClient.VerifyVP(decoded); err != nil {
+				return nil, fmt.Errorf("identity verification failed: %w", err)
+			}
 		}
 	}
 	if context.contractVerificationResult.State == contract.Invalid {

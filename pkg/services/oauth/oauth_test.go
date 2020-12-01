@@ -23,6 +23,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"os"
@@ -580,7 +581,7 @@ func clientCert(t *testing.T) string {
 
 func validContext() *validationContext {
 	sid := "subject"
-	usi := "irma identity token"
+	usi := base64.StdEncoding.EncodeToString([]byte("irma identity token"))
 	token := services.NutsJwtBearerToken{
 		StandardClaims: jwt.StandardClaims{
 			Audience:  "endpoint",
