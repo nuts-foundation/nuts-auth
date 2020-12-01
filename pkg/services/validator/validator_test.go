@@ -124,7 +124,7 @@ func TestContract_Configure(t *testing.T) {
 		c := service{
 			config: Config{
 				Mode:                      core.ServerEngineMode,
-				PublicUrl:                 "url",
+				PublicURL:                 "url",
 				ActingPartyCn:             "url",
 				IrmaConfigPath:            "../../../testdata/irma",
 				SkipAutoUpdateIrmaSchemas: true,

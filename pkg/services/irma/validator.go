@@ -59,12 +59,17 @@ type IrmaService struct {
 	ContractTemplates contract.TemplateStore
 }
 
+// ValidatorConfig holds the configuration for the irma validator.
 type ValidatorConfig struct {
 	// Address to bind the http server to. Default localhost:1323
-	Address                   string
-	PublicUrl                 string
-	IrmaConfigPath            string
-	IrmaSchemeManager         string
+	Address string
+	// PublicURL is used for discovery for the IRMA app.
+	PublicURL string
+	// Where to find the IrmaConfig files including the schemas
+	IrmaConfigPath string
+	// Which scheme manager to use
+	IrmaSchemeManager string
+	// Auto update the schemas every x minutes or not?
 	SkipAutoUpdateIrmaSchemas bool
 }
 
@@ -188,7 +193,7 @@ func (v IrmaService) ValidateJwt(token string, actingPartyCN *string) (*services
 	return contractValidator.verifyAll(signedContract, actingPartyCN)
 }
 
-// IrmaSessionStatus returns the current status of a certain session.
+// SessionStatus returns the current status of a certain session.
 // It returns nil if the session is not found
 // deprecated
 func (v IrmaService) SessionStatus(id services.SessionID) (*services.SessionStatusResult, error) {
@@ -337,11 +342,11 @@ func parseTokenIssuer(issuer string) (core.PartyID, error) {
 	if issuer == "" {
 		return core.PartyID{}, ErrLegalEntityNotProvided
 	}
-	if result, err := core.ParsePartyID(issuer); err != nil {
+	result, err := core.ParsePartyID(issuer)
+	if err != nil {
 		return core.PartyID{}, fmt.Errorf("invalid token issuer: %w", err)
-	} else {
-		return result, nil
 	}
+	return result, nil
 }
 
 // IrmaSessionHandler is an abstraction for the Irma Server, mainly for enabling better testing

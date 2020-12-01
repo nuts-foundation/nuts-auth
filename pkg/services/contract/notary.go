@@ -20,6 +20,7 @@ type contractNotaryService struct {
 	ContractValidity time.Duration
 }
 
+// NewContractNotary accepts the registry and crypto Nuts engines and returns a ContractNotary
 func NewContractNotary(reg registry.RegistryClient, crypto nutscrypto.Client, contractValidity time.Duration) *contractNotaryService {
 	return &contractNotaryService{Registry: reg, ContractValidity: contractValidity, Crypto: crypto}
 }

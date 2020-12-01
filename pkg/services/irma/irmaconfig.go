@@ -68,7 +68,7 @@ func GetIrmaServer(config ValidatorConfig) (irmaServer *irmaserver.Server, err e
 	irmaServer = _irmaServer
 
 	serverOnce.Do(func() {
-		baseURL := config.PublicUrl
+		baseURL := config.PublicURL
 
 		var configDir string
 		configDir, err = irmaConfigDir(config)

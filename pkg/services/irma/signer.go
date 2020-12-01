@@ -38,6 +38,7 @@ type SessionPtr struct {
 	QrCodeInfo irmago.Qr `json:"sessionPtr"`
 }
 
+// SessionID returns the SessionID of the SessionPtr
 func (s SessionPtr) SessionID() string {
 	return s.ID
 }
@@ -48,6 +49,7 @@ func (s SessionPtr) Payload() []byte {
 	return jsonResult
 }
 
+// MarshalJSON marshals a custom session pointer json object for the IRMA means.
 func (s SessionPtr) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		QrCodeInfo irmago.Qr `json:"clientPtr"`
@@ -55,6 +57,7 @@ func (s SessionPtr) MarshalJSON() ([]byte, error) {
 	}{QrCodeInfo: s.QrCodeInfo, ID: s.ID})
 }
 
+// StartSigningSession accepts a rawContractText and creates an IRMA signing session.
 func (v IrmaService) StartSigningSession(rawContractText string) (contract.SessionPointer, error) {
 	// Put the template in an IRMA envelope
 	signatureRequest := irmago.NewSignatureRequest(rawContractText)
@@ -130,6 +133,8 @@ func (v IrmaService) SigningSessionStatus(sessionID string) (contract.SigningSes
 	return nil, services.ErrSessionNotFound
 }
 
+// SigningSessionResult implements the SigningSessionResult interface and contains the
+// SigningSessionResult from the IRMA means.
 type SigningSessionResult struct {
 	server.SessionResult
 	// NutsAuthToken contains the JWT if the sessionStatus is DONE
@@ -137,10 +142,12 @@ type SigningSessionResult struct {
 	NutsAuthToken string `json:"nuts_auth_token"`
 }
 
+// Status returns the IRMA signing status
 func (s SigningSessionResult) Status() string {
 	return string(s.SessionResult.Status)
 }
 
+// VerifiablePresentation returns an IRMA implementation of the contract.VerifiablePresentation interface.
 func (s SigningSessionResult) VerifiablePresentation() (contract.VerifiablePresentation, error) {
 	panic("implement me")
 }

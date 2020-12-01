@@ -43,7 +43,7 @@ import (
 type Config struct {
 	Mode                      string
 	Address                   string
-	PublicUrl                 string
+	PublicURL                 string
 	IrmaConfigPath            string
 	IrmaSchemeManager         string
 	SkipAutoUpdateIrmaSchemas bool
@@ -64,6 +64,7 @@ type service struct {
 	signers   map[string]contract.Signer
 }
 
+// NewContractInstance accepts a Config and several Nuts engines and returns a new instance of services.ContractClient
 func NewContractInstance(config Config, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) services.ContractClient {
 	return &service{
 		config:   config,
@@ -178,7 +179,7 @@ func (s *service) configureContracts() (err error) {
 		logging.Log().Warn("actingPartyCn is deprecated, please migrate to v3 contracts and remove the config parameter")
 	}
 	// todo: this is verifier/signer specific
-	if s.config.PublicUrl == "" {
+	if s.config.PublicURL == "" {
 		err = ErrMissingPublicURL
 		return
 	}
@@ -188,7 +189,7 @@ func (s *service) configureContracts() (err error) {
 func (s *service) configureIrma(config Config) (irmaServer *irmaserver.Server, irmaConfig *irmago.Configuration, err error) {
 	s.irmaServiceConfig = irma.ValidatorConfig{
 		Address:                   config.Address,
-		PublicUrl:                 config.PublicUrl,
+		PublicURL:                 config.PublicURL,
 		IrmaConfigPath:            config.IrmaConfigPath,
 		IrmaSchemeManager:         config.IrmaSchemeManager,
 		SkipAutoUpdateIrmaSchemas: config.SkipAutoUpdateIrmaSchemas,
@@ -208,8 +209,11 @@ func (s *service) HandlerFunc() http.HandlerFunc {
 	return s.irmaServer.HandlerFunc()
 }
 
+// ErrMissingOrganizationKey is used to indicate that this node has no private key of the indicated organization.
+// This usually means that the organization is not managed by this node.
 var ErrMissingOrganizationKey = errors.New("missing organization private key")
 
+// ErrUnknownSigningMeans is used when the node does not now how to handle the indicated signing means
 // todo move
 var ErrUnknownSigningMeans = errors.New("unknown signing means")
 
@@ -223,9 +227,7 @@ func (s *service) CreateSigningSession(sessionRequest services.CreateSessionRequ
 	// find correct signer
 	signer, ok := s.signers[sessionRequest.SigningMeans]
 	if !ok {
-		// return nil, ErrUnknownSigningMeans
-		// todo remove backwards compatibility
-		signer = s.signers["irma"]
+		return nil, ErrUnknownSigningMeans
 	}
 	return signer.StartSigningSession(sessionRequest.Message)
 }

@@ -71,6 +71,7 @@ type validationContext struct {
 	contractVerificationResult *contract.VerificationResult
 }
 
+// NewOauthService accepts a vendorID, and several Nuts engines and returns an implementation of services.OAuthClient
 func NewOAuthService(vendorID core.PartyID, cryptoClient nutsCrypto.Client, registryClient nutsRegistry.RegistryClient, contractClient services.ContractClient) services.OAuthClient {
 	return &service{
 		vendorID:       vendorID,
@@ -83,6 +84,7 @@ func NewOAuthService(vendorID core.PartyID, cryptoClient nutsCrypto.Client, regi
 // OauthBearerTokenMaxValidity is the number of seconds that a bearer token is valid
 const OauthBearerTokenMaxValidity = 5
 
+// Configure the service
 func (s *service) Configure() (err error) {
 	if s.vendorID.IsZero() {
 		err = errMissingVendorID

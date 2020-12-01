@@ -26,6 +26,8 @@ import (
 // It checks required parameters and message body. It converts data from api to internal types.
 // Then passes the internal formats to the AuthClient. Converts internal results back to the generated
 // Api types. Handles errors and returns the correct http response. It does not perform any business logic.
+//
+// This wrapper handles the unversioned, so called v0, API requests. Most of them wil be deprecated and moved to a v1 version
 type Wrapper struct {
 	Auth pkg.AuthClient
 }

@@ -40,10 +40,10 @@ const NoSignatureType = "NoSignature"
 // SessionCreated represents the session state after creation
 const SessionCreated = "created"
 
-// SessionCreated represents the session state after the first SessionStatus call
+// SessionInProgress represents the session state after the first SessionStatus call
 const SessionInProgress = "in-progress"
 
-// SessionCreated represents the session state after the second SessionStatus call
+// SessionCompleted represents the session state after the second SessionStatus call
 const SessionCompleted = "completed"
 
 // Dummy is a contract signer and verifier that always succeeds unless you try to use it in strict mode
@@ -102,7 +102,7 @@ func (s sessionPointer) MarshalJSON() ([]byte, error) {
 }
 
 type signingSessionResult struct {
-	Id      string
+	ID      string
 	State   string
 	Request string
 }
@@ -136,6 +136,8 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 
 var errNotEnabled = errors.New("not allowed in strict mode")
 
+// VerifyVP verifies a verifiablePresentation provided by a byte array.
+// It returns the contract.VerificationResult.
 func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
 	if d.InStrictMode {
 		return nil, errNotEnabled
@@ -164,6 +166,9 @@ func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificatio
 	}, nil
 }
 
+// SigningSessionStatus looks up the session by the provided sessionID param.
+// When the session exists it returns the current state and advances the state to the next one.
+// When the session is SessionComplete, it removes the session from the sessionStore.
 func (d Dummy) SigningSessionStatus(sessionID string) (contract.SigningSessionResult, error) {
 	if d.InStrictMode {
 		return nil, errNotEnabled
@@ -190,12 +195,14 @@ func (d Dummy) SigningSessionStatus(sessionID string) (contract.SigningSessionRe
 		delete(d.Sessions, sessionID)
 	}
 	return signingSessionResult{
-		Id:      sessionID,
+		ID:      sessionID,
 		State:   state,
 		Request: session,
 	}, nil
 }
 
+// StartSigningSession creates a new signing session based on the rawContractString.
+// It creates a sessionID from a random 16 char string and stores the session under this ID in the store.
 func (d Dummy) StartSigningSession(rawContractText string) (contract.SessionPointer, error) {
 	if d.InStrictMode {
 		return nil, errNotEnabled
@@ -203,11 +210,11 @@ func (d Dummy) StartSigningSession(rawContractText string) (contract.SessionPoin
 	sessionBytes := make([]byte, 16)
 	rand.Reader.Read(sessionBytes)
 
-	sessionId := hex.EncodeToString(sessionBytes)
-	d.Status[sessionId] = SessionCreated
-	d.Sessions[sessionId] = rawContractText
+	sessionID := hex.EncodeToString(sessionBytes)
+	d.Status[sessionID] = SessionCreated
+	d.Sessions[sessionID] = rawContractText
 
 	return sessionPointer{
-		sessionID: sessionId,
+		sessionID: sessionID,
 	}, nil
 }

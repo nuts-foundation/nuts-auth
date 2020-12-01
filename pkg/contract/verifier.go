@@ -41,7 +41,7 @@ type Verifier interface {
 // todo: move or use lib
 type VerifiableCredentialBase struct {
 	Context      []string `json:"@context"`
-	Id           *string
+	ID           *string
 	Type         []string
 	Issuer       *string
 	IssuanceDate *string
@@ -72,10 +72,10 @@ type Proof struct {
 	Type string `json:"type"`
 }
 
-// ContractFormat describes the format of a signed contract. Based on the format an appropriate validator can be selected.
+// Format describes the format of a signed contract. Based on the format an appropriate validator can be selected.
 type Format string
 
-// ContractValidationResult contains the result of a contract validation
+// ValidationResult contains the result of a contract validation
 type VerificationResult struct {
 	State          State  `json:"state"`
 	ContractFormat Format `json:"contract_format"`

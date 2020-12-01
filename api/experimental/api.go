@@ -17,10 +17,18 @@ import (
 
 var _ ServerInterface = (*Wrapper)(nil)
 
+// Wrapper bridges the generated api types and http logic to the internal types and logic.
+// It checks required parameters and message body. It converts data from api to internal types.
+// Then passes the internal formats to the AuthClient. Converts internal results back to the generated
+// Api types. Handles errors and returns the correct http response. It does not perform any business logic.
+//
+// This is the experimental API. It is used to tests APIs is the wild.
 type Wrapper struct {
 	Auth pkg.AuthClient
 }
 
+// VerifySignature handles the VerifySignature http request.
+// It parses the request body, parses the verifiable presentation and calls the ContractClient to verify the VP.
 func (w Wrapper) VerifySignature(ctx echo.Context) error {
 	requestParams := new(SignatureVerificationRequest)
 	if err := ctx.Bind(requestParams); err != nil {

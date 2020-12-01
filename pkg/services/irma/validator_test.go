@@ -648,7 +648,7 @@ func defaultValidator(t *testing.T) (IrmaService, crypto.Client) {
 		SkipAutoUpdateIrmaSchemas: true,
 		IrmaConfigPath:            path.Join(testDirectory, "auth", "irma"),
 		//ActingPartyCn:             "CN=Awesomesoft",
-		PublicUrl: "http://" + address,
+		PublicURL: "http://" + address,
 	}
 	if err := os.MkdirAll(serviceConfig.IrmaConfigPath, 0777); err != nil {
 		logging.Log().Fatal(err)

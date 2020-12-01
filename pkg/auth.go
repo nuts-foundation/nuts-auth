@@ -55,10 +55,12 @@ type Auth struct {
 	contractNotary      services.ContractNotary
 }
 
+// ContractNotary returns an implementation of the ContractNotary interface.
 func (auth *Auth) ContractNotary() services.ContractNotary {
 	return auth.contractNotary
 }
 
+// DefaultAuthConfig returns an instance of AuthConfig with the default values.
 func DefaultAuthConfig() AuthConfig {
 	return AuthConfig{
 		Address:            "localhost:1323",
@@ -70,17 +72,15 @@ func DefaultAuthConfig() AuthConfig {
 var instance *Auth
 var oneBackend sync.Once
 
-// AuthInstance create an returns a singleton of the Auth struct
+// AuthInstance returns the singleton Auth instance. If this instance does not exists, it creates a new one.
 func AuthInstance() *Auth {
-	if instance != nil {
-		return instance
-	}
 	oneBackend.Do(func() {
 		instance = NewAuthInstance(DefaultAuthConfig(), nutscrypto.CryptoInstance(), registry.RegistryInstance())
 	})
 	return instance
 }
 
+// NewAuthInstance accepts a AuthConfig with several Nuts Engines and returns an instance of Auth
 func NewAuthInstance(config AuthConfig, cryptoClient nutscrypto.Client, registryClient registry.RegistryClient) *Auth {
 	return &Auth{
 		Config:         config,
@@ -92,9 +92,6 @@ func NewAuthInstance(config AuthConfig, cryptoClient nutscrypto.Client, registry
 
 // OAuthClient returns an instance of OAuthClient
 func (auth *Auth) OAuthClient() services.OAuthClient {
-	if auth.OAuth != nil {
-		return auth.OAuth
-	}
 	auth.oneOauthInstance.Do(func() {
 		auth.OAuth = oauth.NewOAuthService(core.NutsConfig().VendorID(), auth.Crypto, auth.Registry, auth.Contract)
 	})
@@ -107,7 +104,7 @@ func (auth *Auth) ContractClient() services.ContractClient {
 		cfg := validator.Config{
 			Mode:                      auth.Config.Mode,
 			Address:                   auth.Config.Address,
-			PublicUrl:                 auth.Config.PublicUrl,
+			PublicURL:                 auth.Config.PublicUrl,
 			IrmaConfigPath:            auth.Config.IrmaConfigPath,
 			IrmaSchemeManager:         auth.Config.IrmaSchemeManager,
 			SkipAutoUpdateIrmaSchemas: auth.Config.SkipAutoUpdateIrmaSchemas,

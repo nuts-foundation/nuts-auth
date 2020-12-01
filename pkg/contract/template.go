@@ -52,6 +52,9 @@ func (c Template) timeLocation() *time.Location {
 	return loc
 }
 
+// Render a template using the given templates variables. The combination of validFrom and the duration configure the validFrom and validTo template attributes.
+// The ValidFrom or ValidTo provided in the vars map will be overwritten.
+// Note: For date calculation the Amsterdam timezone and Dutch locale is used.
 func (c Template) Render(vars map[string]string, validFrom time.Time, validDuration time.Duration) (*Contract, error) {
 	vars[ValidFromAttr] = monday.Format(validFrom.In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 	vars[ValidToAttr] = monday.Format(validFrom.Add(validDuration).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
