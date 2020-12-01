@@ -113,7 +113,7 @@ func (d signingSessionResult) Status() string {
 
 func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePresentation, error) {
 	// todo: the contract template should be used to select the dummy attributes to add
-	// reqContract := d.Request.Contract()
+	// reqContract := d.Request
 
 	if d.Status() != SessionCompleted {
 		return nil, nil
@@ -130,6 +130,7 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 			Lastname:  "Tester",
 			Birthdate: "1980-01-01",
 			Email:     "tester@example.com",
+			Contract:  d.Request,
 		},
 	}, nil
 }
