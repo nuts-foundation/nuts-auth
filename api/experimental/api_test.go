@@ -7,11 +7,9 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
-	core "github.com/nuts-foundation/nuts-go-core"
 	coreMock "github.com/nuts-foundation/nuts-go-core/mock"
 	"github.com/stretchr/testify/assert"
 
@@ -27,6 +25,7 @@ type TestContext struct {
 	ctrl               *gomock.Controller
 	echoMock           *coreMock.MockContext
 	authMock           pkg2.AuthClient
+	notaryMock         *services2.MockContractNotary
 	contractClientMock *services2.MockContractClient
 	wrapper            Wrapper
 }
@@ -34,6 +33,7 @@ type TestContext struct {
 type mockAuthClient struct {
 	ctrl               gomock.Controller
 	mockContractClient *services2.MockContractClient
+	mockContractNotary *services2.MockContractNotary
 }
 
 func (m mockAuthClient) OAuthClient() services.OAuthClient {
@@ -44,41 +44,28 @@ func (m mockAuthClient) ContractClient() services.ContractClient {
 	return m.mockContractClient
 }
 
-type mockContractNotary struct {
-}
-
-func (m mockContractNotary) ValidateContract(contractToValidate contract.Contract, orgID core.PartyID, checkTime time.Time) (bool, error) {
-	panic("implement me")
-}
-
-func (m mockContractNotary) DrawUpContract(template contract.Template, orgID core.PartyID, validFrom time.Time, validDuration time.Duration) (*contract.Contract, error) {
-	return &contract.Contract{
-		RawContractText: "drawn up contract text",
-		Template:        &template,
-		Params:          nil,
-	}, nil
-}
-
 func (m mockAuthClient) ContractNotary() services.ContractNotary {
-	return mockContractNotary{}
+	return m.mockContractNotary
 }
 
 func createContext(t *testing.T) TestContext {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	mockContractClient := services2.NewMockContractClient(ctrl)
-	authMock := mockAuthClient{ctrl: *ctrl, mockContractClient: mockContractClient}
+	mockContractNotary := services2.NewMockContractNotary(ctrl)
+	authMock := mockAuthClient{ctrl: *ctrl, mockContractClient: mockContractClient, mockContractNotary: mockContractNotary}
 	return TestContext{
 		ctrl:               ctrl,
 		echoMock:           coreMock.NewMockContext(ctrl),
 		authMock:           authMock,
+		notaryMock:         mockContractNotary,
 		contractClientMock: mockContractClient,
 		wrapper:            Wrapper{Auth: authMock},
 	}
 }
 
 func TestWrapper_GetContractTemplate(t *testing.T) {
-	t.Run("it can retrieve a ContractTemplate", func(t *testing.T) {
+	t.Run("ok - it can retrieve a ContractTemplate", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
@@ -90,10 +77,23 @@ func TestWrapper_GetContractTemplate(t *testing.T) {
 			Version:  ContractVersion(expectedContract.Version),
 		}
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, response)
-		err := ctx.wrapper.GetContractTemplate(ctx.echoMock, "EN", "PractitionerLogin", GetContractTemplateParams{Version: nil})
+		version := "v1"
+		err := ctx.wrapper.GetContractTemplate(ctx.echoMock, "EN", "PractitionerLogin", GetContractTemplateParams{Version: &version})
 		if !assert.NoError(t, err) {
 			return
 		}
+	})
+
+	t.Run("nok - unknown contract template", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		err := ctx.wrapper.GetContractTemplate(ctx.echoMock, "EN", "UnknownContractTemplate", GetContractTemplateParams{Version: nil})
+
+		assert.IsType(t, &echo.HTTPError{}, err)
+		httpError := err.(*echo.HTTPError)
+		assert.Equal(t, http.StatusNotFound, httpError.Code)
+		assert.Equal(t, "contract not found", httpError.Message)
 	})
 }
 
@@ -195,7 +195,7 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 		})
 	}
 
-	t.Run("it can draw up a standard contract", func(t *testing.T) {
+	t.Run("ok - it can draw up a standard contract", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
@@ -207,6 +207,14 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 		}
 		bindPostBody(&ctx, params)
 
+		template := contract.StandardContractTemplates["EN"]["PractitionerLogin"]["v3"]
+		drawnUpContract := &contract.Contract{
+			RawContractText: "drawn up contract text",
+			Template:        template,
+			Params:          nil,
+		}
+		ctx.notaryMock.EXPECT().DrawUpContract(*template, gomock.Any(), gomock.Any(), gomock.Any()).Return(drawnUpContract, nil)
+
 		expectedResponse := ContractResponse{
 			Language: ContractLanguage("EN"),
 			Message:  "drawn up contract text",
@@ -216,7 +224,108 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, expectedResponse)
 		err := ctx.wrapper.DrawUpContract(ctx.echoMock)
 		assert.NoError(t, err)
+	})
 
+	t.Run("nok - wrong parameters", func(t *testing.T) {
+		t.Run("invalid formatted validFrom", func(t *testing.T) {
+			ctx := createContext(t)
+			defer ctx.ctrl.Finish()
+
+			validFrom := "invalid date"
+
+			params := DrawUpContractRequest{
+				ValidFrom: &validFrom,
+			}
+			bindPostBody(&ctx, params)
+
+			err := ctx.wrapper.DrawUpContract(ctx.echoMock)
+
+			assert.IsType(t, &echo.HTTPError{}, err)
+			httpError := err.(*echo.HTTPError)
+			assert.Equal(t, http.StatusBadRequest, httpError.Code)
+			assert.Equal(t, "Could not parse validFrom: parsing time \"invalid date\" as \"2006-01-02T15:04:05-07:00\": cannot parse \"invalid date\" as \"2006\"", httpError.Message)
+		})
+
+		t.Run("invalid formatted duration", func(t *testing.T) {
+			ctx := createContext(t)
+			defer ctx.ctrl.Finish()
+
+			duration := "15 minutes"
+
+			params := DrawUpContractRequest{
+				ValidDuration: &duration,
+			}
+			bindPostBody(&ctx, params)
+
+			err := ctx.wrapper.DrawUpContract(ctx.echoMock)
+
+			assert.IsType(t, &echo.HTTPError{}, err)
+			httpError := err.(*echo.HTTPError)
+			assert.Equal(t, http.StatusBadRequest, httpError.Code)
+			assert.Equal(t, "Could not parse validDuration: time: unknown unit \" minutes\" in duration \"15 minutes\"", httpError.Message)
+		})
+
+		t.Run("unknown contract", func(t *testing.T) {
+			ctx := createContext(t)
+			defer ctx.ctrl.Finish()
+
+			params := DrawUpContractRequest{
+				Language: ContractLanguage("EN"),
+				Type:     ContractType("UnknownContractName"),
+				Version:  ContractVersion("v3"),
+			}
+			bindPostBody(&ctx, params)
+
+			err := ctx.wrapper.DrawUpContract(ctx.echoMock)
+
+			assert.IsType(t, &echo.HTTPError{}, err)
+			httpError := err.(*echo.HTTPError)
+			assert.Equal(t, http.StatusNotFound, httpError.Code)
+			assert.Equal(t, "contract not found", httpError.Message)
+		})
+
+		t.Run("malformed orgID", func(t *testing.T) {
+			ctx := createContext(t)
+			defer ctx.ctrl.Finish()
+
+			params := DrawUpContractRequest{
+				Language:    ContractLanguage("EN"),
+				Type:        ContractType("PractitionerLogin"),
+				Version:     ContractVersion("v3"),
+				LegalEntity: LegalEntity("ZorgId:15"),
+			}
+			bindPostBody(&ctx, params)
+
+			err := ctx.wrapper.DrawUpContract(ctx.echoMock)
+
+			assert.IsType(t, &echo.HTTPError{}, err)
+			httpError := err.(*echo.HTTPError)
+			assert.Equal(t, http.StatusBadRequest, httpError.Code)
+			assert.Equal(t, "Invalid value for param legalEntity: 'ZorgId:15', make sure its in the form 'urn:oid:1.2.3.4:foo'", httpError.Message)
+		})
+
+	})
+
+	t.Run("nok - error while drawing up contract", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		params := DrawUpContractRequest{
+			Language:    ContractLanguage("EN"),
+			Type:        ContractType("PractitionerLogin"),
+			Version:     ContractVersion("v3"),
+			LegalEntity: LegalEntity("urn:oid:1.2.3.4:foo"),
+		}
+		bindPostBody(&ctx, params)
+
+		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("unknown error while drawing up the contract"))
+
+		err := ctx.wrapper.DrawUpContract(ctx.echoMock)
+
+		assert.IsType(t, &echo.HTTPError{}, err)
+		httpError := err.(*echo.HTTPError)
+		assert.Equal(t, http.StatusBadRequest, httpError.Code)
+		assert.Equal(t, "error while drawing up the contract: unknown error while drawing up the contract", httpError.Message)
 	})
 }
 
@@ -268,6 +377,23 @@ func TestWrapper_CreateSignSession(t *testing.T) {
 		ctx.echoMock.EXPECT().JSON(http.StatusCreated, signSessionResponseMatcher{means: "dummy"})
 		err := ctx.wrapper.CreateSignSession(ctx.echoMock)
 		assert.NoError(t, err)
+	})
+
+	t.Run("nok - error while creating signing session", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		postParams := CreateSignSessionRequest{}
+		bindPostBody(&ctx, postParams)
+
+		ctx.contractClientMock.EXPECT().CreateSigningSession(gomock.Any()).Return(nil, errors.New("some error"))
+
+		err := ctx.wrapper.CreateSignSession(ctx.echoMock)
+
+		assert.IsType(t, &echo.HTTPError{}, err)
+		httpError := err.(*echo.HTTPError)
+		assert.Equal(t, http.StatusBadRequest, httpError.Code)
+		assert.Equal(t, "unable to create sign challenge: some error", httpError.Message)
 	})
 }
 
