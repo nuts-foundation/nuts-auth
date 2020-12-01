@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"reflect"
 	"testing"
 	"time"
@@ -516,7 +517,8 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 	t.Run("valid request", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		pemBytes, _ := ioutil.ReadFile("../../testdata/certs/escaped.pem")
+		pemBytes, _ := ioutil.ReadFile("../../testdata/certs/example.pem")
+		encodedPem := url.PathEscape(string(pemBytes))
 
 		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
 		bindPostBody(ctx, params)
@@ -527,7 +529,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
 		expectStatusOK(ctx, apiResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: string(pemBytes)})
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: encodedPem})
 
 		assert.Nil(t, err)
 
