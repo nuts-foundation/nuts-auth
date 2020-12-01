@@ -235,6 +235,23 @@ func TestService_validateSubject(t *testing.T) {
 			assert.Contains(t, err.Error(), "invalid jwt.subject: organization not found")
 		}
 	})
+
+	t.Run("no match for node vendorId", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+		pId, _ := core.NewPartyID(vendorID.OID(), vendorID.Value() + "1")
+
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{
+			Vendor: pId,
+		}, nil)
+
+		tokenCtx := validContext()
+
+		err := ctx.oauthService.validateSubject(tokenCtx)
+		if assert.NotNil(t, err) {
+			assert.Contains(t, err.Error(), "invalid jwt.subject: subject.vendor: urn:oid:1.3.6.1.4.1.54851.4:vendorId1 doesn't match with vendorID of this node: urn:oid:1.3.6.1.4.1.54851.4:vendorId")
+		}
+	})
 }
 
 // todo validate actor
