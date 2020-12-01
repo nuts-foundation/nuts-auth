@@ -2,6 +2,7 @@ package experimental
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -9,10 +10,12 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/labstack/echo/v4"
 	core "github.com/nuts-foundation/nuts-go-core"
 	coreMock "github.com/nuts-foundation/nuts-go-core/mock"
 	"github.com/stretchr/testify/assert"
 
+	mock_contract "github.com/nuts-foundation/nuts-auth/mock/contract"
 	services2 "github.com/nuts-foundation/nuts-auth/mock/services"
 	pkg2 "github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
@@ -21,14 +24,16 @@ import (
 )
 
 type TestContext struct {
-	ctrl     *gomock.Controller
-	echoMock *coreMock.MockContext
-	authMock pkg2.AuthClient
-	wrapper  Wrapper
+	ctrl               *gomock.Controller
+	echoMock           *coreMock.MockContext
+	authMock           pkg2.AuthClient
+	contractClientMock *services2.MockContractClient
+	wrapper            Wrapper
 }
 
 type mockAuthClient struct {
-	ctrl gomock.Controller
+	ctrl               gomock.Controller
+	mockContractClient *services2.MockContractClient
 }
 
 func (m mockAuthClient) OAuthClient() services.OAuthClient {
@@ -36,18 +41,7 @@ func (m mockAuthClient) OAuthClient() services.OAuthClient {
 }
 
 func (m mockAuthClient) ContractClient() services.ContractClient {
-	dummyMeans := dummy.Dummy{
-		InStrictMode: false,
-		Sessions:     map[string]string{},
-		Status:       map[string]string{},
-	}
-
-	contractClient := services2.NewMockContractClient(&m.ctrl)
-	contractClient.EXPECT().CreateSigningSession(gomock.Any()).DoAndReturn(
-		func(sessionRequest services.CreateSessionRequest) (contract.SessionPointer, error) {
-			return dummyMeans.StartSigningSession(sessionRequest.Message)
-		})
-	return contractClient
+	return m.mockContractClient
 }
 
 type mockContractNotary struct {
@@ -72,12 +66,14 @@ func (m mockAuthClient) ContractNotary() services.ContractNotary {
 func createContext(t *testing.T) TestContext {
 	t.Helper()
 	ctrl := gomock.NewController(t)
-	authMock := mockAuthClient{ctrl: *ctrl}
+	mockContractClient := services2.NewMockContractClient(ctrl)
+	authMock := mockAuthClient{ctrl: *ctrl, mockContractClient: mockContractClient}
 	return TestContext{
-		ctrl:     ctrl,
-		echoMock: coreMock.NewMockContext(ctrl),
-		authMock: authMock,
-		wrapper:  Wrapper{Auth: authMock},
+		ctrl:               ctrl,
+		echoMock:           coreMock.NewMockContext(ctrl),
+		authMock:           authMock,
+		contractClientMock: mockContractClient,
+		wrapper:            Wrapper{Auth: authMock},
 	}
 }
 
@@ -98,6 +94,96 @@ func TestWrapper_GetContractTemplate(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
+	})
+}
+
+func TestWrapper_GetSignSessionStatus(t *testing.T) {
+	t.Run("ok - started without VP", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		signingSessionID := "123"
+		signingSessionStatus := "started"
+
+		signingSessionResult := mock_contract.NewMockSigningSessionResult(ctx.ctrl)
+
+		var vp interface{}
+		signingSessionResult.EXPECT().VerifiablePresentation().Return(vp, nil)
+
+		signingSessionResult.EXPECT().Status().Return(signingSessionStatus)
+
+		ctx.contractClientMock.EXPECT().SigningSessionStatus(signingSessionID).Return(signingSessionResult, nil)
+
+		response := GetSignSessionStatusResult{
+			Status:                 signingSessionStatus,
+			VerifiablePresentation: nil,
+		}
+
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, response)
+
+		err := ctx.wrapper.GetSignSessionStatus(ctx.echoMock, signingSessionID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("ok - completed with VP", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		signingSessionID := "123"
+		signingSessionStatus := "completed"
+
+		signingSessionResult := mock_contract.NewMockSigningSessionResult(ctx.ctrl)
+
+		vp := struct {
+			Context []string `json:"@context"`
+		}{Context: []string{"http://example.com"}}
+		signingSessionResult.EXPECT().VerifiablePresentation().Return(vp, nil)
+
+		signingSessionResult.EXPECT().Status().Return(signingSessionStatus)
+
+		ctx.contractClientMock.EXPECT().SigningSessionStatus(signingSessionID).Return(signingSessionResult, nil)
+
+		response := GetSignSessionStatusResult{
+			Status:                 signingSessionStatus,
+			VerifiablePresentation: &VerifiablePresentation{Context: []string{"http://example.com"}},
+		}
+
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, response)
+
+		err := ctx.wrapper.GetSignSessionStatus(ctx.echoMock, signingSessionID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("nok - session not found", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		signingSessionID := "123"
+		ctx.contractClientMock.EXPECT().SigningSessionStatus(signingSessionID).Return(nil, services.ErrSessionNotFound)
+
+		err := ctx.wrapper.GetSignSessionStatus(ctx.echoMock, signingSessionID)
+		assert.IsType(t, &echo.HTTPError{}, err)
+		httpError := err.(*echo.HTTPError)
+		assert.Equal(t, http.StatusNotFound, httpError.Code)
+		assert.Equal(t, "no active signing session for this sessionPtr found", httpError.Message)
+	})
+
+	t.Run("nok - unable to build a VP", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		signingSessionID := "123"
+		signingSessionResult := mock_contract.NewMockSigningSessionResult(ctx.ctrl)
+
+		signingSessionResult.EXPECT().VerifiablePresentation().Return(nil, errors.New("could not build VP"))
+
+		ctx.contractClientMock.EXPECT().SigningSessionStatus(signingSessionID).Return(signingSessionResult, nil)
+
+		err := ctx.wrapper.GetSignSessionStatus(ctx.echoMock, signingSessionID)
+		assert.IsType(t, &echo.HTTPError{}, err)
+		httpError := err.(*echo.HTTPError)
+		assert.Equal(t, http.StatusInternalServerError, httpError.Code)
+		assert.Equal(t, "error while building verifiable presentation: could not build VP", httpError.Message)
 	})
 }
 
@@ -162,6 +248,17 @@ func TestWrapper_CreateSignSession(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
+		dummyMeans := dummy.Dummy{
+			InStrictMode: false,
+			Sessions:     map[string]string{},
+			Status:       map[string]string{},
+		}
+
+		ctx.contractClientMock.EXPECT().CreateSigningSession(gomock.Any()).DoAndReturn(
+			func(sessionRequest services.CreateSessionRequest) (contract.SessionPointer, error) {
+				return dummyMeans.StartSigningSession(sessionRequest.Message)
+			})
+
 		postParams := CreateSignSessionRequest{
 			Means:   "dummy",
 			Payload: "this is the contract message to agree to",
@@ -172,4 +269,37 @@ func TestWrapper_CreateSignSession(t *testing.T) {
 		err := ctx.wrapper.CreateSignSession(ctx.echoMock)
 		assert.NoError(t, err)
 	})
+}
+
+func TestWrapper_VerifySignature(t *testing.T) {
+	bindPostBody := func(ctx *TestContext, body SignatureVerificationRequest) {
+		jsonData, _ := json.Marshal(body)
+		ctx.echoMock.EXPECT().Bind(gomock.Any()).Do(func(f interface{}) {
+			_ = json.Unmarshal(jsonData, f)
+		})
+	}
+
+	ctx := createContext(t)
+	defer ctx.ctrl.Finish()
+
+	postParams := SignatureVerificationRequest{VerifiablePresentation{
+		Context: []string{"http://example.com"},
+		Proof:   map[string]interface{}{"foo": "bar"},
+		Type:    []string{"TestCredential"},
+	}}
+
+	bindPostBody(&ctx, postParams)
+
+	verificationResult := &contract.VerificationResult{
+		State:               contract.Valid,
+		ContractFormat:      "",
+		DisclosedAttributes: nil,
+		ContractAttributes:  nil,
+	}
+
+	ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(verificationResult, nil)
+	ctx.echoMock.EXPECT().JSON(http.StatusOK, SignatureVerificationResponse(true))
+
+	err := ctx.wrapper.VerifySignature(ctx.echoMock)
+	assert.NoError(t, err)
 }
