@@ -63,7 +63,7 @@ var NowFunc = time.Now
 // If SignerAttribute name starts with a dot '.', it uses the configured scheme manager
 var StandardSignerAttributes = []string{
 	".gemeente.personalData.firstnames",
-	"pbdf.pbdf.email.email",
+	"pbdf.sidn-pbdf.email.email",
 }
 
 func (c Template) timeLocation() *time.Location {

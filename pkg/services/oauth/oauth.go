@@ -464,7 +464,7 @@ func (s *service) buildAccessToken(context *validationContext) (string, error) {
 		GivenName:  identityValidationResult.DisclosedAttributes["gemeente.personalData.firstnames"],
 		Prefix:     identityValidationResult.DisclosedAttributes["gemeente.personalData.prefix"],
 		Name:       identityValidationResult.DisclosedAttributes["gemeente.personalData.fullname"],
-		Email:      identityValidationResult.DisclosedAttributes["pbdf.email.email"],
+		Email:      identityValidationResult.DisclosedAttributes["sidn-pbdf.email.email"],
 	}
 
 	var keyVals map[string]interface{}
