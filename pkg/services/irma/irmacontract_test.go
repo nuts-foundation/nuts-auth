@@ -49,7 +49,7 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 
 		sic, err := cv.parseSignedIrmaContract(validJsonContract)
 		if !assert.NoError(t, err) {
-			t.FailNow()
+			return
 		}
 		res, err := cv.verifySignature(sic)
 		res, err = cv.verifyRequiredAttributes(sic, res)

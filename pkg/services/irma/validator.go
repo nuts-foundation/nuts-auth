@@ -23,10 +23,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/nuts-foundation/nuts-auth/logging"
 
-	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	irmaserver2 "github.com/privacybydesign/irmago/server/irmaserver"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 
@@ -96,7 +98,7 @@ func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificat
 	// Extract the Irma message
 	vp := VerifiablePresentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &vp); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not verify VP: %w", err)
 	}
 
 	// Create the irma contract validator

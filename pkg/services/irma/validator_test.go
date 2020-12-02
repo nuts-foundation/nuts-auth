@@ -595,6 +595,54 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	})
 }
 
+func TestService_VerifyVP(t *testing.T) {
+	t.Run("ok - valid VP", func(t *testing.T) {
+		validator, _ := defaultValidator(t)
+
+		irmaSignature := testdata.ValidIrmaContract
+		validIrmaContract := irma.SignedMessage{}
+		err := json.Unmarshal([]byte(irmaSignature), &validIrmaContract)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		rawSic, err := json.Marshal(validIrmaContract)
+
+		vp := VerifiablePresentation{
+			Proof: VPProof{
+				Proof:     contract.Proof{Type: ""},
+				Signature: string(rawSic),
+			},
+		}
+
+		rawIrmaVP, err := json.Marshal(vp)
+		if !assert.NoError(t, err) {
+			return
+		}
+		validationResult, err := validator.VerifyVP(rawIrmaVP)
+
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		if !assert.NotNil(t, validationResult) {
+			return
+		}
+	})
+
+	t.Run("nok - invalid rawVP", func(t *testing.T) {
+		validator := Service{}
+		validationResult, err := validator.VerifyVP([]byte{})
+
+		assert.Nil(t, validationResult)
+		if !assert.Error(t, err) {
+			return
+		}
+		assert.Equal(t, "could not verify VP: unexpected end of JSON input", err.Error())
+
+	})
+}
+
 func createJwt(cryptoInstance crypto.Client, iss core.PartyID, sub core.PartyID, contractStr string) []byte {
 	contract := SignedIrmaContract{}
 	err := json.Unmarshal([]byte(contractStr), &contract.IrmaContract)
