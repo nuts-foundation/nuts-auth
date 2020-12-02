@@ -304,14 +304,16 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 
 type mockIrmaClient struct {
 	err           error
-	sessionResult irmaservercore.SessionResult
+	sessionResult *irmaservercore.SessionResult
+	irmaQr        *irma.Qr
+	sessionToken  string
 }
 
 func (m *mockIrmaClient) GetSessionResult(token string) *irmaservercore.SessionResult {
 	if m.err != nil {
 		return nil
 	}
-	return &m.sessionResult
+	return m.sessionResult
 }
 
 func (m *mockIrmaClient) StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma.Qr, string, error) {
@@ -319,7 +321,7 @@ func (m *mockIrmaClient) StartSession(request interface{}, handler irmaservercor
 		return nil, "", m.err
 	}
 
-	return nil, "", nil
+	return m.irmaQr, m.sessionToken, nil
 }
 
 // tests using mocks
@@ -334,7 +336,7 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 		rMock := registryMock.NewMockRegistryClient(ctrl)
 		cMock := cryptoMock.NewMockClient(ctrl)
 		iMock := mockIrmaClient{
-			sessionResult: irmaservercore.SessionResult{
+			sessionResult: &irmaservercore.SessionResult{
 				Token: "token",
 				Signature: &irma.SignedMessage{
 					Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens verpleeghuis De nootjes en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",

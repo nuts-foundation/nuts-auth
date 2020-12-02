@@ -19,6 +19,7 @@
 package irma
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -28,6 +29,7 @@ import (
 	"github.com/nuts-foundation/nuts-auth/logging"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	"github.com/pkg/errors"
 	irmago "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 )
@@ -57,13 +59,15 @@ func (s SessionPtr) MarshalJSON() ([]byte, error) {
 	}{QrCodeInfo: s.QrCodeInfo, ID: s.ID})
 }
 
+const NutsIrmaSignedContract = "NutsIrmaSignedContract"
+
 // StartSigningSession accepts a rawContractText and creates an IRMA signing session.
 func (v Service) StartSigningSession(rawContractText string) (contract.SessionPointer, error) {
 	// Put the template in an IRMA envelope
 	signatureRequest := irmago.NewSignatureRequest(rawContractText)
 	schemeManager := v.IrmaServiceConfig.IrmaSchemeManager
 
-	c, err := contract.ParseContractString(rawContractText, contract.StandardContractTemplates)
+	c, err := contract.ParseContractString(rawContractText, v.ContractTemplates)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +142,6 @@ func (v Service) SigningSessionStatus(sessionID string) (contract.SigningSession
 type SigningSessionResult struct {
 	server.SessionResult
 	// NutsAuthToken contains the JWT if the sessionStatus is DONE
-	// Todo how with new APIs?
 	NutsAuthToken string `json:"nuts_auth_token"`
 }
 
@@ -149,7 +152,26 @@ func (s SigningSessionResult) Status() string {
 
 // VerifiablePresentation returns an IRMA implementation of the contract.VerifiablePresentation interface.
 func (s SigningSessionResult) VerifiablePresentation() (contract.VerifiablePresentation, error) {
-	panic("implement me")
+
+	irmaSig := s.Signature
+	js, err := json.Marshal(irmaSig)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create NutsIrmaPresentation")
+	}
+	b64 := base64.StdEncoding.EncodeToString(js)
+
+	return IrmaVerifiablePresentation{
+		VerifiableCredentialBase: contract.VerifiableCredentialBase{
+			Context: []string{contract.VerifiableCredentialContext},
+			Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
+		},
+		Proof: IrmaVPProof{
+			Proof: contract.Proof{
+				Type: NutsIrmaSignedContract,
+			},
+			Signature: b64,
+		},
+	}, nil
 }
 
 func printQrCode(qrcode string) {

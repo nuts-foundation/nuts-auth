@@ -61,12 +61,6 @@ type Presentation struct {
 	Proof Proof
 }
 
-// CredentialSubjectValue holds the type and value for a specific attribute within the CredentialSubject
-type CredentialSubjectValue struct {
-	Type  string
-	Value string
-}
-
 // Proof holds the Proof generated from the dummy Signer
 type Proof struct {
 	// Proof type, mandatory

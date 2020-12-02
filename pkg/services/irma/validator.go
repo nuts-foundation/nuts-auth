@@ -43,7 +43,7 @@ import (
 // todo rename to verifier
 
 // VerifiablePresentationType is the irma verifiable presentation type
-const VerifiablePresentationType = "IrmaVerifiablePresentation"
+const VerifiablePresentationType = "NutsIrmaPresentation"
 
 // ContractFormat holds the readable identifier of this signing means.
 const ContractFormat = "irma"
@@ -78,29 +78,30 @@ func (v Service) IsInitialized() bool {
 	return v.IrmaConfig != nil
 }
 
-// irmaVerifiablePresentation is a specific proof for irma signatures
-type irmaVerifiablePresentation struct {
-	proof irmaVPProof `json:"proof"`
+// IrmaVerifiablePresentation is a specific proof for irma signatures
+type IrmaVerifiablePresentation struct {
+	contract.VerifiableCredentialBase
+	Proof IrmaVPProof `json:"proof"`
 }
 
-// irmaVPProof is a specific IrmaProof for the specific IrmaVerifiablePresentation
-type irmaVPProof struct {
+// IrmaVPProof is a specific IrmaProof for the specific IrmaVerifiablePresentation
+type IrmaVPProof struct {
 	contract.Proof
-	Signature string `json:"signature"`
+	Signature string `json:"proofValue"`
 }
 
 // VerifyVP expects the given raw VerifiablePresentation to be of the correct type
 // todo: type check?
 func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
 	// Extract the Irma message
-	vp := irmaVerifiablePresentation{}
+	vp := IrmaVerifiablePresentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &vp); err != nil {
 		return nil, err
 	}
 
 	// Create the irma contract validator
 	contractValidator := contractVerifier{v.IrmaConfig, v.ContractTemplates}
-	signedContract, err := contractValidator.parseSignedIrmaContract(vp.proof.Signature)
+	signedContract, err := contractValidator.parseSignedIrmaContract(vp.Proof.Signature)
 	if err != nil {
 		return nil, err
 	}
