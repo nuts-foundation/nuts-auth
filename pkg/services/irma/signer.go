@@ -59,6 +59,7 @@ func (s SessionPtr) MarshalJSON() ([]byte, error) {
 	}{QrCodeInfo: s.QrCodeInfo, ID: s.ID})
 }
 
+// NutsIrmaSignedContract is the type of proof used in an Irma VP
 const NutsIrmaSignedContract = "NutsIrmaSignedContract"
 
 // StartSigningSession accepts a rawContractText and creates an IRMA signing session.
@@ -160,12 +161,12 @@ func (s SigningSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 	}
 	b64 := base64.StdEncoding.EncodeToString(js)
 
-	return IrmaVerifiablePresentation{
+	return VerifiablePresentation{
 		VerifiableCredentialBase: contract.VerifiableCredentialBase{
 			Context: []string{contract.VerifiableCredentialContext},
 			Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
 		},
-		Proof: IrmaVPProof{
+		Proof: VPProof{
 			Proof: contract.Proof{
 				Type: NutsIrmaSignedContract,
 			},

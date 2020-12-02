@@ -78,14 +78,14 @@ func (v Service) IsInitialized() bool {
 	return v.IrmaConfig != nil
 }
 
-// IrmaVerifiablePresentation is a specific proof for irma signatures
-type IrmaVerifiablePresentation struct {
+// VerifiablePresentation is a specific proof for irma signatures
+type VerifiablePresentation struct {
 	contract.VerifiableCredentialBase
-	Proof IrmaVPProof `json:"proof"`
+	Proof VPProof `json:"proof"`
 }
 
-// IrmaVPProof is a specific IrmaProof for the specific IrmaVerifiablePresentation
-type IrmaVPProof struct {
+// VPProof is a specific IrmaProof for the specific VerifiablePresentation
+type VPProof struct {
 	contract.Proof
 	Signature string `json:"proofValue"`
 }
@@ -94,7 +94,7 @@ type IrmaVPProof struct {
 // todo: type check?
 func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
 	// Extract the Irma message
-	vp := IrmaVerifiablePresentation{}
+	vp := VerifiablePresentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &vp); err != nil {
 		return nil, err
 	}
