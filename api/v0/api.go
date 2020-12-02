@@ -40,28 +40,14 @@ const errOauthUnsupportedGrant = "unsupported_grant_type"
 // and returns the session pointer to the HTTP stack.
 func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	// bind params to a generated api format struct
-	params := new(ContractSigningRequest)
-	if err := ctx.Bind(params); err != nil {
+	var params ContractSigningRequest
+	if err := ctx.Bind(&params); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
 	}
 
-	var (
-		vf, vt        time.Time
-		err           error
-		validDuration time.Duration
-	)
-	if params.ValidFrom != nil {
-		vf, err = time.Parse("2006-01-02T15:04:05-07:00", *params.ValidFrom)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validFrom: %v", err))
-		}
-	}
-	if params.ValidTo != nil {
-		vt, err = time.Parse("2006-01-02T15:04:05-07:00", *params.ValidTo)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validTo: %v", err))
-		}
-		validDuration = vt.Sub(vt)
+	vf, _, validDuration, err := parsePeriodParams(params)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	orgID, err := core.ParsePartyID(string(params.LegalEntity))
@@ -104,6 +90,25 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	}
 
 	return ctx.JSON(http.StatusCreated, answer)
+}
+
+func parsePeriodParams(params ContractSigningRequest) (vf time.Time, vt time.Time, d time.Duration, err error) {
+	if params.ValidFrom != nil {
+		vf, err = time.Parse(time.RFC3339, *params.ValidFrom)
+		if err != nil {
+			err = fmt.Errorf("could not parse validFrom: %v", err)
+			return
+		}
+	}
+	if params.ValidTo != nil {
+		vt, err = time.Parse(time.RFC3339, *params.ValidTo)
+		if err != nil {
+			err = fmt.Errorf("could not parse validTo: %v", err)
+			return
+		}
+		d = vt.Sub(vf)
+	}
+	return
 }
 
 // SessionRequestStatus gets the current status or the IRMA signing session,

@@ -75,7 +75,7 @@ type Proof struct {
 // Format describes the format of a signed contract. Based on the format an appropriate validator can be selected.
 type Format string
 
-// ValidationResult contains the result of a contract validation
+// VerificationResult contains the result of a contract validation
 type VerificationResult struct {
 	State          State  `json:"state"`
 	ContractFormat Format `json:"contract_format"`

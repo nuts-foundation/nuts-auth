@@ -44,8 +44,11 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		tt := time.Now().Truncate(time.Second)
+		vf := tt.Format("2006-01-02T15:04:05-07:00")
+		vt := tt.Add(time.Hour * 13).Format("2006-01-02T15:04:05-07:00")
+		d := tt.Add(time.Hour * 13).Sub(tt)
 
-		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), d).Return(
 			&contract2.Contract{
 				RawContractText: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan ZorgDossier om namens Verpleeghuis de Hoeksteen en ondergetekende het Nuts netwerk te bevragen",
 				Template:        nil,
@@ -63,8 +66,6 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		}, nil)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
-		vf := tt.Format("2006-01-02T15:04:05-07:00")
-		vt := tt.Add(time.Hour * 13).Format("2006-01-02T15:04:05-07:00")
 		params := ContractSigningRequest{
 			Type:        "BehandelaarLogin",
 			Language:    "NL",
@@ -104,7 +105,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.Error(t, err)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
-		assert.Contains(t, httpError.Message, "Could not parse validFrom")
+		assert.Contains(t, httpError.Message, "could not parse validFrom")
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
 
 		jsonData = `{"language":"NL","legalEntity":"legalEntity","type":"BehandelaarLogin","valid_from":"2020-03-26T00:16:57+01:00","valid_to":"invalid time in validTo","version":"v1"}`
@@ -117,7 +118,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.Error(t, err)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError = err.(*echo.HTTPError)
-		assert.Contains(t, httpError.Message, "Could not parse validTo")
+		assert.Contains(t, httpError.Message, "could not parse validTo")
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
 	})
 

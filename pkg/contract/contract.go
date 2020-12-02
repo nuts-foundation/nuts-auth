@@ -59,6 +59,7 @@ func (sc *Contract) initParams() error {
 
 var ErrInvalidPeriod = fmt.Errorf("%w: invalid period", ErrInvalidContractText)
 
+// VerifyForGivenTime checks if the contract is valid for the given moment in time
 func (sc Contract) VerifyForGivenTime(checkTime time.Time) error {
 	var (
 		err                      error
@@ -100,7 +101,6 @@ func (sc Contract) VerifyForGivenTime(checkTime time.Time) error {
 	}
 
 	return nil
-
 }
 
 // Verify verifies the params with the template
