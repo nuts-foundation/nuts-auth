@@ -2,6 +2,7 @@ package contract
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/cbroglie/mustache"
@@ -61,7 +62,7 @@ func (c Template) Render(vars map[string]string, validFrom time.Time, validDurat
 
 	rawContractText, err := mustache.Render(c.Template, vars)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not render contract template: %w", err)
 	}
 
 	contract := &Contract{

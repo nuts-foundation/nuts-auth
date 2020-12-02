@@ -17,7 +17,6 @@ import (
 
 func Test_contractNotaryService_ValidateContract(t *testing.T) {
 	t.Run("it could validate a valid contract", func(t *testing.T) {
-
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -73,5 +72,134 @@ func Test_contractNotaryService_KeyExistsFor(t *testing.T) {
 		cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).Return(true)
 
 		assert.True(t, notary.KeyExistsFor(organizationID))
+	})
+}
+
+func Test_contractNotaryService_DrawUpContract(t *testing.T) {
+	type testContext struct {
+		ctrl         *gomock.Controller
+		cryptoMock   *cryptoMock.MockClient
+		registryMock *mock.MockRegistryClient
+		notary       contractNotaryService
+	}
+	buildContext := func(t *testing.T) *testContext {
+		ctrl := gomock.NewController(t)
+		ctx := &testContext{
+			ctrl:         ctrl,
+			cryptoMock:   cryptoMock.NewMockClient(ctrl),
+			registryMock: mock.NewMockRegistryClient(ctrl),
+		}
+		notary := contractNotaryService{
+			Registry:         ctx.registryMock,
+			Crypto:           ctx.cryptoMock,
+			ContractValidity: 15 * time.Minute,
+		}
+		ctx.notary = notary
+		return ctx
+	}
+
+	template := contract.Template{
+		Template: "Organisation Name: {{legal_entity}}, valid from {{valid_from}} to {{valid_to}}",
+	}
+	orgID := core.PartyID{}
+	// Add 1 second so !time.Zero()
+	validFrom := time.Time{}.Add(time.Second)
+	duration := 10 * time.Minute
+
+	t.Run("draw up valid contract", func(t *testing.T) {
+		ctx := buildContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).AnyTimes().Return(true)
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).AnyTimes().Return(&db.Organization{Name: "CareBears"}, nil)
+
+		drawnUpContract, err := ctx.notary.DrawUpContract(template, orgID, validFrom, duration)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.NotNil(t, drawnUpContract)
+		assert.Equal(t, "Organisation Name: CareBears, valid from maandag, 1 januari 0001 00:19:33 to maandag, 1 januari 0001 00:29:33", drawnUpContract.RawContractText)
+	})
+
+	t.Run("no given duration uses default", func(t *testing.T) {
+		ctx := buildContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).AnyTimes().Return(true)
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).AnyTimes().Return(&db.Organization{Name: "CareBears"}, nil)
+
+		drawnUpContract, err := ctx.notary.DrawUpContract(template, orgID, validFrom, 0)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.NotNil(t, drawnUpContract)
+		assert.Equal(t, "Organisation Name: CareBears, valid from maandag, 1 januari 0001 00:19:33 to maandag, 1 januari 0001 00:34:33", drawnUpContract.RawContractText)
+	})
+
+	t.Run("no given time uses time.Now()", func(t *testing.T) {
+		ctx := buildContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).AnyTimes().Return(true)
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).AnyTimes().Return(&db.Organization{Name: "CareBears"}, nil)
+
+		timenow = func() time.Time {
+			return time.Time{}.Add(10 * time.Second)
+		}
+		defer func() { timenow = time.Now }()
+		drawnUpContract, err := ctx.notary.DrawUpContract(template, orgID, time.Time{}, 0)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.NotNil(t, drawnUpContract)
+		assert.Equal(t, "Organisation Name: CareBears, valid from maandag, 1 januari 0001 00:19:42 to maandag, 1 januari 0001 00:34:42", drawnUpContract.RawContractText)
+	})
+
+	t.Run("nok - unknown private key", func(t *testing.T) {
+		ctx := buildContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).Return(false)
+
+		drawnUpContract, err := ctx.notary.DrawUpContract(template, orgID, validFrom, duration)
+		if assert.Error(t, err) {
+			assert.Equal(t, "could not draw up contract: organization is not managed by this node: missing organization private key", err.Error())
+		}
+		assert.Nil(t, drawnUpContract)
+	})
+
+	t.Run("nok - unknown organization", func(t *testing.T) {
+		ctx := buildContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).Return(true)
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(nil, db.ErrOrganizationNotFound)
+
+		drawnUpContract, err := ctx.notary.DrawUpContract(template, orgID, validFrom, duration)
+		if assert.Error(t, err) {
+			assert.Equal(t, "could not draw up contract: organization not found", err.Error())
+		}
+		assert.Nil(t, drawnUpContract)
+	})
+
+	t.Run("nok - render error", func(t *testing.T) {
+		ctx := buildContext(t)
+		defer ctx.ctrl.Finish()
+
+		ctx.cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).Return(true)
+		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Name: "CareBears"}, nil)
+
+		template := contract.Template{
+			Template: "Organisation Name: {{{legal_entity}}, valid from {{valid_from}} to {{valid_to}}",
+		}
+
+		drawnUpContract, err := ctx.notary.DrawUpContract(template, orgID, validFrom, duration)
+		if assert.Error(t, err) {
+			assert.Equal(t, "could not draw up contract: could not render contract template: line 1: unmatched open tag", err.Error())
+		}
+		assert.Nil(t, drawnUpContract)
 	})
 }

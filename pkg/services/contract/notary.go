@@ -20,6 +20,8 @@ type contractNotaryService struct {
 	ContractValidity time.Duration
 }
 
+var timenow = time.Now
+
 // NewContractNotary accepts the registry and crypto Nuts engines and returns a ContractNotary
 func NewContractNotary(reg registry.RegistryClient, crypto nutscrypto.Client, contractValidity time.Duration) *contractNotaryService {
 	return &contractNotaryService{Registry: reg, ContractValidity: contractValidity, Crypto: crypto}
@@ -61,7 +63,7 @@ func (s contractNotaryService) DrawUpContract(template contract.Template, orgID 
 		validDuration = s.ContractValidity
 	}
 	if validFrom.IsZero() {
-		validFrom = time.Now()
+		validFrom = timenow()
 	}
 
 	drawnUpContract, err := template.Render(contractAttrs, validFrom, validDuration)
