@@ -118,7 +118,7 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 
 	// check the maximum validity, according to RFC003 §5.2.1.4
 	if context.jwtBearerToken.ExpiresAt-context.jwtBearerToken.IssuedAt > OauthBearerTokenMaxValidity {
-		return nil, errors.New("JWT validity to long")
+		return nil, errors.New("JWT validity too long")
 	}
 
 	// check the actor against the registry, according to RFC003 §5.2.1.3

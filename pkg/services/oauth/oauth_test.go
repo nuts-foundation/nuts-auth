@@ -99,7 +99,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		}
 	})
 
-	t.Run("JWT validity to long", func(t *testing.T) {
+	t.Run("JWT validity too long", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
@@ -110,7 +110,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		response, err := ctx.oauthService.CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: tokenCtx.rawJwtBearerToken})
 		assert.Nil(t, response)
 		if assert.NotNil(t, err) {
-			assert.Contains(t, err.Error(), "JWT validity to long")
+			assert.Contains(t, err.Error(), "JWT validity too long")
 		}
 	})
 

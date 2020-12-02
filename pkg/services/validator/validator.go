@@ -170,7 +170,7 @@ var ErrMissingActingParty = errors.New("missing actingPartyCn")
 // ErrMissingPublicURL is returned when the publicUrl is missing from the config
 var ErrMissingPublicURL = errors.New("missing publicUrl")
 
-// deprecates
+// deprecated
 func (s *service) configureContracts() (err error) {
 	if s.config.ActingPartyCn == "" {
 		// todo remove this check in 0.17
