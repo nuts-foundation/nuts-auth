@@ -58,7 +58,7 @@ func (s SessionPtr) MarshalJSON() ([]byte, error) {
 }
 
 // StartSigningSession accepts a rawContractText and creates an IRMA signing session.
-func (v IrmaService) StartSigningSession(rawContractText string) (contract.SessionPointer, error) {
+func (v Service) StartSigningSession(rawContractText string) (contract.SessionPointer, error) {
 	// Put the template in an IRMA envelope
 	signatureRequest := irmago.NewSignatureRequest(rawContractText)
 	schemeManager := v.IrmaServiceConfig.IrmaSchemeManager
@@ -104,7 +104,7 @@ func (v IrmaService) StartSigningSession(rawContractText string) (contract.Sessi
 
 // SigningSessionStatus returns the current status of a certain session.
 // It returns nil if the session is not found
-func (v IrmaService) SigningSessionStatus(sessionID string) (contract.SigningSessionResult, error) {
+func (v Service) SigningSessionStatus(sessionID string) (contract.SigningSessionResult, error) {
 	if result := v.IrmaSessionHandler.GetSessionResult(sessionID); result != nil {
 		var (
 			token string

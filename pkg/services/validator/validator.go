@@ -88,7 +88,7 @@ func (s *service) Configure() (err error) {
 		return
 	}
 
-	irmaService := irma.IrmaService{
+	irmaService := irma.Service{
 		IrmaSessionHandler: &irma.DefaultIrmaSessionHandler{I: irmaServer},
 		IrmaConfig:         irmaConfig,
 		// todo: remove this when the deprecated irmaValidatorValidateJwt is removed

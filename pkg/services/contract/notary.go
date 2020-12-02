@@ -1,3 +1,21 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package contract
 
 import (
@@ -5,6 +23,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	cryptoTypes "github.com/nuts-foundation/nuts-crypto/pkg/types"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -23,7 +42,7 @@ type contractNotaryService struct {
 var timenow = time.Now
 
 // NewContractNotary accepts the registry and crypto Nuts engines and returns a ContractNotary
-func NewContractNotary(reg registry.RegistryClient, crypto nutscrypto.Client, contractValidity time.Duration) *contractNotaryService {
+func NewContractNotary(reg registry.RegistryClient, crypto nutscrypto.Client, contractValidity time.Duration) services.ContractNotary {
 	return &contractNotaryService{Registry: reg, ContractValidity: contractValidity, Crypto: crypto}
 }
 
@@ -44,7 +63,7 @@ func (s *contractNotaryService) KeyExistsFor(legalEntity core.PartyID) bool {
 // DrawUpContract accepts a template and fills in the Party, validFrom time and its duration.
 // If validFrom is zero, the current time is used.
 // If the duration is 0 than the default duration is used.
-func (s contractNotaryService) DrawUpContract(template contract.Template, orgID core.PartyID, validFrom time.Time, validDuration time.Duration) (*contract.Contract, error) {
+func (s *contractNotaryService) DrawUpContract(template contract.Template, orgID core.PartyID, validFrom time.Time, validDuration time.Duration) (*contract.Contract, error) {
 	// Test if the org in managed by this node:
 	if !s.KeyExistsFor(orgID) {
 		return nil, fmt.Errorf("could not draw up contract: organization is not managed by this node: %w", validator.ErrMissingOrganizationKey)
@@ -74,7 +93,7 @@ func (s contractNotaryService) DrawUpContract(template contract.Template, orgID 
 }
 
 // ValidateContract checks if a given contract is valid for a given orgID and is valid at a given checkTime.
-func (s contractNotaryService) ValidateContract(contractToValidate contract.Contract, orgID core.PartyID, checkTime time.Time) (bool, error) {
+func (s *contractNotaryService) ValidateContract(contractToValidate contract.Contract, orgID core.PartyID, checkTime time.Time) (bool, error) {
 	// check if the contract is sound and it is valid at the given checkTime
 	err := contractToValidate.VerifyForGivenTime(checkTime)
 	if err != nil {

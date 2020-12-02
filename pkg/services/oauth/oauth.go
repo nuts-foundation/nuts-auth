@@ -71,7 +71,7 @@ type validationContext struct {
 	contractVerificationResult *contract.VerificationResult
 }
 
-// NewOauthService accepts a vendorID, and several Nuts engines and returns an implementation of services.OAuthClient
+// NewOAuthService accepts a vendorID, and several Nuts engines and returns an implementation of services.OAuthClient
 func NewOAuthService(vendorID core.PartyID, cryptoClient nutsCrypto.Client, registryClient nutsRegistry.RegistryClient, contractClient services.ContractClient) services.OAuthClient {
 	return &service{
 		vendorID:       vendorID,
@@ -140,19 +140,19 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	// Validate the AuthTokenContainer, according to RFC003 §5.2.1.5
 	var err error
 	if context.jwtBearerToken.UserIdentity != nil {
-		if decoded, err := base64.StdEncoding.DecodeString(*context.jwtBearerToken.UserIdentity); err != nil {
+		var decoded []byte
+		if decoded, err = base64.StdEncoding.DecodeString(*context.jwtBearerToken.UserIdentity); err != nil {
 			return nil, fmt.Errorf("failed to decode base64 usi field: %w", err)
-		} else {
-			if context.contractVerificationResult, err = s.contractClient.VerifyVP(decoded); err != nil {
-				return nil, fmt.Errorf("identity verification failed: %w", err)
-			}
+		}
+		if context.contractVerificationResult, err = s.contractClient.VerifyVP(decoded); err != nil {
+			return nil, fmt.Errorf("identity verification failed: %w", err)
 		}
 	}
 	if context.contractVerificationResult.State == contract.Invalid {
 		return nil, errors.New("identity validation failed")
 	}
 	// checks if the name from the login contract matches with the registered name of the issuer.
-	if err = s.validateActor(&context); err != nil {
+	if err := s.validateActor(&context); err != nil {
 		return nil, err
 	}
 
@@ -176,17 +176,6 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 
 // ErrLegalEntityNotProvided indicates that the legalEntity is missing
 var ErrLegalEntityNotProvided = errors.New("legalEntity not provided")
-
-func parseTokenIssuer(issuer string) (core.PartyID, error) {
-	if issuer == "" {
-		return core.PartyID{}, ErrLegalEntityNotProvided
-	}
-	if result, err := core.ParsePartyID(issuer); err != nil {
-		return core.PartyID{}, fmt.Errorf("invalid token issuer: %w", err)
-	} else {
-		return result, nil
-	}
-}
 
 // checks if the name from the login contract matches with the registered name of the issuer.
 func (s *service) validateActor(context *validationContext) error {
