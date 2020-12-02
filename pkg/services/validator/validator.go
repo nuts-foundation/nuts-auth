@@ -129,7 +129,7 @@ func (s *service) Configure() (err error) {
 func (s *service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
 	vp := contract.BaseVerifiablePresentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &vp); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to verifyVP: %w", err)
 	}
 
 	// remove default type

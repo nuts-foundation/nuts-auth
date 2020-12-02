@@ -19,6 +19,7 @@
 package validator
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -129,6 +130,7 @@ func TestContract_Configure(t *testing.T) {
 				ActingPartyCn:             "url",
 				IrmaConfigPath:            "../../../testdata/irma",
 				SkipAutoUpdateIrmaSchemas: true,
+				ContractValidators:        []string{"irma", "dummy"},
 			},
 		}
 
@@ -136,6 +138,123 @@ func TestContract_Configure(t *testing.T) {
 			// BUG: nuts-auth#23
 			assert.True(t, c.contractValidator.IsInitialized())
 		}
+	})
+}
+
+func TestContract_VerifyVP(t *testing.T) {
+	t.Run("ok - valid VP", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		rawVP, err := json.Marshal(struct {
+			Type []string
+		}{Type: []string{"bar"}})
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		mockVerifier := servicesMock.NewMockContractClient(ctrl)
+		mockVerifier.EXPECT().VerifyVP(rawVP).Return(&contract.VerificationResult{State: contract.Valid}, nil)
+
+		validator := service{verifiers: map[string]contract.Verifier{"bar": mockVerifier}}
+
+		validationResult, err := validator.VerifyVP(rawVP)
+
+		if !assert.NoError(t, err) {
+			return
+		}
+		if !assert.NotNil(t, validationResult) {
+			return
+		}
+		assert.Equal(t, contract.Valid, validationResult.State)
+	})
+
+	t.Run("nok - unknown VerifiablePresentation", func(t *testing.T) {
+		validator := service{}
+
+		rawVP, err := json.Marshal(struct {
+			Type []string
+		}{Type: []string{"bar"}})
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		validationResult, err := validator.VerifyVP(rawVP)
+		if !assert.Error(t, err) {
+			return
+		}
+		if !assert.Nil(t, validationResult) {
+			return
+		}
+		assert.Equal(t, "unknown VerifiablePresentation type: bar", err.Error())
+	})
+
+	t.Run("nok - missing custom type", func(t *testing.T) {
+		validator := service{}
+
+		rawVP, err := json.Marshal(struct {
+			foo string
+		}{foo: "bar"})
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		validationResult, err := validator.VerifyVP(rawVP)
+		if !assert.Error(t, err) {
+			return
+		}
+		if !assert.Nil(t, validationResult) {
+			return
+		}
+		assert.Equal(t, "unprocessable VerifiablePresentation, exactly 1 custom type is expected", err.Error())
+	})
+
+	t.Run("nok - invalid rawVP", func(t *testing.T) {
+		validator := service{}
+		validationResult, err := validator.VerifyVP([]byte{})
+		if !assert.Error(t, err) {
+			return
+		}
+		if !assert.Nil(t, validationResult) {
+			return
+		}
+		assert.Equal(t, "unable to verifyVP: unexpected end of JSON input", err.Error())
+	})
+}
+
+func TestContract_SigningSessionStatus(t *testing.T) {
+	t.Run("ok - valid session", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		sessionID := "123"
+
+		mockSigner := contractMock.NewMockSigner(ctrl)
+		mockSigner.EXPECT().SigningSessionStatus(sessionID).Return(&contractMock.MockSigningSessionResult{}, nil)
+
+		validator := service{signers: map[string]contract.Signer{"bar": mockSigner}}
+
+		signingSessionResult, err := validator.SigningSessionStatus(sessionID)
+		if !assert.NoError(t, err) {
+			return
+		}
+		if !assert.NotNil(t, signingSessionResult) {
+			return
+		}
+	})
+
+	t.Run("nok - session not found", func(t *testing.T) {
+		validator := service{}
+		sessionID := "123"
+		signingSesionResult, err := validator.SigningSessionStatus(sessionID)
+
+		if !assert.Error(t, err) {
+			return
+		}
+		if !assert.Nil(t, signingSesionResult) {
+			return
+		}
+		assert.Equal(t, "session not found", err.Error())
 	})
 }
 
