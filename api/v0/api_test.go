@@ -13,6 +13,7 @@ import (
 
 	"github.com/nuts-foundation/nuts-registry/pkg"
 
+	"github.com/nuts-foundation/nuts-auth/mock"
 	servicesMock "github.com/nuts-foundation/nuts-auth/mock/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
@@ -31,8 +32,6 @@ import (
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/nuts-foundation/nuts-auth/mock"
 )
 
 var careOrgID = test.OrganizationID("987")

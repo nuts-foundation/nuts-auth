@@ -5,9 +5,10 @@ package v0
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/labstack/echo/v4"
-	"net/http"
 )
 
 // AccessTokenRequestFailedResponse defines model for AccessTokenRequestFailedResponse.
