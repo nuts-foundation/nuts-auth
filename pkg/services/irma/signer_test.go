@@ -219,7 +219,7 @@ func TestService_SigningSessionStatus(t *testing.T) {
 		result, err := service.SigningSessionStatus("session")
 
 		assert.NoError(t, err)
-		assert.Equal(t, "status", result.Status())
+		assert.Equal(t, "status", string(result.Status()))
 
 		vp, err := result.VerifiablePresentation()
 
