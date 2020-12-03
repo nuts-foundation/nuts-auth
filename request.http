@@ -1,3 +1,6 @@
+# Intellij specific config for easy testing of the api.
+# https://www.jetbrains.com/help/idea/exploring-http-syntax.html
+
 # For a quick start check out our HTTP Requests collection (Tools|HTTP Client|Open HTTP Requests Collection).
 #
 # Following HTTP Request Live Templates are available:
