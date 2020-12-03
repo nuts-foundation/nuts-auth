@@ -78,6 +78,7 @@ func (sc *Contract) initParams() error {
 var ErrInvalidPeriod = fmt.Errorf("%w: invalid period", ErrInvalidContractText)
 
 // VerifyForGivenTime checks if the contract is valid for the given moment in time
+// TODO: support of different time zones: https://github.com/nuts-foundation/nuts-auth/issues/152
 func (sc Contract) VerifyForGivenTime(checkTime time.Time) error {
 	var (
 		err                      error
@@ -129,6 +130,7 @@ func (sc Contract) Verify() error {
 
 // parseTime parses the given timeStr in context of the Europe/Amsterdam time zone and uses the given language.
 // Note that currently only the language "NL" is supported.
+// TODO: support of different time zones: https://github.com/nuts-foundation/nuts-auth/issues/152
 func parseTime(timeStr string, _ Language) (*time.Time, error) {
 	contractIssuerTimezone, _ := time.LoadLocation(AmsterdamTimeZone)
 	// TODO: add support for other languages
