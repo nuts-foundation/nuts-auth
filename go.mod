@@ -3,7 +3,6 @@ module github.com/nuts-foundation/nuts-auth
 go 1.15
 
 require (
-	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
 	github.com/bwesterb/go-atum v1.0.1 // indirect
 	github.com/cbroglie/mustache v1.2.0
 	github.com/deepmap/oapi-codegen v1.4.1
