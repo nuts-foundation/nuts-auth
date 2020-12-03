@@ -84,7 +84,7 @@ type AuthenticationTokenParser interface {
 type ContractNotary interface {
 	// DrawUpContract draws up a contract from a template and returns a Contract which than can be signed by the user.
 	DrawUpContract(template contract.Template, orgID core.PartyID, validFrom time.Time, validDuration time.Duration) (*contract.Contract, error)
-
+	// ValidateContract checks if the contract is syntactically correct and valid at the given moment in time. It does not check the signature.
 	ValidateContract(contractToValidate contract.Contract, orgID core.PartyID, checkTime time.Time) (bool, error)
 }
 
