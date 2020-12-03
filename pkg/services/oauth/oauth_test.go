@@ -240,7 +240,7 @@ func TestService_validateSubject(t *testing.T) {
 	t.Run("no match for node vendorId", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		pId, _ := core.NewPartyID(vendorID.OID(), vendorID.Value() + "1")
+		pId, _ := core.NewPartyID(vendorID.OID(), vendorID.Value()+"1")
 
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{
 			Vendor: pId,

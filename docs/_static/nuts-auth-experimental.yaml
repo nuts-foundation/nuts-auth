@@ -186,7 +186,7 @@ components:
         message:
           type: string
           description: The contract message
-          example: ik verklaar dat Pro Gen - Italia namens mij request mag maken
+          example: I hereby declare that Pro Gen - Italia should be make requests in my name
         type:
           $ref: "#/components/schemas/ContractType"
         language:
