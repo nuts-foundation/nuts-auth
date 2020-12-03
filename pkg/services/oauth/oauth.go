@@ -240,11 +240,11 @@ func (s *service) validateClientCertificate(context *validationContext, pemEncod
 
 	chains, err := s.crypto.TrustStore().VerifiedChain(c, validationTime)
 	if err != nil || len(chains) == 0 {
-		e := ""
+		msg := ""
 		if err != nil {
-			e = err.Error()
+			msg = err.Error()
 		}
-		logging.Log().Warnf("failed to verify certificate, chains: %d, err: %s", len(chains), e)
+		logging.Log().Warnf("failed to verify certificate, chains: %d, err: %s", len(chains), msg)
 		return errInvalidClientCert
 	}
 
