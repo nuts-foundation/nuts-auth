@@ -33,7 +33,7 @@ paths:
             type: string
       responses:
         200:
-          description: When the sessionPtr is know. Contains the current session status.
+          description: When the sessionPtr is known. Contains the current session status.
           content:
             application/json:
               schema:
@@ -77,44 +77,13 @@ paths:
               $ref: "#/components/schemas/DrawUpContractRequest"
       responses:
         200:
-          description: When the contract was drawed up successfully
+          description: When the contract was drawn up successfully
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContractResponse"
         404:
           description: When the combination of template, language and version was not found
-  /internal/auth/experimental/contract/template/{language}/{contractType}:
-    get:
-      operationId: getContractTemplate
-      summary: Get the contract template by version, and type
-      parameters:
-        - name: language
-          in: path
-          required: true
-          schema:
-            type: string
-            default: nl
-        - name: contractType
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: version
-          description: The version of this contract. If omitted, the most recent version will be returned
-          required: false
-          in: query
-          schema:
-            type: string
-      responses:
-        200:
-          description: When the contract template could be found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ContractTemplateResponse"
-        404:
-          description: When the contract template for the combination type and version could not be found
 
 components:
   schemas:
@@ -206,23 +175,6 @@ components:
       type: string
       description: "Identifier of the legalEntity as registered in the Nuts registry"
       example: "urn:oid:2.16.840.1.113883.2.4.6.1:48000000"
-
-    ContractTemplateResponse:
-      required:
-        - type
-        - version
-        - language
-        - template
-      properties:
-        type:
-          $ref: "#/components/schemas/ContractType"
-        language:
-          $ref: "#/components/schemas/ContractLanguage"
-        version:
-          $ref: "#/components/schemas/ContractVersion"
-        template:
-          type: string
-          example: ik verklaar dat ${acting_party} namens mij request mag maken
 
     ContractResponse:
       required:

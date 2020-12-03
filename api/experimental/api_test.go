@@ -64,39 +64,6 @@ func createContext(t *testing.T) TestContext {
 	}
 }
 
-func TestWrapper_GetContractTemplate(t *testing.T) {
-	t.Run("ok - it can retrieve a ContractTemplate", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-
-		expectedContract := contract.StandardContractTemplates["EN"]["PractitionerLogin"]["v1"]
-		response := ContractTemplateResponse{
-			Language: ContractLanguage(expectedContract.Language),
-			Template: expectedContract.Template,
-			Type:     ContractType(expectedContract.Type),
-			Version:  ContractVersion(expectedContract.Version),
-		}
-		ctx.echoMock.EXPECT().JSON(http.StatusOK, response)
-		version := "v1"
-		err := ctx.wrapper.GetContractTemplate(ctx.echoMock, "EN", "PractitionerLogin", GetContractTemplateParams{Version: &version})
-		if !assert.NoError(t, err) {
-			return
-		}
-	})
-
-	t.Run("nok - unknown contract template", func(t *testing.T) {
-		ctx := createContext(t)
-		defer ctx.ctrl.Finish()
-
-		err := ctx.wrapper.GetContractTemplate(ctx.echoMock, "EN", "UnknownContractTemplate", GetContractTemplateParams{Version: nil})
-
-		assert.IsType(t, &echo.HTTPError{}, err)
-		httpError := err.(*echo.HTTPError)
-		assert.Equal(t, http.StatusNotFound, httpError.Code)
-		assert.Equal(t, "contract not found", httpError.Message)
-	})
-}
-
 func TestWrapper_GetSignSessionStatus(t *testing.T) {
 	t.Run("ok - started without VP", func(t *testing.T) {
 		ctx := createContext(t)

@@ -112,29 +112,6 @@ func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
 	return ctx.JSON(http.StatusOK, response)
 }
 
-// GetContractTemplate handles http requests for a contract template. The contract is find by language and type.
-func (w Wrapper) GetContractTemplate(ctx echo.Context, language string, contractType string, params GetContractTemplateParams) error {
-	var version contract.Version
-	if params.Version != nil {
-		version = contract.Version(*params.Version)
-	}
-
-	c, err := contract.StandardContractTemplates.Find(contract.Type(contractType), contract.Language(language), version)
-	if err != nil {
-		if errors.Is(err, contract.ErrContractNotFound) {
-			return echo.NewHTTPError(http.StatusNotFound, "contract not found")
-		}
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-	response := ContractTemplateResponse{
-		Language: ContractLanguage(c.Language),
-		Template: c.Template,
-		Type:     ContractType(c.Type),
-		Version:  ContractVersion(c.Version),
-	}
-	return ctx.JSON(http.StatusOK, response)
-}
-
 // DrawUpContract handles the http request for drawing up a contract for a given contract template identified by type, language and version.
 func (w Wrapper) DrawUpContract(ctx echo.Context) error {
 	params := new(DrawUpContractRequest)

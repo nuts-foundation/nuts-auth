@@ -29,20 +29,6 @@ type ContractResponse struct {
 	Version ContractVersion `json:"version"`
 }
 
-// ContractTemplateResponse defines model for ContractTemplateResponse.
-type ContractTemplateResponse struct {
-
-	// Language of the contract in all caps
-	Language ContractLanguage `json:"language"`
-	Template string           `json:"template"`
-
-	// Type of which contract to sign
-	Type ContractType `json:"type"`
-
-	// Version of the contract
-	Version ContractVersion `json:"version"`
-}
-
 // ContractType defines model for ContractType.
 type ContractType string
 
@@ -125,13 +111,6 @@ type VerifiablePresentation struct {
 // DrawUpContractJSONBody defines parameters for DrawUpContract.
 type DrawUpContractJSONBody DrawUpContractRequest
 
-// GetContractTemplateParams defines parameters for GetContractTemplate.
-type GetContractTemplateParams struct {
-
-	// The version of this contract. If omitted, the most recent version will be returned
-	Version *string `json:"version,omitempty"`
-}
-
 // CreateSignSessionJSONBody defines parameters for CreateSignSession.
 type CreateSignSessionJSONBody CreateSignSessionRequest
 
@@ -152,9 +131,6 @@ type ServerInterface interface {
 	// Draw up a contract using a specified contract template, language and version
 	// (PUT /internal/auth/experimental/contract/drawup)
 	DrawUpContract(ctx echo.Context) error
-	// Get the contract template by version, and type
-	// (GET /internal/auth/experimental/contract/template/{language}/{contractType})
-	GetContractTemplate(ctx echo.Context, language string, contractType string, params GetContractTemplateParams) error
 	// Create a signing session for a supported means.
 	// (POST /internal/auth/experimental/signature/session)
 	CreateSignSession(ctx echo.Context) error
@@ -177,39 +153,6 @@ func (w *ServerInterfaceWrapper) DrawUpContract(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshalled arguments
 	err = w.Handler.DrawUpContract(ctx)
-	return err
-}
-
-// GetContractTemplate converts echo context to params.
-func (w *ServerInterfaceWrapper) GetContractTemplate(ctx echo.Context) error {
-	var err error
-	// ------------- Path parameter "language" -------------
-	var language string
-
-	err = runtime.BindStyledParameter("simple", false, "language", ctx.Param("language"), &language)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter language: %s", err))
-	}
-
-	// ------------- Path parameter "contractType" -------------
-	var contractType string
-
-	err = runtime.BindStyledParameter("simple", false, "contractType", ctx.Param("contractType"), &contractType)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter contractType: %s", err))
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetContractTemplateParams
-	// ------------- Optional query parameter "version" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "version", ctx.QueryParams(), &params.Version)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter version: %s", err))
-	}
-
-	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.GetContractTemplate(ctx, language, contractType, params)
 	return err
 }
 
@@ -265,7 +208,6 @@ func RegisterHandlers(router interface {
 	}
 
 	router.PUT("/internal/auth/experimental/contract/drawup", wrapper.DrawUpContract)
-	router.GET("/internal/auth/experimental/contract/template/:language/:contractType", wrapper.GetContractTemplate)
 	router.POST("/internal/auth/experimental/signature/session", wrapper.CreateSignSession)
 	router.GET("/internal/auth/experimental/signature/session/:sessionPtr", wrapper.GetSignSessionStatus)
 	router.PUT("/internal/auth/experimental/signature/verify", wrapper.VerifySignature)
