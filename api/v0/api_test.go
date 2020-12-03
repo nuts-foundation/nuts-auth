@@ -174,7 +174,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
-		assert.Contains(t, httpError.Message, "Unable to find contract: type UnknownContract")
+		assert.Equal(t, "Unable to find contract: UnknownContract", httpError.Message)
 	})
 
 	t.Run("for an unknown legalEntity", func(t *testing.T) {
@@ -188,17 +188,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
-			&contract2.Contract{
-				RawContractText: "NL:BehandelaarLogin:v1 Ondergetekende",
-				Template:        nil,
-				Params:          nil,
-			}, nil)
-
-		ctx.contractMock.EXPECT().CreateSigningSession(services.CreateSessionRequest{
-			Message:      "NL:BehandelaarLogin:v1 Ondergetekende",
-			SigningMeans: "irma",
-		}).Return(nil, pkg.ErrOrganizationNotFound)
+		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, pkg.ErrOrganizationNotFound)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
 
@@ -211,7 +201,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
-		assert.Equal(t, "No organization registered for legalEntity: organization not found", httpError.Message)
+		assert.Equal(t, "No organization registered for legalEntity: urn:oid:2.16.840.1.113883.2.4.6.1:987", httpError.Message)
 	})
 
 	t.Run("for an unregistered legal entity", func(t *testing.T) {
@@ -238,7 +228,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
-		assert.Equal(t, "Unable to draw up contract: missing organization private key", httpError.Message)
+		assert.Equal(t, "Unknown legalEntity, this Nuts node does not seem to be managing 'urn:oid:2.16.840.1.113883.2.4.6.1:987'", httpError.Message)
 	})
 }
 
@@ -352,7 +342,7 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 			Language: &cLanguage,
 		}
 
-		a, _ := contract2.StandardContractTemplates.Find(contract2.Type(cType), contract2.Language(cLanguage), contract2.Version(cVersion))
+		a := contract2.StandardContractTemplates.Get(contract2.Type(cType), contract2.Language(cLanguage), contract2.Version(cVersion))
 		answer := Contract{
 			Language:           Language(a.Language),
 			Template:           &a.Template,

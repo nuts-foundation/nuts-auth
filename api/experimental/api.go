@@ -50,7 +50,7 @@ type Wrapper struct {
 func (w Wrapper) VerifySignature(ctx echo.Context) error {
 	requestParams := new(SignatureVerificationRequest)
 	if err := ctx.Bind(requestParams); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("could not parse request body: %s", err.Error()))
 	}
 	rawVP, err := json.Marshal(requestParams.VerifiablePresentation)
 	if err != nil {
@@ -69,7 +69,7 @@ func (w Wrapper) VerifySignature(ctx echo.Context) error {
 func (w Wrapper) CreateSignSession(ctx echo.Context) error {
 	requestParams := new(CreateSignSessionRequest)
 	if err := ctx.Bind(requestParams); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("could not parse request body: %s", err.Error()))
 	}
 	createSessionRequest := services.CreateSessionRequest{
 		SigningMeans: requestParams.Means,
@@ -80,16 +80,10 @@ func (w Wrapper) CreateSignSession(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to create sign challenge: %s", err.Error()))
 	}
 
-	// Convert the session pointer to a map[string]interface{} using json conversion
-	// todo: put into separate method
-	jsonPointer, err := json.Marshal(pointer)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert sessionpointer: %s", err.Error()))
-	}
 	var keyValPointer map[string]interface{}
-	err = json.Unmarshal(jsonPointer, &keyValPointer)
+	err = convertToMap(pointer, &keyValPointer)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert sessionpointer: %s", err.Error()))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to build sessionPointer: %s", err.Error()))
 	}
 
 	response := CreateSignSessionResult{
@@ -104,7 +98,7 @@ func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
 	sessionStatus, err := w.Auth.ContractClient().SigningSessionStatus(sessionPtr)
 	if err != nil {
 		if errors.Is(err, services.ErrSessionNotFound) {
-			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("no active signing session for this sessionPtr found"))
+			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("no active signing session for sessionPtr: '%s' found", sessionPtr))
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to retrieve a session status: %s", err.Error()))
 	}
@@ -114,14 +108,8 @@ func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
 	}
 	var apiVp *VerifiablePresentation
 	if vp != nil {
-		// Convert the verifiable presentation to a map[string]interface{} using json conversion
-		// todo: put into separate method
-		jsonVp, err := json.Marshal(vp)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert verifiable presentation: %s", err.Error()))
-		}
-		apiVp = new(VerifiablePresentation)
-		err = json.Unmarshal(jsonVp, apiVp)
+		apiVp = &VerifiablePresentation{}
+		err = convertToMap(vp, apiVp)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert verifiable presentation: %s", err.Error()))
 		}
@@ -134,7 +122,7 @@ func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
 func (w Wrapper) DrawUpContract(ctx echo.Context) error {
 	params := new(DrawUpContractRequest)
 	if err := ctx.Bind(params); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("could not parse request body: %s", err.Error()))
 	}
 
 	var (
@@ -145,7 +133,7 @@ func (w Wrapper) DrawUpContract(ctx echo.Context) error {
 	if params.ValidFrom != nil {
 		vf, err = time.Parse("2006-01-02T15:04:05-07:00", *params.ValidFrom)
 		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validFrom: %v", err))
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("could not parse validFrom: %s", err.Error()))
 		}
 	} else {
 		vf = time.Now()
@@ -154,20 +142,17 @@ func (w Wrapper) DrawUpContract(ctx echo.Context) error {
 	if params.ValidDuration != nil {
 		validDuration, err = time.ParseDuration(*params.ValidDuration)
 		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validDuration: %v", err))
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("could not parse validDuration: %s", err.Error()))
 		}
 	}
 
-	template, err := contract.StandardContractTemplates.Find(contract.Type(params.Type), contract.Language(params.Language), contract.Version(params.Version))
-	if err != nil {
-		if errors.Is(err, contract.ErrContractNotFound) {
-			return echo.NewHTTPError(http.StatusNotFound, "contract not found")
-		}
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	template := contract.StandardContractTemplates.Get(contract.Type(params.Type), contract.Language(params.Language), contract.Version(params.Version))
+	if template == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "no contract found for given combination of type, version and language")
 	}
 	orgID, err := core.ParsePartyID(string(params.LegalEntity))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid value for param legalEntity: '%s', make sure its in the form 'urn:oid:1.2.3.4:foo'", params.LegalEntity))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("invalid value for param legalEntity: '%s', make sure its in the form 'urn:oid:1.2.3.4:foo'", params.LegalEntity))
 	}
 
 	drawnUpContract, err := w.Auth.ContractNotary().DrawUpContract(*template, orgID, vf, validDuration)
@@ -183,4 +168,19 @@ func (w Wrapper) DrawUpContract(ctx echo.Context) error {
 	}
 	return ctx.JSON(http.StatusOK, response)
 
+}
+
+// convertToMap converts an object to a map[string]interface{} using json conversion
+func convertToMap(obj interface{}, target interface{}) (err error) {
+	var jsonStr []byte
+	jsonStr, err = json.Marshal(obj)
+	if err != nil {
+		fmt.Errorf("could not convert value to json: %w", err)
+	}
+
+	err = json.Unmarshal(jsonStr, target)
+	if err != nil {
+		fmt.Errorf("could not convert json string to key value map: %w", err)
+	}
+	return
 }

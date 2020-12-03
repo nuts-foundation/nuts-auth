@@ -150,7 +150,7 @@ func TestWrapper_GetSignSessionStatus(t *testing.T) {
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusNotFound, httpError.Code)
-		assert.Equal(t, "no active signing session for this sessionPtr found", httpError.Message)
+		assert.Equal(t, "no active signing session for sessionPtr: '123' found", httpError.Message)
 	})
 
 	t.Run("nok - unable to build a VP", func(t *testing.T) {
@@ -228,7 +228,7 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 			assert.IsType(t, &echo.HTTPError{}, err)
 			httpError := err.(*echo.HTTPError)
 			assert.Equal(t, http.StatusBadRequest, httpError.Code)
-			assert.Equal(t, "Could not parse validFrom: parsing time \"invalid date\" as \"2006-01-02T15:04:05-07:00\": cannot parse \"invalid date\" as \"2006\"", httpError.Message)
+			assert.Equal(t, "could not parse validFrom: parsing time \"invalid date\" as \"2006-01-02T15:04:05-07:00\": cannot parse \"invalid date\" as \"2006\"", httpError.Message)
 		})
 
 		t.Run("invalid formatted duration", func(t *testing.T) {
@@ -247,7 +247,7 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 			assert.IsType(t, &echo.HTTPError{}, err)
 			httpError := err.(*echo.HTTPError)
 			assert.Equal(t, http.StatusBadRequest, httpError.Code)
-			assert.Equal(t, "Could not parse validDuration: time: unknown unit \" minutes\" in duration \"15 minutes\"", httpError.Message)
+			assert.Equal(t, "could not parse validDuration: time: unknown unit \" minutes\" in duration \"15 minutes\"", httpError.Message)
 		})
 
 		t.Run("unknown contract", func(t *testing.T) {
@@ -266,7 +266,7 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 			assert.IsType(t, &echo.HTTPError{}, err)
 			httpError := err.(*echo.HTTPError)
 			assert.Equal(t, http.StatusNotFound, httpError.Code)
-			assert.Equal(t, "contract not found", httpError.Message)
+			assert.Equal(t, "no contract found for given combination of type, version and language", httpError.Message)
 		})
 
 		t.Run("malformed orgID", func(t *testing.T) {
@@ -286,7 +286,7 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 			assert.IsType(t, &echo.HTTPError{}, err)
 			httpError := err.(*echo.HTTPError)
 			assert.Equal(t, http.StatusBadRequest, httpError.Code)
-			assert.Equal(t, "Invalid value for param legalEntity: 'ZorgId:15', make sure its in the form 'urn:oid:1.2.3.4:foo'", httpError.Message)
+			assert.Equal(t, "invalid value for param legalEntity: 'ZorgId:15', make sure its in the form 'urn:oid:1.2.3.4:foo'", httpError.Message)
 		})
 
 	})

@@ -30,7 +30,7 @@ import (
 	"github.com/nuts-foundation/nuts-auth/logging"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
-	pkg2 "github.com/nuts-foundation/nuts-registry/pkg"
+	nutsRegistry "github.com/nuts-foundation/nuts-registry/pkg"
 
 	"github.com/labstack/echo/v4"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -63,7 +63,7 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
 	}
 
-	vf, _, validDuration, err := parsePeriodParams(params)
+	validFrom, _, validDuration, err := parsePeriodParams(params)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
@@ -73,27 +73,25 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid value for param legalEntity: '%s', make sure its in the form 'urn:oid:1.2.3.4:foo'", params.LegalEntity))
 	}
 
-	template, err := contract.StandardContractTemplates.Find(contract.Type(params.Type), contract.Language(params.Language), contract.Version(params.Version))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unable to find contract: %s", err.Error()))
+	template := contract.StandardContractTemplates.Get(contract.Type(params.Type), contract.Language(params.Language), contract.Version(params.Version))
+	if template == nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unable to find contract: %s", params.Type))
 	}
-	drawnUpContract, err := api.Auth.ContractNotary().DrawUpContract(*template, orgID, vf, validDuration)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unable to draw up contract: %s", err.Error()))
-	}
-
-	sessionRequest := services.CreateSessionRequest{SigningMeans: "irma", Message: drawnUpContract.RawContractText}
-
-	// Initiate the actual session
-	result, err := api.Auth.ContractClient().CreateSigningSession(sessionRequest)
+	drawnUpContract, err := api.Auth.ContractNotary().DrawUpContract(*template, orgID, validFrom, validDuration)
 	if err != nil {
 		if errors.Is(err, validator.ErrMissingOrganizationKey) {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity, this Nuts node does not seem to be managing '%s'", orgID))
 		}
-		if errors.Is(err, pkg2.ErrOrganizationNotFound) {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No organization registered for legalEntity: %v", err))
+		if errors.Is(err, nutsRegistry.ErrOrganizationNotFound) {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No organization registered for legalEntity: %s", orgID))
 		}
-		// todo add errors for MissingOrg
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unable to draw up contract: %s", err.Error()))
+	}
+
+	sessionRequest := services.CreateSessionRequest{SigningMeans: "irma", Message: drawnUpContract.RawContractText}
+	// Initiate the actual session
+	result, err := api.Auth.ContractClient().CreateSigningSession(sessionRequest)
+	if err != nil {
 		logging.Log().WithError(err).Error("error while creating contract session")
 		return err
 	}
@@ -110,23 +108,26 @@ func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	return ctx.JSON(http.StatusCreated, answer)
 }
 
-func parsePeriodParams(params ContractSigningRequest) (vf time.Time, vt time.Time, d time.Duration, err error) {
+func parsePeriodParams(params ContractSigningRequest) (time.Time, time.Time, time.Duration, error) {
+	var (
+		validFrom, validTo time.Time
+		d                  time.Duration
+		err                error
+	)
 	if params.ValidFrom != nil {
-		vf, err = time.Parse(time.RFC3339, *params.ValidFrom)
+		validFrom, err = time.Parse(time.RFC3339, *params.ValidFrom)
 		if err != nil {
-			err = fmt.Errorf("could not parse validFrom: %v", err)
-			return
+			return time.Time{}, time.Time{}, 0, fmt.Errorf("could not parse validFrom: %v", err)
 		}
 	}
 	if params.ValidTo != nil {
-		vt, err = time.Parse(time.RFC3339, *params.ValidTo)
+		validTo, err = time.Parse(time.RFC3339, *params.ValidTo)
 		if err != nil {
-			err = fmt.Errorf("could not parse validTo: %v", err)
-			return
+			return time.Time{}, time.Time{}, 0, fmt.Errorf("could not parse validTo: %v", err)
 		}
-		d = vt.Sub(vf)
+		d = validTo.Sub(validFrom)
 	}
-	return
+	return validFrom, validTo, d, nil
 }
 
 // SessionRequestStatus gets the current status or the IRMA signing session,
@@ -232,11 +233,9 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 	}
 
 	// get contract
-	authContract, err := contract.StandardContractTemplates.Find(contract.Type(contractType), contractLanguage, contractVersion)
-	if errors.Is(err, contract.ErrContractNotFound) {
-		return echo.NewHTTPError(http.StatusNotFound, err.Error())
-	} else if err != nil {
-		return err
+	authContract := contract.StandardContractTemplates.Get(contract.Type(contractType), contractLanguage, contractVersion)
+	if authContract == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "could not found contract template")
 	}
 
 	// convert internal data types to generated api types

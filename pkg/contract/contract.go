@@ -43,6 +43,10 @@ func ParseContractString(rawContractText string, contractTemplates TemplateStore
 		return nil, err
 	}
 
+	if template == nil {
+		return nil, ErrContractNotFound
+	}
+
 	contract := &Contract{
 		Template:        template,
 		RawContractText: rawContractText,
