@@ -36,7 +36,7 @@ return contract
 
 EPD -> ZorgIDServer : StartSignSession(contract)
 activate ZorgIDServer
-ZorgIDServer --> EPD : sesessionPtr
+ZorgIDServer --> EPD : sessionPtr
 
 EPD --> Browser : login.html with sessionPtr
 deactivate EPD
