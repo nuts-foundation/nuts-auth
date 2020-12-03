@@ -1,0 +1,136 @@
+openapi: 3.0.0
+info:
+  title: Nuts Auth Service API
+  version: 1.0.0
+
+paths:
+  /internal/auth/v1/signature/session:
+    post:
+      operationId: createSignSessionV1
+      summary: Create a signing session for a supported means.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./nuts-auth-model.yaml#/components/schemas/CreateSignSessionRequest"
+      responses:
+        201:
+          description: When the signing session was successfully created
+          content:
+            application/json:
+              schema:
+                $ref: "./nuts-auth-model.yaml#/components/schemas/CreateSignSessionResult"
+  /internal/auth/v1/signature/session/{sessionPtr}:
+    get:
+      operationId: getSignSessionStatusV1
+      summary: Get the current status of a signing session
+      parameters:
+        - name: sessionPtr
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: When the sessionPtr is know. Contains the current session status.
+          content:
+            application/json:
+              schema:
+                $ref: "./nuts-auth-model.yaml#/components/schemas/GetSignSessionStatusResult"
+        404:
+          description: When the sessionPtr in unknown.
+  #    delete:
+  #      operationId: cancelSignSession
+  #      responses:
+  #        204:
+  #          description: When the sessionPtr is known and the session was successfully deleted
+  #        404:
+  #          description: When the sessionPtr was unknown
+  /internal/auth/v1/signature/verify:
+    put:
+      operationId: verifySignatureV1
+      summary: Verify a signature in the form of a verifiable credential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./nuts-auth-model.yaml#/components/schemas/SignatureVerificationRequest"
+      responses:
+        200:
+          description: "When the verification could be performed. The response contains the verification result. Note: This status code does not indicate the validity of the signature."
+          content:
+            application/json:
+              schema:
+                $ref: "./nuts-auth-model.yaml#/components/schemas/SignatureVerificationResponse"
+
+  /internal/auth/v1/contract/drawup:
+    put:
+      operationId: drawUpContractV1
+      summary: Draw up a contract using a specified contract template, language and version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "./nuts-auth-model.yaml#/components/schemas/DrawUpContractRequest"
+      responses:
+        200:
+          description: When the contract was drawed up successfully
+          content:
+            application/json:
+              schema:
+                $ref: "./nuts-auth-model.yaml#/components/schemas/ContractResponse"
+        404:
+          description: When the combination of template, language and version was not found
+  /internal/auth/v1/contract/template/{language}/{contractType}:
+    get:
+      operationId: getContractTemplateV1
+      summary: Get the contract template by version, and type
+      parameters:
+        - name: language
+          in: path
+          required: true
+          schema:
+            type: string
+            default: nl
+        - name: contractType
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          description: The version of this contract. If omitted, the most recent version will be returned
+          required: false
+          in: query
+          schema:
+            type: string
+      responses:
+        200:
+          description: When the contract template could be found
+          content:
+            application/json:
+              schema:
+                $ref: "./nuts-auth-model.yaml#/components/schemas/ContractTemplateResponse"
+        404:
+          description: When the contract template for the combination type and version could not be found
+  /internal/auth/v1/accesstoken/verify:
+    head:
+      operationId: verifyAccessTokenV1
+      summary: |
+        Verifies the access token given in the Authorization header (as bearer token). If it's a valid access token issued by this server, it'll return a 200 status code.
+        If it cannot be verified it'll return 403. Note that it'll not return the contents of the access token. The introspection API is for that.
+      tags:
+        - auth
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The access token is valid. It has been signed by this server.
+        '403':
+          description: The given access token is invalid or couldn't be verified.

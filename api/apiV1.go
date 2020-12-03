@@ -1,35 +1,49 @@
-package experimental
+package api
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
+	v1 "github.com/nuts-foundation/nuts-auth/api/v1"
+	"github.com/nuts-foundation/nuts-auth/logging"
 	core "github.com/nuts-foundation/nuts-go-core"
 
-	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
-var _ ServerInterface = (*Wrapper)(nil)
+// VerifyAccessToken verifies if a request contains a valid bearer token issued by this server
+func (api *Wrapper) VerifyAccessTokenV1(ctx echo.Context, params v1.VerifyAccessTokenV1Params) error {
+	if len(params.Authorization) == 0 {
+		logging.Log().Warn("No authorization header given")
+		return ctx.NoContent(http.StatusForbidden)
+	}
 
-// Wrapper bridges the generated api types and http logic to the internal types and logic.
-// It checks required parameters and message body. It converts data from api to internal types.
-// Then passes the internal formats to the AuthClient. Converts internal results back to the generated
-// Api types. Handles errors and returns the correct http response. It does not perform any business logic.
-//
-// This is the experimental API. It is used to tests APIs is the wild.
-type Wrapper struct {
-	Auth pkg.AuthClient
+	index := strings.Index(strings.ToLower(params.Authorization), bearerPrefix)
+	if index != 0 {
+		logging.Log().Warn("Authorization does not contain bearer token")
+		return ctx.NoContent(http.StatusForbidden)
+	}
+
+	token := params.Authorization[len(bearerPrefix):]
+
+	_, err := api.Auth.OAuthClient().IntrospectAccessToken(token)
+	if err != nil {
+		logging.Log().WithError(err).Warn("Error while inspecting access token")
+		return ctx.NoContent(http.StatusForbidden)
+	}
+
+	return ctx.NoContent(200)
 }
 
-// VerifySignature handles the VerifySignature http request.
+// VerifySignatureV1 handles the VerifySignatureV1 http request.
 // It parses the request body, parses the verifiable presentation and calls the ContractClient to verify the VP.
-func (w Wrapper) VerifySignature(ctx echo.Context) error {
+func (w Wrapper) VerifySignatureV1(ctx echo.Context) error {
 	requestParams := new(SignatureVerificationRequest)
 	if err := ctx.Bind(requestParams); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
@@ -47,8 +61,8 @@ func (w Wrapper) VerifySignature(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, result)
 }
 
-// CreateSignSession handles the CreateSignSession http request. It parses the parameters, finds the means handler and returns a session pointer which can be used to monitor the session.
-func (w Wrapper) CreateSignSession(ctx echo.Context) error {
+// CreateSignSessionV1 handles the CreateSignSessionV1 http request. It parses the parameters, finds the means handler and returns a session pointer which can be used to monitor the session.
+func (w Wrapper) CreateSignSessionV1(ctx echo.Context) error {
 	requestParams := new(CreateSignSessionRequest)
 	if err := ctx.Bind(requestParams); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
@@ -81,8 +95,8 @@ func (w Wrapper) CreateSignSession(ctx echo.Context) error {
 	return ctx.JSON(http.StatusCreated, response)
 }
 
-// GetSignSessionStatus handles the http requests for getting the current status of a signing session.
-func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error {
+// GetSignSessionStatusV1 handles the http requests for getting the current status of a signing session.
+func (w Wrapper) GetSignSessionStatusV1(ctx echo.Context, sessionPtr string) error {
 	sessionStatus, err := w.Auth.ContractClient().SigningSessionStatus(sessionPtr)
 	if err != nil {
 		if errors.Is(err, services.ErrSessionNotFound) {
@@ -112,8 +126,8 @@ func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
 	return ctx.JSON(http.StatusOK, response)
 }
 
-// GetContractTemplate handles http requests for a contract template. The contract is find by language and type.
-func (w Wrapper) GetContractTemplate(ctx echo.Context, language string, contractType string, params GetContractTemplateParams) error {
+// GetContractTemplateV1 handles http requests for a contract template. The contract is find by language and type.
+func (w Wrapper) GetContractTemplateV1(ctx echo.Context, language string, contractType string, params v1.GetContractTemplateV1Params) error {
 	var version contract.Version
 	if params.Version != nil {
 		version = contract.Version(*params.Version)
@@ -135,8 +149,8 @@ func (w Wrapper) GetContractTemplate(ctx echo.Context, language string, contract
 	return ctx.JSON(http.StatusOK, response)
 }
 
-// DrawUpContract handles the http request for drawing up a contract for a given contract template identified by type, language and version.
-func (w Wrapper) DrawUpContract(ctx echo.Context) error {
+// DrawUpContractV1 handles the http request for drawing up a contract for a given contract template identified by type, language and version.
+func (w Wrapper) DrawUpContractV1(ctx echo.Context) error {
 	params := new(DrawUpContractRequest)
 	if err := ctx.Bind(params); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))

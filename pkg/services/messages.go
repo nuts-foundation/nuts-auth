@@ -31,7 +31,7 @@ type SessionStatusResult struct {
 	NutsAuthToken string `json:"nuts_auth_token"`
 }
 
-// ValidationRequest is used to pass all information to ValidateContract
+// ValidationRequest is used to pass all information to ValidateContractV0
 // deprecated, moved to pkg/contract
 type ValidationRequest struct {
 	// ContractFormat specifies the type of format used for the contract, e.g. 'irma'
@@ -60,7 +60,7 @@ type CreateJwtBearerTokenRequest struct {
 	Subject       *string
 }
 
-// AccessTokenResult defines the return value back to the api for the CreateAccessToken method
+// AccessTokenResult defines the return value back to the api for the CreateAccessTokenV0 method
 type AccessTokenResult struct {
 	AccessToken string
 }

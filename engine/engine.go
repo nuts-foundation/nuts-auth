@@ -1,20 +1,22 @@
 package engine
 
 import (
-	"fmt"
-	"github.com/nuts-foundation/nuts-auth/logging"
-	"net/http"
-	"strings"
+    "fmt"
+    "net/http"
+    "strings"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	apiExperimental "github.com/nuts-foundation/nuts-auth/api/experimental"
-	apiV0 "github.com/nuts-foundation/nuts-auth/api/v0"
-	"github.com/nuts-foundation/nuts-auth/pkg"
-	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
-	nutsGo "github.com/nuts-foundation/nuts-go-core"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
+    "github.com/nuts-foundation/nuts-auth/api"
+    "github.com/nuts-foundation/nuts-auth/logging"
+
+    "github.com/labstack/echo/v4"
+    "github.com/labstack/echo/v4/middleware"
+	apiV1 "github.com/nuts-foundation/nuts-auth/api/v1"
+    apiV0 "github.com/nuts-foundation/nuts-auth/api/v0"
+    "github.com/nuts-foundation/nuts-auth/pkg"
+    "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+    nutsGo "github.com/nuts-foundation/nuts-go-core"
+    "github.com/spf13/cobra"
+    "github.com/spf13/pflag"
 )
 
 type echoRouter interface {
@@ -60,8 +62,8 @@ func NewAuthEngine() *nutsGo.Engine {
 			routerWithAny.Any(irma.IrmaMountPath+"/*", irmaEchoHandler)
 
 			// Mount the Auth-api routes
-			apiV0.RegisterHandlers(router, &apiV0.Wrapper{Auth: authBackend})
-			apiExperimental.RegisterHandlers(router, &apiExperimental.Wrapper{Auth: authBackend})
+			apiV0.RegisterHandlers(router, &api.Wrapper{Auth: authBackend})
+			apiV1.RegisterHandlers(router, &api.Wrapper{Auth: authBackend})
 
 			checkConfig(authBackend.Config)
 
@@ -95,8 +97,8 @@ func initEcho(auth *pkg.Auth) (*echo.Echo, error) {
 	echoServer.Any(irma.IrmaMountPath+"/*", irmaEchoHandler)
 
 	// Mount the Nuts-Auth routes
-	apiV0.RegisterHandlers(echoServer, &apiV0.Wrapper{Auth: auth})
-	apiExperimental.RegisterHandlers(echoServer, &apiExperimental.Wrapper{Auth: auth})
+	apiV0.RegisterHandlers(echoServer, &api.Wrapper{Auth: auth})
+	apiV1.RegisterHandlers(echoServer, &api.Wrapper{Auth: auth})
 
 	// Start the server
 	return echoServer, nil

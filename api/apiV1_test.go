@@ -1,4 +1,4 @@
-package experimental
+package api
 
 import (
 	"encoding/json"
@@ -10,31 +10,14 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
-	coreMock "github.com/nuts-foundation/nuts-go-core/mock"
+	v1 "github.com/nuts-foundation/nuts-auth/api/v1"
 	"github.com/stretchr/testify/assert"
 
 	mock_contract "github.com/nuts-foundation/nuts-auth/mock/contract"
-	services2 "github.com/nuts-foundation/nuts-auth/mock/services"
-	pkg2 "github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/dummy"
 )
-
-type TestContext struct {
-	ctrl               *gomock.Controller
-	echoMock           *coreMock.MockContext
-	authMock           pkg2.AuthClient
-	notaryMock         *services2.MockContractNotary
-	contractClientMock *services2.MockContractClient
-	wrapper            Wrapper
-}
-
-type mockAuthClient struct {
-	ctrl               gomock.Controller
-	mockContractClient *services2.MockContractClient
-	mockContractNotary *services2.MockContractNotary
-}
 
 func (m mockAuthClient) OAuthClient() services.OAuthClient {
 	panic("implement me")
@@ -46,22 +29,6 @@ func (m mockAuthClient) ContractClient() services.ContractClient {
 
 func (m mockAuthClient) ContractNotary() services.ContractNotary {
 	return m.mockContractNotary
-}
-
-func createContext(t *testing.T) TestContext {
-	t.Helper()
-	ctrl := gomock.NewController(t)
-	mockContractClient := services2.NewMockContractClient(ctrl)
-	mockContractNotary := services2.NewMockContractNotary(ctrl)
-	authMock := mockAuthClient{ctrl: *ctrl, mockContractClient: mockContractClient, mockContractNotary: mockContractNotary}
-	return TestContext{
-		ctrl:               ctrl,
-		echoMock:           coreMock.NewMockContext(ctrl),
-		authMock:           authMock,
-		notaryMock:         mockContractNotary,
-		contractClientMock: mockContractClient,
-		wrapper:            Wrapper{Auth: authMock},
-	}
 }
 
 func TestWrapper_GetContractTemplate(t *testing.T) {
@@ -78,7 +45,7 @@ func TestWrapper_GetContractTemplate(t *testing.T) {
 		}
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, response)
 		version := "v1"
-		err := ctx.wrapper.GetContractTemplate(ctx.echoMock, "EN", "PractitionerLogin", GetContractTemplateParams{Version: &version})
+		err := ctx.wrapper.GetContractTemplateV1(ctx.echoMock, "EN", "PractitionerLogin", v1.GetContractTemplateV1Params{Version: &version})
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -88,7 +55,7 @@ func TestWrapper_GetContractTemplate(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		err := ctx.wrapper.GetContractTemplate(ctx.echoMock, "EN", "UnknownContractTemplate", GetContractTemplateParams{Version: nil})
+		err := ctx.wrapper.GetContractTemplateV1(ctx.echoMock, "EN", "UnknownContractTemplate", v1.GetContractTemplateV1Params{Version: nil})
 
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
@@ -112,7 +79,7 @@ func TestWrapper_GetSignSessionStatus(t *testing.T) {
 
 		signingSessionResult.EXPECT().Status().Return(signingSessionStatus)
 
-		ctx.contractClientMock.EXPECT().SigningSessionStatus(signingSessionID).Return(signingSessionResult, nil)
+		ctx.contractMock.EXPECT().SigningSessionStatus(signingSessionID).Return(signingSessionResult, nil)
 
 		response := GetSignSessionStatusResult{
 			Status:                 signingSessionStatus,
@@ -121,7 +88,7 @@ func TestWrapper_GetSignSessionStatus(t *testing.T) {
 
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, response)
 
-		err := ctx.wrapper.GetSignSessionStatus(ctx.echoMock, signingSessionID)
+		err := ctx.wrapper.GetSignSessionStatusV1(ctx.echoMock, signingSessionID)
 		assert.NoError(t, err)
 	})
 
@@ -141,7 +108,7 @@ func TestWrapper_GetSignSessionStatus(t *testing.T) {
 
 		signingSessionResult.EXPECT().Status().Return(signingSessionStatus)
 
-		ctx.contractClientMock.EXPECT().SigningSessionStatus(signingSessionID).Return(signingSessionResult, nil)
+		ctx.contractMock.EXPECT().SigningSessionStatus(signingSessionID).Return(signingSessionResult, nil)
 
 		response := GetSignSessionStatusResult{
 			Status:                 signingSessionStatus,
@@ -150,7 +117,7 @@ func TestWrapper_GetSignSessionStatus(t *testing.T) {
 
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, response)
 
-		err := ctx.wrapper.GetSignSessionStatus(ctx.echoMock, signingSessionID)
+		err := ctx.wrapper.GetSignSessionStatusV1(ctx.echoMock, signingSessionID)
 		assert.NoError(t, err)
 	})
 
@@ -159,9 +126,9 @@ func TestWrapper_GetSignSessionStatus(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		signingSessionID := "123"
-		ctx.contractClientMock.EXPECT().SigningSessionStatus(signingSessionID).Return(nil, services.ErrSessionNotFound)
+		ctx.contractMock.EXPECT().SigningSessionStatus(signingSessionID).Return(nil, services.ErrSessionNotFound)
 
-		err := ctx.wrapper.GetSignSessionStatus(ctx.echoMock, signingSessionID)
+		err := ctx.wrapper.GetSignSessionStatusV1(ctx.echoMock, signingSessionID)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusNotFound, httpError.Code)
@@ -177,9 +144,9 @@ func TestWrapper_GetSignSessionStatus(t *testing.T) {
 
 		signingSessionResult.EXPECT().VerifiablePresentation().Return(nil, errors.New("could not build VP"))
 
-		ctx.contractClientMock.EXPECT().SigningSessionStatus(signingSessionID).Return(signingSessionResult, nil)
+		ctx.contractMock.EXPECT().SigningSessionStatus(signingSessionID).Return(signingSessionResult, nil)
 
-		err := ctx.wrapper.GetSignSessionStatus(ctx.echoMock, signingSessionID)
+		err := ctx.wrapper.GetSignSessionStatusV1(ctx.echoMock, signingSessionID)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusInternalServerError, httpError.Code)
@@ -205,7 +172,7 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 			Version:     ContractVersion("v3"),
 			LegalEntity: LegalEntity("urn:oid:1.2.3.4:foo"),
 		}
-		bindPostBody(&ctx, params)
+		bindPostBody(ctx, params)
 
 		template := contract.StandardContractTemplates["EN"]["PractitionerLogin"]["v3"]
 		drawnUpContract := &contract.Contract{
@@ -222,7 +189,7 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 			Version:  ContractVersion("v3"),
 		}
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, expectedResponse)
-		err := ctx.wrapper.DrawUpContract(ctx.echoMock)
+		err := ctx.wrapper.DrawUpContractV1(ctx.echoMock)
 		assert.NoError(t, err)
 	})
 
@@ -236,9 +203,9 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 			params := DrawUpContractRequest{
 				ValidFrom: &validFrom,
 			}
-			bindPostBody(&ctx, params)
+			bindPostBody(ctx, params)
 
-			err := ctx.wrapper.DrawUpContract(ctx.echoMock)
+			err := ctx.wrapper.DrawUpContractV1(ctx.echoMock)
 
 			assert.IsType(t, &echo.HTTPError{}, err)
 			httpError := err.(*echo.HTTPError)
@@ -255,9 +222,9 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 			params := DrawUpContractRequest{
 				ValidDuration: &duration,
 			}
-			bindPostBody(&ctx, params)
+			bindPostBody(ctx, params)
 
-			err := ctx.wrapper.DrawUpContract(ctx.echoMock)
+			err := ctx.wrapper.DrawUpContractV1(ctx.echoMock)
 
 			assert.IsType(t, &echo.HTTPError{}, err)
 			httpError := err.(*echo.HTTPError)
@@ -274,9 +241,9 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 				Type:     ContractType("UnknownContractName"),
 				Version:  ContractVersion("v3"),
 			}
-			bindPostBody(&ctx, params)
+			bindPostBody(ctx, params)
 
-			err := ctx.wrapper.DrawUpContract(ctx.echoMock)
+			err := ctx.wrapper.DrawUpContractV1(ctx.echoMock)
 
 			assert.IsType(t, &echo.HTTPError{}, err)
 			httpError := err.(*echo.HTTPError)
@@ -294,9 +261,9 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 				Version:     ContractVersion("v3"),
 				LegalEntity: LegalEntity("ZorgId:15"),
 			}
-			bindPostBody(&ctx, params)
+			bindPostBody(ctx, params)
 
-			err := ctx.wrapper.DrawUpContract(ctx.echoMock)
+			err := ctx.wrapper.DrawUpContractV1(ctx.echoMock)
 
 			assert.IsType(t, &echo.HTTPError{}, err)
 			httpError := err.(*echo.HTTPError)
@@ -316,11 +283,11 @@ func TestWrapper_DrawUpContract(t *testing.T) {
 			Version:     ContractVersion("v3"),
 			LegalEntity: LegalEntity("urn:oid:1.2.3.4:foo"),
 		}
-		bindPostBody(&ctx, params)
+		bindPostBody(ctx, params)
 
 		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("unknown error while drawing up the contract"))
 
-		err := ctx.wrapper.DrawUpContract(ctx.echoMock)
+		err := ctx.wrapper.DrawUpContractV1(ctx.echoMock)
 
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
@@ -363,7 +330,7 @@ func TestWrapper_CreateSignSession(t *testing.T) {
 			Status:       map[string]string{},
 		}
 
-		ctx.contractClientMock.EXPECT().CreateSigningSession(gomock.Any()).DoAndReturn(
+		ctx.contractMock.EXPECT().CreateSigningSession(gomock.Any()).DoAndReturn(
 			func(sessionRequest services.CreateSessionRequest) (contract.SessionPointer, error) {
 				return dummyMeans.StartSigningSession(sessionRequest.Message)
 			})
@@ -372,10 +339,10 @@ func TestWrapper_CreateSignSession(t *testing.T) {
 			Means:   "dummy",
 			Payload: "this is the contract message to agree to",
 		}
-		bindPostBody(&ctx, postParams)
+		bindPostBody(ctx, postParams)
 
 		ctx.echoMock.EXPECT().JSON(http.StatusCreated, signSessionResponseMatcher{means: "dummy"})
-		err := ctx.wrapper.CreateSignSession(ctx.echoMock)
+		err := ctx.wrapper.CreateSignSessionV1(ctx.echoMock)
 		assert.NoError(t, err)
 	})
 
@@ -384,11 +351,11 @@ func TestWrapper_CreateSignSession(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		postParams := CreateSignSessionRequest{}
-		bindPostBody(&ctx, postParams)
+		bindPostBody(ctx, postParams)
 
-		ctx.contractClientMock.EXPECT().CreateSigningSession(gomock.Any()).Return(nil, errors.New("some error"))
+		ctx.contractMock.EXPECT().CreateSigningSession(gomock.Any()).Return(nil, errors.New("some error"))
 
-		err := ctx.wrapper.CreateSignSession(ctx.echoMock)
+		err := ctx.wrapper.CreateSignSessionV1(ctx.echoMock)
 
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
@@ -414,7 +381,7 @@ func TestWrapper_VerifySignature(t *testing.T) {
 		Type:    []string{"TestCredential"},
 	}}
 
-	bindPostBody(&ctx, postParams)
+	bindPostBody(ctx, postParams)
 
 	verificationResult := &contract.VerificationResult{
 		State:               contract.Valid,
@@ -423,9 +390,9 @@ func TestWrapper_VerifySignature(t *testing.T) {
 		ContractAttributes:  nil,
 	}
 
-	ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(verificationResult, nil)
+	ctx.contractMock.EXPECT().VerifyVP(gomock.Any()).Return(verificationResult, nil)
 	ctx.echoMock.EXPECT().JSON(http.StatusOK, SignatureVerificationResponse(true))
 
-	err := ctx.wrapper.VerifySignature(ctx.echoMock)
+	err := ctx.wrapper.VerifySignatureV1(ctx.echoMock)
 	assert.NoError(t, err)
 }

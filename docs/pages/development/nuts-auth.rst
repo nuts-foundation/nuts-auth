@@ -28,7 +28,9 @@ Generate the api package from the OpenAPI specification
 
 .. code-block:: shell
 
-    oapi-codegen -generate server,types -package api docs/_static/nuts-auth.yaml > api/generated.go
+    oapi-codegen -generate types,skip-prune -package api docs/_static/nuts-auth-model.yaml > api/generated.go
+    oapi-codegen -generate server,types -package v0 --import-mapping=./nuts-auth-model.yaml:github.com/nuts-foundation/nuts-auth/api docs/_static/nuts-auth.yaml  > api/v0/generated.go
+    oapi-codegen -generate server,types -package v1 --import-mapping=./nuts-auth-model.yaml:github.com/nuts-foundation/nuts-auth/api docs/_static/nuts-auth-v1.yaml  > api/v1/generated.go
 
 Embed files like certificates from the bindata directory
 

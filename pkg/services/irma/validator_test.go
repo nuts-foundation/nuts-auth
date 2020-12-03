@@ -221,11 +221,11 @@ func TestValidateContract(t *testing.T) {
 			contract.NowFunc = func() time.Time { return tt.date }
 			got, err := validator.ValidateContract(tt.args.contract, tt.args.format, &tt.args.actingPartyCN)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateContract() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ValidateContractV0() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ValidateContract() = %v, want %v", got, tt.want)
+				t.Errorf("ValidateContractV0() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -1,4 +1,22 @@
-package v0
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package api
 
 import (
 	"encoding/json"
@@ -11,9 +29,9 @@ import (
 	"testing"
 	"time"
 
+	v0 "github.com/nuts-foundation/nuts-auth/api/v0"
 	"github.com/nuts-foundation/nuts-registry/pkg"
 
-	servicesMock "github.com/nuts-foundation/nuts-auth/mock/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
 
@@ -27,12 +45,9 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
-	coreMock "github.com/nuts-foundation/nuts-go-core/mock"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/nuts-foundation/nuts-auth/mock"
 )
 
 var careOrgID = test.OrganizationID("987")
@@ -85,7 +100,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 				Irmaqr: "signing",
 			}, SessionId: "abc-sessionid"})
 
-		err := wrapper.CreateSession(ctx.echoMock)
+		err := wrapper.CreateSessionV0(ctx.echoMock)
 
 		assert.Nil(t, err)
 	})
@@ -101,7 +116,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			_ = json.Unmarshal([]byte(jsonData), f)
 		})
 
-		err := wrapper.CreateSession(ctx.echoMock)
+		err := wrapper.CreateSessionV0(ctx.echoMock)
 		assert.Error(t, err)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
@@ -114,7 +129,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			_ = json.Unmarshal([]byte(jsonData), f)
 		})
 
-		err = wrapper.CreateSession(ctx.echoMock)
+		err = wrapper.CreateSessionV0(ctx.echoMock)
 		assert.Error(t, err)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError = err.(*echo.HTTPError)
@@ -128,7 +143,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		ctx.echoMock.EXPECT().Bind(gomock.Any()).Return(errors.New("unable to parse body"))
-		err := wrapper.CreateSession(ctx.echoMock)
+		err := wrapper.CreateSessionV0(ctx.echoMock)
 		assert.Error(t, err)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
@@ -153,7 +168,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 
-		err := wrapper.CreateSession(ctx.echoMock)
+		err := wrapper.CreateSessionV0(ctx.echoMock)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
@@ -190,7 +205,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 
-		err := wrapper.CreateSession(ctx.echoMock)
+		err := wrapper.CreateSessionV0(ctx.echoMock)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
@@ -217,7 +232,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			_ = json.Unmarshal(jsonData, f)
 		})
 
-		err := wrapper.CreateSession(ctx.echoMock)
+		err := wrapper.CreateSessionV0(ctx.echoMock)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
@@ -261,7 +276,7 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 			ProofStatus:   &proofStatus,
 		})
 		wrapper := Wrapper{Auth: ctx.authMock}
-		err := wrapper.SessionRequestStatus(ctx.echoMock, sessionID)
+		err := wrapper.SessionRequestStatusV0(ctx.echoMock, sessionID)
 		assert.Nil(t, err)
 	})
 
@@ -274,7 +289,7 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 		ctx.contractMock.EXPECT().ContractSessionStatus(sessionID).Return(nil, services.ErrSessionNotFound)
 		wrapper := Wrapper{Auth: ctx.authMock}
 
-		err := wrapper.SessionRequestStatus(ctx.echoMock, sessionID)
+		err := wrapper.SessionRequestStatusV0(ctx.echoMock, sessionID)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusNotFound, httpError.Code)
@@ -282,7 +297,7 @@ func TestWrapper_NutsAuthSessionRequestStatus(t *testing.T) {
 }
 
 func TestWrapper_NutsAuthValidateContract(t *testing.T) {
-	t.Run("ValidateContract", func(t *testing.T) {
+	t.Run("ValidateContractV0", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
@@ -315,7 +330,7 @@ func TestWrapper_NutsAuthValidateContract(t *testing.T) {
 		}, nil)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
-		err := wrapper.ValidateContract(ctx.echoMock)
+		err := wrapper.ValidateContractV0(ctx.echoMock)
 
 		assert.Nil(t, err)
 	})
@@ -330,7 +345,7 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 		cType := "PractitionerLogin"
 		cVersion := "v1"
 		cLanguage := "EN"
-		params := GetContractByTypeParams{
+		params := v0.GetContractByTypeV0Params{
 			Version:  &cVersion,
 			Language: &cLanguage,
 		}
@@ -347,7 +362,7 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, answer)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
-		err := wrapper.GetContractByType(ctx.echoMock, cType, params)
+		err := wrapper.GetContractByTypeV0(ctx.echoMock, cType, params)
 
 		assert.Nil(t, err)
 	})
@@ -357,10 +372,10 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		cType := "UnknownContract"
-		params := GetContractByTypeParams{}
+		params := v0.GetContractByTypeV0Params{}
 
 		wrapper := Wrapper{Auth: ctx.authMock}
-		err := wrapper.GetContractByType(ctx.echoMock, cType, params)
+		err := wrapper.GetContractByTypeV0(ctx.echoMock, cType, params)
 
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
@@ -386,37 +401,7 @@ func (e OAuthErrorMatcher) String() string {
 	return fmt.Sprintf("is equal to {%v, %v}", e.x.Error, e.x.ErrorDescription)
 }
 
-type TestContext struct {
-	ctrl         *gomock.Controller
-	echoMock     *coreMock.MockContext
-	authMock     *mock.MockAuthClient
-	oauthMock    *servicesMock.MockOAuthClient
-	notaryMock   *servicesMock.MockContractNotary
-	contractMock *servicesMock.MockContractClient
-	wrapper      Wrapper
-}
 
-var createContext = func(t *testing.T) *TestContext {
-	ctrl := gomock.NewController(t)
-	authMock := mock.NewMockAuthClient(ctrl)
-	oauthMock := servicesMock.NewMockOAuthClient(ctrl)
-	notaryMock := servicesMock.NewMockContractNotary(ctrl)
-	contractMock := servicesMock.NewMockContractClient(ctrl)
-
-	authMock.EXPECT().OAuthClient().AnyTimes().Return(oauthMock)
-	authMock.EXPECT().ContractClient().AnyTimes().Return(contractMock)
-	authMock.EXPECT().ContractNotary().AnyTimes().Return(notaryMock)
-
-	return &TestContext{
-		ctrl:         ctrl,
-		echoMock:     coreMock.NewMockContext(ctrl),
-		authMock:     authMock,
-		oauthMock:    oauthMock,
-		contractMock: contractMock,
-		notaryMock:   notaryMock,
-		wrapper:      Wrapper{Auth: authMock},
-	}
-}
 
 func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 	const validJwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6NDgwMDAwMDAiLCJzdWIiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjE6MTI0ODEyNDgiLCJzaWQiOiJ1cm46b2lkOjIuMTYuODQwLjEuMTEzODgzLjIuNC42LjM6OTk5OTk5MCIsImF1ZCI6Imh0dHBzOi8vdGFyZ2V0X3Rva2VuX2VuZHBvaW50IiwidXNpIjoiYmFzZTY0IGVuY29kZWQgc2lnbmF0dXJlIiwiZXhwIjoxNTc4MTEwNDgxLCJpYXQiOjE1Nzg5MTA0ODEsImp0aSI6IjEyMy00NTYtNzg5In0.76XtU81IyR3Ak_2fgrYsuLcvxndf0eedT1mFPa-rPXk"
@@ -445,7 +430,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errOauthUnsupportedGrant}
 		expectError(ctx, errorResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
+		err := ctx.wrapper.CreateAccessTokenV0(ctx.echoMock, v0.CreateAccessTokenV0Params{})
 
 		assert.Nil(t, err)
 	})
@@ -461,7 +446,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errOauthInvalidRequest}
 		expectError(ctx, errorResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
+		err := ctx.wrapper.CreateAccessTokenV0(ctx.echoMock, v0.CreateAccessTokenV0Params{})
 
 		assert.Nil(t, err)
 	})
@@ -477,7 +462,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errOauthInvalidRequest}
 		expectError(ctx, errorResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: "%"})
+		err := ctx.wrapper.CreateAccessTokenV0(ctx.echoMock, v0.CreateAccessTokenV0Params{XSslClientCert: "%"})
 
 		assert.Nil(t, err)
 	})
@@ -493,12 +478,12 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		errorResponse := AccessTokenRequestFailedResponse{ErrorDescription: errorDescription, Error: errOauthInvalidGrant}
 		expectError(ctx, errorResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{})
+		err := ctx.wrapper.CreateAccessTokenV0(ctx.echoMock, v0.CreateAccessTokenV0Params{})
 
 		assert.Nil(t, err)
 	})
 
-	t.Run("auth.CreateAccessToken returns error", func(t *testing.T) {
+	t.Run("auth.CreateAccessTokenV0 returns error", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
@@ -510,7 +495,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		expectError(ctx, errorResponse)
 
 		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, ClientCert: "cert"}).Return(nil, fmt.Errorf("oh boy"))
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: "cert"})
+		err := ctx.wrapper.CreateAccessTokenV0(ctx.echoMock, v0.CreateAccessTokenV0Params{XSslClientCert: "cert"})
 
 		assert.Nil(t, err)
 	})
@@ -530,7 +515,7 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
 		expectStatusOK(ctx, apiResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: encodedPem})
+		err := ctx.wrapper.CreateAccessTokenV0(ctx.echoMock, v0.CreateAccessTokenV0Params{XSslClientCert: encodedPem})
 
 		assert.Nil(t, err)
 
@@ -576,7 +561,7 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 		ctx.oauthMock.EXPECT().CreateJwtBearerToken(expectedRequest).Return(&services.JwtBearerTokenResult{BearerToken: response.BearerToken}, nil)
 		expectStatusOK(ctx, response)
 
-		if !assert.Nil(t, ctx.wrapper.CreateJwtBearerToken(ctx.echoMock)) {
+		if !assert.Nil(t, ctx.wrapper.CreateJwtBearerTokenV0(ctx.echoMock)) {
 			t.FailNow()
 		}
 	})
@@ -601,7 +586,7 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 		response := TokenIntrospectionResponse{Active: false}
 		expectStatusOK(ctx, response)
 
-		_ = ctx.wrapper.IntrospectAccessToken(ctx.echoMock)
+		_ = ctx.wrapper.IntrospectAccessTokenV0(ctx.echoMock)
 	})
 
 	t.Run("introspect a token", func(t *testing.T) {
@@ -651,60 +636,60 @@ func TestWrapper_NutsAuthIntrospectAccessToken(t *testing.T) {
 		}
 		expectStatusOK(ctx, response)
 
-		if !assert.NoError(t, ctx.wrapper.IntrospectAccessToken(ctx.echoMock)) {
+		if !assert.NoError(t, ctx.wrapper.IntrospectAccessTokenV0(ctx.echoMock)) {
 			t.Fail()
 		}
 	})
 }
 
-func TestWrapper_VerifyAccessToken(t *testing.T) {
+func TestWrapper_VerifyAccessTokenV0(t *testing.T) {
 	t.Run("403 - missing header", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		params := VerifyAccessTokenParams{
+		params := v0.VerifyAccessTokenV0Params{
 			Authorization: "",
 		}
 
 		ctx.echoMock.EXPECT().NoContent(http.StatusForbidden)
 
-		_ = ctx.wrapper.VerifyAccessToken(ctx.echoMock, params)
+		_ = ctx.wrapper.VerifyAccessTokenV0(ctx.echoMock, params)
 	})
 
 	t.Run("403 - incorrect authorization header", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		params := VerifyAccessTokenParams{
+		params := v0.VerifyAccessTokenV0Params{
 			Authorization: "34987569ytihua",
 		}
 
 		ctx.echoMock.EXPECT().NoContent(http.StatusForbidden)
 
-		_ = ctx.wrapper.VerifyAccessToken(ctx.echoMock, params)
+		_ = ctx.wrapper.VerifyAccessTokenV0(ctx.echoMock, params)
 	})
 
 	t.Run("403 - incorrect token", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		params := VerifyAccessTokenParams{
+		params := v0.VerifyAccessTokenV0Params{
 			Authorization: "Bearer token",
 		}
 
 		ctx.echoMock.EXPECT().NoContent(http.StatusForbidden)
 		ctx.oauthMock.EXPECT().IntrospectAccessToken("token").Return(nil, errors.New("unauthorized"))
 
-		_ = ctx.wrapper.VerifyAccessToken(ctx.echoMock, params)
+		_ = ctx.wrapper.VerifyAccessTokenV0(ctx.echoMock, params)
 	})
 
 	t.Run("200 - correct token", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		params := VerifyAccessTokenParams{
+		params := v0.VerifyAccessTokenV0Params{
 			Authorization: "Bearer token",
 		}
 
 		ctx.echoMock.EXPECT().NoContent(http.StatusOK)
 		ctx.oauthMock.EXPECT().IntrospectAccessToken("token").Return(&services.NutsAccessToken{}, nil)
 
-		_ = ctx.wrapper.VerifyAccessToken(ctx.echoMock, params)
+		_ = ctx.wrapper.VerifyAccessTokenV0(ctx.echoMock, params)
 	})
 }
