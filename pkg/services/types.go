@@ -36,7 +36,7 @@ const (
 )
 
 // NutsIdentityToken contains the signed identity of the user performing the request
-// Deprecated ??
+// Deprecated
 type NutsIdentityToken struct {
 	jwt.StandardClaims
 	//Identifier of the legalEntity who issued and signed the token

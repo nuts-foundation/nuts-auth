@@ -107,8 +107,6 @@ func (v Service) StartSigningSession(rawContractText string) (contract.SessionPo
 	return challenge, nil
 }
 
-// SigningSessionStatus returns the current status of a certain session.
-// It returns nil if the session is not found
 func (v Service) SigningSessionStatus(sessionID string) (contract.SigningSessionResult, error) {
 	if result := v.IrmaSessionHandler.GetSessionResult(sessionID); result != nil {
 		var (
@@ -116,10 +114,10 @@ func (v Service) SigningSessionStatus(sessionID string) (contract.SigningSession
 		)
 		if result.Signature != nil {
 			c, err := contract.ParseContractString(result.Signature.Message, v.ContractTemplates)
-			sic := &SignedIrmaContract{*result.Signature, c}
 			if err != nil {
 				return nil, err
 			}
+			sic := &SignedIrmaContract{*result.Signature, c}
 
 			le, err := v.legalEntityFromContract(sic)
 			if err != nil {
@@ -154,8 +152,7 @@ func (s SigningSessionResult) Status() string {
 // VerifiablePresentation returns an IRMA implementation of the contract.VerifiablePresentation interface.
 func (s SigningSessionResult) VerifiablePresentation() (contract.VerifiablePresentation, error) {
 
-	irmaSig := s.Signature
-	js, err := json.Marshal(irmaSig)
+	js, err := json.Marshal(s.Signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create NutsIrmaPresentation")
 	}
