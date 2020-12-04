@@ -18,6 +18,8 @@
 
 package pkg
 
+import "time"
+
 // JwtBearerGrantType defines the grant-type to use in the access token request
 const JwtBearerGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
 
@@ -33,4 +35,5 @@ type AuthConfig struct {
 	ActingPartyCn             string
 	EnableCORS                bool
 	ContractValidators        []string
+	ContractValidDuration     time.Duration
 }

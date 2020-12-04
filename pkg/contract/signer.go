@@ -37,7 +37,6 @@ type Signer interface {
 type SessionPointer interface {
 	SessionID() string
 	Payload() []byte
-	MarshalJSON() ([]byte, error)
 }
 
 // SigningSessionResult holds information in the current status of the SigningSession

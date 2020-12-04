@@ -33,7 +33,8 @@ type VerifierType string
 
 // Verifier defines the funcs needed to verify a VerifiablePresentation
 type Verifier interface {
-	// ValidateVP validates a verifiable presentation, it's up to the caller to select the right verifier for the given VerifiablePresentation type
+	// VerifyVP validates a verifiable presentation.
+	// When the verifier could not handle the verifiable presentation, an error should be thrown.
 	VerifyVP(rawVerifiablePresentation []byte) (*VerificationResult, error)
 }
 

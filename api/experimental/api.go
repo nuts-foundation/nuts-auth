@@ -75,18 +75,19 @@ func (w Wrapper) CreateSignSession(ctx echo.Context) error {
 		SigningMeans: requestParams.Means,
 		Message:      requestParams.Payload,
 	}
-	pointer, err := w.Auth.ContractClient().CreateSigningSession(createSessionRequest)
+	sessionPtr, err := w.Auth.ContractClient().CreateSigningSession(createSessionRequest)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to create sign challenge: %s", err.Error()))
 	}
 
 	var keyValPointer map[string]interface{}
-	err = convertToMap(pointer, &keyValPointer)
+	err = convertToMap(sessionPtr, &keyValPointer)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to build sessionPointer: %s", err.Error()))
 	}
 
-	response := CreateSignSessionResult{
+	response := CreateSignSessionResponse{
+		SessionID:  sessionPtr.SessionID(),
 		Means:      requestParams.Means,
 		SessionPtr: keyValPointer,
 	}
@@ -94,11 +95,11 @@ func (w Wrapper) CreateSignSession(ctx echo.Context) error {
 }
 
 // GetSignSessionStatus handles the http requests for getting the current status of a signing session.
-func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error {
-	sessionStatus, err := w.Auth.ContractClient().SigningSessionStatus(sessionPtr)
+func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionID string) error {
+	sessionStatus, err := w.Auth.ContractClient().SigningSessionStatus(sessionID)
 	if err != nil {
 		if errors.Is(err, services.ErrSessionNotFound) {
-			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("no active signing session for sessionPtr: '%s' found", sessionPtr))
+			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("no active signing session for sessionID: '%s' found", sessionID))
 		}
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to retrieve a session status: %s", err.Error()))
 	}
@@ -114,7 +115,7 @@ func (w Wrapper) GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
 			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert verifiable presentation: %s", err.Error()))
 		}
 	}
-	response := GetSignSessionStatusResult{Status: sessionStatus.Status(), VerifiablePresentation: apiVp}
+	response := GetSignSessionStatusResponse{Status: sessionStatus.Status(), VerifiablePresentation: apiVp}
 	return ctx.JSON(http.StatusOK, response)
 }
 

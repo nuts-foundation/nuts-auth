@@ -46,13 +46,16 @@ type CreateSignSessionRequest struct {
 	Payload string `json:"payload"`
 }
 
-// CreateSignSessionResult defines model for CreateSignSessionResult.
-type CreateSignSessionResult struct {
+// CreateSignSessionResponse defines model for CreateSignSessionResponse.
+type CreateSignSessionResponse struct {
 
 	// The means this session uses to sign.
 	Means string `json:"means"`
 
-	// A pointer to a signature session. This is an opaque value which only has meaning in the context of the signing means. Can be an URL, base64 encoded image of a QRCode etc.
+	// Unique identifier of this sign session.
+	SessionID string `json:"sessionID"`
+
+	// A pointer to a sign session. This is an opaque value which only has meaning in the context of the signing means. Can be an URL, base64 encoded image of a QRCode etc.
 	SessionPtr map[string]interface{} `json:"sessionPtr"`
 }
 
@@ -78,8 +81,8 @@ type DrawUpContractRequest struct {
 	Version ContractVersion `json:"version"`
 }
 
-// GetSignSessionStatusResult defines model for GetSignSessionStatusResult.
-type GetSignSessionStatusResult struct {
+// GetSignSessionStatusResponse defines model for GetSignSessionStatusResponse.
+type GetSignSessionStatusResponse struct {
 
 	// Status indicates the status of the signing proces. Values depend on the implementation of the signing means.
 	Status string `json:"status"`
@@ -135,8 +138,8 @@ type ServerInterface interface {
 	// (POST /internal/auth/experimental/signature/session)
 	CreateSignSession(ctx echo.Context) error
 	// Get the current status of a signing session
-	// (GET /internal/auth/experimental/signature/session/{sessionPtr})
-	GetSignSessionStatus(ctx echo.Context, sessionPtr string) error
+	// (GET /internal/auth/experimental/signature/session/{sessionID})
+	GetSignSessionStatus(ctx echo.Context, sessionID string) error
 	// Verify a signature in the form of a verifiable credential
 	// (PUT /internal/auth/experimental/signature/verify)
 	VerifySignature(ctx echo.Context) error
@@ -168,16 +171,16 @@ func (w *ServerInterfaceWrapper) CreateSignSession(ctx echo.Context) error {
 // GetSignSessionStatus converts echo context to params.
 func (w *ServerInterfaceWrapper) GetSignSessionStatus(ctx echo.Context) error {
 	var err error
-	// ------------- Path parameter "sessionPtr" -------------
-	var sessionPtr string
+	// ------------- Path parameter "sessionID" -------------
+	var sessionID string
 
-	err = runtime.BindStyledParameter("simple", false, "sessionPtr", ctx.Param("sessionPtr"), &sessionPtr)
+	err = runtime.BindStyledParameter("simple", false, "sessionID", ctx.Param("sessionID"), &sessionID)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter sessionPtr: %s", err))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter sessionID: %s", err))
 	}
 
 	// Invoke the callback with all the unmarshalled arguments
-	err = w.Handler.GetSignSessionStatus(ctx, sessionPtr)
+	err = w.Handler.GetSignSessionStatus(ctx, sessionID)
 	return err
 }
 
@@ -209,8 +212,7 @@ func RegisterHandlers(router interface {
 
 	router.PUT("/internal/auth/experimental/contract/drawup", wrapper.DrawUpContract)
 	router.POST("/internal/auth/experimental/signature/session", wrapper.CreateSignSession)
-	router.GET("/internal/auth/experimental/signature/session/:sessionPtr", wrapper.GetSignSessionStatus)
+	router.GET("/internal/auth/experimental/signature/session/:sessionID", wrapper.GetSignSessionStatus)
 	router.PUT("/internal/auth/experimental/signature/verify", wrapper.VerifySignature)
 
 }
-

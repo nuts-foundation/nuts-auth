@@ -20,33 +20,26 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreateSignSessionResult"
-  /internal/auth/experimental/signature/session/{sessionPtr}:
+                $ref: "#/components/schemas/CreateSignSessionResponse"
+  /internal/auth/experimental/signature/session/{sessionID}:
     get:
       operationId: getSignSessionStatus
       summary: Get the current status of a signing session
       parameters:
-        - name: sessionPtr
+        - name: sessionID
           in: path
           required: true
           schema:
             type: string
       responses:
         200:
-          description: When the sessionPtr is known. Contains the current session status.
+          description: When the session is found. Contains the current session status.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GetSignSessionStatusResult"
+                $ref: "#/components/schemas/GetSignSessionStatusResponse"
         404:
-          description: When the sessionPtr in unknown.
-  #    delete:
-  #      operationId: cancelSignSession
-  #      responses:
-  #        204:
-  #          description: When the sessionPtr is known and the session was successfully deleted
-  #        404:
-  #          description: When the sessionPtr was unknown
+          description: When the session could not be found.
   /internal/auth/experimental/signature/verify:
     put:
       operationId: verifySignature
@@ -104,13 +97,17 @@ components:
           type: string
           description: base64 encoded payload what needs to be signed
 
-    CreateSignSessionResult:
+    CreateSignSessionResponse:
       required:
+        - sessionID
         - sessionPtr
         - means
       properties:
+        sessionID:
+          description: Unique identifier of this sign session.
+          type: string
         sessionPtr:
-          description: A pointer to a signature session. This is an opaque value which only has meaning in the context of the signing means. Can be an URL, base64 encoded image of a QRCode etc.
+          description: A pointer to a sign session. This is an opaque value which only has meaning in the context of the signing means. Can be an URL, base64 encoded image of a QRCode etc.
           type: object
         means:
           description: The means this session uses to sign.
@@ -118,7 +115,7 @@ components:
           enum: [ irma, dummy ]
           example: irma
 
-    GetSignSessionStatusResult:
+    GetSignSessionStatusResponse:
       required:
         - status
       properties:

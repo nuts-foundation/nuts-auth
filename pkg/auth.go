@@ -74,16 +74,17 @@ type Auth struct {
 }
 
 // ContractNotary returns an implementation of the ContractNotary interface.
-func (auth *Auth) ContractNotary() services.ContractNotary {
+func (auth Auth) ContractNotary() services.ContractNotary {
 	return auth.contractNotary
 }
 
 // DefaultAuthConfig returns an instance of AuthConfig with the default values.
 func DefaultAuthConfig() AuthConfig {
 	return AuthConfig{
-		Address:            "localhost:1323",
-		IrmaSchemeManager:  "pbdf",
-		ContractValidators: []string{"irma", "uzi", "dummy"},
+		Address:               "localhost:1323",
+		IrmaSchemeManager:     "pbdf",
+		ContractValidators:    []string{"irma", "uzi", "dummy"},
+		ContractValidDuration: 60 * time.Minute,
 	}
 }
 
@@ -104,7 +105,7 @@ func NewAuthInstance(config AuthConfig, cryptoClient nutscrypto.Client, registry
 		Config:         config,
 		Crypto:         cryptoClient,
 		Registry:       registryClient,
-		contractNotary: contract.NewContractNotary(registryClient, cryptoClient, 60*time.Minute),
+		contractNotary: contract.NewContractNotary(registryClient, cryptoClient, config.ContractValidDuration),
 	}
 }
 

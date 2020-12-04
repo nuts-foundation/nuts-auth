@@ -99,7 +99,7 @@ func TestWrapper_GetSignSessionStatus(t *testing.T) {
 
 		ctx.contractClientMock.EXPECT().SigningSessionStatus(signingSessionID).Return(signingSessionResult, nil)
 
-		response := GetSignSessionStatusResult{
+		response := GetSignSessionStatusResponse{
 			Status:                 signingSessionStatus,
 			VerifiablePresentation: nil,
 		}
@@ -128,7 +128,7 @@ func TestWrapper_GetSignSessionStatus(t *testing.T) {
 
 		ctx.contractClientMock.EXPECT().SigningSessionStatus(signingSessionID).Return(signingSessionResult, nil)
 
-		response := GetSignSessionStatusResult{
+		response := GetSignSessionStatusResponse{
 			Status:                 signingSessionStatus,
 			VerifiablePresentation: &VerifiablePresentation{Context: []string{"http://example.com"}},
 		}
@@ -150,7 +150,7 @@ func TestWrapper_GetSignSessionStatus(t *testing.T) {
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusNotFound, httpError.Code)
-		assert.Equal(t, "no active signing session for sessionPtr: '123' found", httpError.Message)
+		assert.Equal(t, "no active signing session for sessionID: '123' found", httpError.Message)
 	})
 
 	t.Run("nok - unable to build a VP", func(t *testing.T) {
@@ -323,7 +323,7 @@ func (s signSessionResponseMatcher) Matches(x interface{}) bool {
 		return false
 	}
 
-	return x.(CreateSignSessionResult).Means == s.means && x.(CreateSignSessionResult).SessionPtr["sessionID"] != ""
+	return x.(CreateSignSessionResponse).Means == s.means && x.(CreateSignSessionResponse).SessionPtr["sessionID"] != ""
 }
 
 func (s signSessionResponseMatcher) String() string {
