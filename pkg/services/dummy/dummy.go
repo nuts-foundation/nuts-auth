@@ -59,7 +59,7 @@ type Dummy struct {
 // Presentation is a VerifiablePresentation without valid cryptographic proofs
 // It is only usable in non-strict mode.
 type Presentation struct {
-	contract.VerifiableCredentialBase
+	contract.VerifiablePresentationBase
 	Proof Proof
 }
 
@@ -116,7 +116,7 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 	}
 
 	return Presentation{
-		VerifiableCredentialBase: contract.VerifiableCredentialBase{
+		VerifiablePresentationBase: contract.VerifiablePresentationBase{
 			Context: []string{contract.VerifiableCredentialContext},
 			Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
 		},

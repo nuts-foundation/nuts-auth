@@ -163,10 +163,10 @@ func Test_contractNotaryService_DrawUpContract(t *testing.T) {
 		ctx.cryptoMock.EXPECT().PrivateKeyExists(gomock.Any()).AnyTimes().Return(true)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).AnyTimes().Return(&db.Organization{Name: "CareBears"}, nil)
 
-		timenow = func() time.Time {
+		timeNow = func() time.Time {
 			return time.Time{}.Add(10 * time.Second)
 		}
-		defer func() { timenow = time.Now }()
+		defer func() { timeNow = time.Now }()
 		drawnUpContract, err := ctx.notary.DrawUpContract(template, orgID, time.Time{}, 0)
 		if !assert.NoError(t, err) {
 			return

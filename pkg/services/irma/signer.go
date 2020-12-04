@@ -159,7 +159,7 @@ func (s SigningSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 	b64 := base64.StdEncoding.EncodeToString(js)
 
 	return VerifiablePresentation{
-		VerifiableCredentialBase: contract.VerifiableCredentialBase{
+		VerifiablePresentationBase: contract.VerifiablePresentationBase{
 			Context: []string{contract.VerifiableCredentialContext},
 			Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
 		},

@@ -39,7 +39,8 @@ type contractNotaryService struct {
 	ContractValidity time.Duration
 }
 
-var timenow = time.Now
+// timeNow can be used during tests to overwrite the current time.
+var timeNow = time.Now
 
 // NewContractNotary accepts the registry and crypto Nuts engines and returns a ContractNotary
 func NewContractNotary(reg registry.RegistryClient, crypto nutscrypto.Client, contractValidity time.Duration) services.ContractNotary {
@@ -82,7 +83,7 @@ func (s *contractNotaryService) DrawUpContract(template contract.Template, orgID
 		validDuration = s.ContractValidity
 	}
 	if validFrom.IsZero() {
-		validFrom = timenow()
+		validFrom = timeNow()
 	}
 
 	drawnUpContract, err := template.Render(contractAttrs, validFrom, validDuration)

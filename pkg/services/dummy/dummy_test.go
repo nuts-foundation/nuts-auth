@@ -163,7 +163,7 @@ func TestDummy_VerifyVP(t *testing.T) {
 		}
 
 		p := Presentation{
-			VerifiableCredentialBase: contract.VerifiableCredentialBase{
+			VerifiablePresentationBase: contract.VerifiablePresentationBase{
 				Context: []string{contract.VerifiableCredentialContext},
 				Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
 			},

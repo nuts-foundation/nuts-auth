@@ -82,7 +82,7 @@ func (v Service) IsInitialized() bool {
 
 // VerifiablePresentation is a specific proof for irma signatures
 type VerifiablePresentation struct {
-	contract.VerifiableCredentialBase
+	contract.VerifiablePresentationBase
 	Proof VPProof `json:"proof"`
 }
 
@@ -113,7 +113,6 @@ func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificat
 		return nil, err
 	}
 
-	// todo this is because of backwards compatibility
 	return &contract.VerificationResult{
 		State:               contract.State(cvr.ValidationResult),
 		ContractFormat:      contract.Format(cvr.ContractFormat),

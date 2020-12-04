@@ -38,14 +38,11 @@ type Verifier interface {
 	VerifyVP(rawVerifiablePresentation []byte) (*VerificationResult, error)
 }
 
-// VerifiableCredentialBase holds the basic fields for a VerifiableCredential
+// VerifiablePresentationBase holds the basic fields for a VerifiableCredential
 // todo: move or use lib
-type VerifiableCredentialBase struct {
-	Context      []string `json:"@context"`
-	ID           *string
-	Type         []string
-	Issuer       *string
-	IssuanceDate *string
+type VerifiablePresentationBase struct {
+	Context []string `json:"@context"`
+	Type    []string
 }
 
 // VerifiableCredentialContext is the v1 base context for VPs
