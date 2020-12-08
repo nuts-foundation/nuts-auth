@@ -26,6 +26,8 @@ import (
 
 	"github.com/nuts-foundation/nuts-auth/logging"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/dummy"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/uzi"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/x509"
 
 	nutscrypto "github.com/nuts-foundation/nuts-crypto/pkg"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -121,6 +123,18 @@ func (s *service) Configure() (err error) {
 		}
 		s.verifiers[dummy.VerifiablePresentationType] = d
 		s.signers[dummy.ContractFormat] = d
+	}
+
+	if _, ok := cvMap[uzi.VerifiablePresentationType]; ok {
+		crlGetter := x509.NewCachedHttpCrlService()
+		uziValidator, err := x509.NewUziValidator(x509.UziAcceptation, &contract.StandardContractTemplates, crlGetter)
+		uziVerifier := uzi.UziVerifier{UziValidator: uziValidator}
+
+		if err != nil {
+			return fmt.Errorf("could not initiate uzi validator: %w", err)
+		}
+
+		s.verifiers[uzi.VerifiablePresentationType] = uziVerifier
 	}
 
 	return

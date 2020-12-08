@@ -44,7 +44,7 @@ type UziValidator struct {
 	contractTemplates *contract.TemplateStore
 }
 
-// UziEnv is used to indicate which Uzi environment should be used.
+// UziEnv is used to indicate which Uzi environment (e.g. production, acceptation) should be used.
 type UziEnv string
 
 // UziProduction uses the production certificate tree:
