@@ -1,3 +1,21 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package engine
 
 import (
@@ -8,7 +26,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/nuts-foundation/nuts-auth/api"
+	apiExperimental "github.com/nuts-foundation/nuts-auth/api/experimental"
+	apiV0 "github.com/nuts-foundation/nuts-auth/api/v0"
 	"github.com/nuts-foundation/nuts-auth/pkg"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 	nutsGo "github.com/nuts-foundation/nuts-go-core"
@@ -59,7 +78,8 @@ func NewAuthEngine() *nutsGo.Engine {
 			routerWithAny.Any(irma.IrmaMountPath+"/*", irmaEchoHandler)
 
 			// Mount the Auth-api routes
-			api.RegisterHandlers(router, &api.Wrapper{Auth: authBackend})
+			apiV0.RegisterHandlers(router, &apiV0.Wrapper{Auth: authBackend})
+			apiExperimental.RegisterHandlers(router, &apiExperimental.Wrapper{Auth: authBackend})
 
 			checkConfig(authBackend.Config)
 
@@ -93,7 +113,8 @@ func initEcho(auth *pkg.Auth) (*echo.Echo, error) {
 	echoServer.Any(irma.IrmaMountPath+"/*", irmaEchoHandler)
 
 	// Mount the Nuts-Auth routes
-	api.RegisterHandlers(echoServer, &api.Wrapper{Auth: auth})
+	apiV0.RegisterHandlers(echoServer, &apiV0.Wrapper{Auth: auth})
+	apiExperimental.RegisterHandlers(echoServer, &apiExperimental.Wrapper{Auth: auth})
 
 	// Start the server
 	return echoServer, nil

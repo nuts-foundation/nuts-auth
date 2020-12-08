@@ -1,3 +1,21 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package contract
 
 import (
@@ -23,6 +41,10 @@ func ParseContractString(rawContractText string, contractTemplates TemplateStore
 	template, err := contractTemplates.FindFromRawContractText(rawContractText)
 	if err != nil {
 		return nil, err
+	}
+
+	if template == nil {
+		return nil, ErrContractNotFound
 	}
 
 	contract := &Contract{
@@ -59,8 +81,9 @@ func (sc *Contract) initParams() error {
 
 var ErrInvalidPeriod = fmt.Errorf("%w: invalid period", ErrInvalidContractText)
 
-// Verify verifies the params with the template
-func (sc Contract) Verify() error {
+// VerifyForGivenTime checks if the contract is valid for the given moment in time
+// TODO: support of different time zones: https://github.com/nuts-foundation/nuts-auth/issues/152
+func (sc Contract) VerifyForGivenTime(checkTime time.Time) error {
 	var (
 		err                      error
 		ok                       bool
@@ -93,20 +116,25 @@ func (sc Contract) Verify() error {
 	}
 
 	amsterdamLocation, _ := time.LoadLocation(AmsterdamTimeZone)
-	now := NowFunc()
-
-	if now.In(amsterdamLocation).Before(*validFrom) {
+	if checkTime.In(amsterdamLocation).Before(*validFrom) {
 		return fmt.Errorf("%w: contract is not yet valid", ErrInvalidPeriod)
 	}
-	if now.In(amsterdamLocation).After(*validTo) {
+	if checkTime.In(amsterdamLocation).After(*validTo) {
 		return fmt.Errorf("%w: contract is expired", ErrInvalidPeriod)
 	}
 
 	return nil
 }
 
+// Verify verifies the params with the template
+func (sc Contract) Verify() error {
+	now := NowFunc()
+	return sc.VerifyForGivenTime(now)
+}
+
 // parseTime parses the given timeStr in context of the Europe/Amsterdam time zone and uses the given language.
 // Note that currently only the language "NL" is supported.
+// TODO: support of different time zones: https://github.com/nuts-foundation/nuts-auth/issues/152
 func parseTime(timeStr string, _ Language) (*time.Time, error) {
 	contractIssuerTimezone, _ := time.LoadLocation(AmsterdamTimeZone)
 	// TODO: add support for other languages

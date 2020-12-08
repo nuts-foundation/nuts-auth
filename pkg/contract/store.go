@@ -1,3 +1,21 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package contract
 
 import (
@@ -71,17 +89,17 @@ var StandardContractTemplates = TemplateStore{
 // TemplateStore contains a list of Contract templates sorted by language, type and version
 type TemplateStore map[Language]map[Type]map[Version]*Template
 
-// Find safely searches the template store. When no version is given, v1 is used.
-// Returns the template or nil, ErrContractNotFound
-func (m TemplateStore) Find(cType Type, language Language, version Version) (*Template, error) {
+// Get safely searches the template store. When no version is given, v1 is used.
+// Returns the template or nil
+func (m TemplateStore) Get(cType Type, language Language, version Version) *Template {
 	if version == "" {
 		version = "v1"
 	}
 	if template, ok := m[language][cType][version]; ok {
-		return template, nil
+		return template
 	}
 
-	return nil, fmt.Errorf("type %s, lang: %s, version: %s: %w", cType, language, version, ErrContractNotFound)
+	return nil
 }
 
 func (m TemplateStore) FindFromRawContractText(rawContractText string) (*Template, error) {
@@ -96,5 +114,5 @@ func (m TemplateStore) FindFromRawContractText(rawContractText string) (*Templat
 	contractType := Type(matchResult[2])
 	version := Version(matchResult[3])
 
-	return m.Find(contractType, language, version)
+	return m.Get(contractType, language, version), nil
 }

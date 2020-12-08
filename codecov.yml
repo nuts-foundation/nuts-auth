@@ -1,4 +1,6 @@
 ignore:
-  - "api/generated.go" # ignore generated code
+  - "**/generated.go" # ignore generated code
   - "docs/*"
   - "**/test.go"
+github_checks:
+  annotations: false

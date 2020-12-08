@@ -1,14 +1,36 @@
-package api
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package v0
 
 import (
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-auth/logging"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/nuts-foundation/nuts-auth/logging"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/irma"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
+	nutsRegistry "github.com/nuts-foundation/nuts-registry/pkg"
 
 	"github.com/labstack/echo/v4"
 	core "github.com/nuts-foundation/nuts-go-core"
@@ -22,6 +44,8 @@ import (
 // It checks required parameters and message body. It converts data from api to internal types.
 // Then passes the internal formats to the AuthClient. Converts internal results back to the generated
 // Api types. Handles errors and returns the correct http response. It does not perform any business logic.
+//
+// This wrapper handles the unversioned, so called v0, API requests. Most of them wil be deprecated and moved to a v1 version
 type Wrapper struct {
 	Auth pkg.AuthClient
 }
@@ -34,69 +58,76 @@ const errOauthUnsupportedGrant = "unsupported_grant_type"
 // and returns the session pointer to the HTTP stack.
 func (api *Wrapper) CreateSession(ctx echo.Context) error {
 	// bind params to a generated api format struct
-	params := new(ContractSigningRequest)
-	if err := ctx.Bind(params); err != nil {
+	var params ContractSigningRequest
+	if err := ctx.Bind(&params); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse request body: %s", err))
 	}
 
-	var vf, vt time.Time
-	if params.ValidFrom != nil {
-		vft, err := time.Parse("2006-01-02T15:04:05-07:00", *params.ValidFrom)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validFrom: %v", err))
-		}
-		vf = vft
-	}
-	if params.ValidTo != nil {
-		vft, err := time.Parse("2006-01-02T15:04:05-07:00", *params.ValidTo)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Could not parse validTo: %v", err))
-		}
-		vt = vft
+	validFrom, _, validDuration, err := parsePeriodParams(params)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	orgID, err := core.ParsePartyID(string(params.LegalEntity))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid value for param legalEntity: '%s', make sure its in the form 'urn:oid:1.2.3.4:foo'", params.LegalEntity))
 	}
-	// find legal entity in crypto
-	if !api.Auth.ContractClient().KeyExistsFor(orgID) {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity, this Nuts node does not seem to be managing '%s'", orgID))
-	}
 
-	// translate legal entity to its name
-	orgName, err := api.Auth.ContractClient().OrganizationNameByID(orgID)
+	template := contract.StandardContractTemplates.Get(contract.Type(params.Type), contract.Language(params.Language), contract.Version(params.Version))
+	if template == nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unable to find contract: %s", params.Type))
+	}
+	drawnUpContract, err := api.Auth.ContractNotary().DrawUpContract(*template, orgID, validFrom, validDuration)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No organization registered for legalEntity: %v", err))
-	}
-
-	// convert generated api format to internal struct
-	sessionRequest := services.CreateSessionRequest{
-		Type:        contract.Type(params.Type),
-		Version:     contract.Version(params.Version),
-		Language:    contract.Language(params.Language),
-		LegalEntity: orgName,
-		ValidFrom:   vf,
-		ValidTo:     vt,
-	}
-
-	// Initiate the actual session
-	result, err := api.Auth.ContractClient().CreateContractSession(sessionRequest)
-	if err != nil {
-		if errors.Is(err, contract.ErrContractNotFound) {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		if errors.Is(err, validator.ErrMissingOrganizationKey) {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unknown legalEntity, this Nuts node does not seem to be managing '%s'", orgID))
 		}
+		if errors.Is(err, nutsRegistry.ErrOrganizationNotFound) {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No organization registered for legalEntity: %s", orgID))
+		}
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unable to draw up contract: %s", err.Error()))
+	}
+
+	sessionRequest := services.CreateSessionRequest{SigningMeans: "irma", Message: drawnUpContract.RawContractText}
+	// Initiate the actual session
+	result, err := api.Auth.ContractClient().CreateSigningSession(sessionRequest)
+	if err != nil {
 		logging.Log().WithError(err).Error("error while creating contract session")
 		return err
 	}
 
+	// backwards compatibility
+	irmaResult := result.(irma.SessionPtr)
+
 	// convert internal result back to generated api format
 	answer := CreateSessionResult{
-		QrCodeInfo: IrmaQR{U: string(result.QrCodeInfo.URL), Irmaqr: string(result.QrCodeInfo.Type)},
-		SessionId:  result.SessionID,
+		QrCodeInfo: IrmaQR{U: irmaResult.QrCodeInfo.URL, Irmaqr: string(irmaResult.QrCodeInfo.Type)},
+		SessionId:  result.SessionID(),
 	}
 
 	return ctx.JSON(http.StatusCreated, answer)
+}
+
+func parsePeriodParams(params ContractSigningRequest) (time.Time, time.Time, time.Duration, error) {
+	var (
+		validFrom, validTo time.Time
+		d                  time.Duration
+		err                error
+	)
+	if params.ValidFrom != nil {
+		validFrom, err = time.Parse(time.RFC3339, *params.ValidFrom)
+		if err != nil {
+			return time.Time{}, time.Time{}, 0, fmt.Errorf("could not parse validFrom: %v", err)
+		}
+	}
+	if params.ValidTo != nil {
+		validTo, err = time.Parse(time.RFC3339, *params.ValidTo)
+		if err != nil {
+			return time.Time{}, time.Time{}, 0, fmt.Errorf("could not parse validTo: %v", err)
+		}
+		d = validTo.Sub(validFrom)
+	}
+	return validFrom, validTo, d, nil
 }
 
 // SessionRequestStatus gets the current status or the IRMA signing session,
@@ -202,11 +233,9 @@ func (api *Wrapper) GetContractByType(ctx echo.Context, contractType string, par
 	}
 
 	// get contract
-	authContract, err := api.Auth.ContractClient().ContractByType(contract.Type(contractType), contractLanguage, contractVersion)
-	if errors.Is(err, contract.ErrContractNotFound) {
-		return echo.NewHTTPError(http.StatusNotFound, err.Error())
-	} else if err != nil {
-		return err
+	authContract := contract.StandardContractTemplates.Get(contract.Type(contractType), contractLanguage, contractVersion)
+	if authContract == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "could not found contract template")
 	}
 
 	// convert internal data types to generated api types
@@ -247,6 +276,7 @@ func (api *Wrapper) CreateAccessToken(ctx echo.Context, params CreateAccessToken
 		errorResponse := AccessTokenRequestFailedResponse{Error: errOauthInvalidRequest, ErrorDescription: errDesc}
 		return ctx.JSON(http.StatusBadRequest, errorResponse)
 	}
+
 	cert, err := url.PathUnescape(params.XSslClientCert)
 	if err != nil {
 		errDesc := "corrupted client certificate header"
@@ -276,7 +306,7 @@ func (api *Wrapper) CreateJwtBearerToken(ctx echo.Context) error {
 	request := services.CreateJwtBearerTokenRequest{
 		Actor:         requestBody.Actor,
 		Custodian:     requestBody.Custodian,
-		IdentityToken: requestBody.Identity,
+		IdentityToken: &requestBody.Identity,
 		Subject:       requestBody.Subject,
 	}
 	response, err := api.Auth.OAuthClient().CreateJwtBearerToken(request)

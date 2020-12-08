@@ -1,15 +1,34 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package irma
 
 import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"github.com/nuts-foundation/nuts-auth/logging"
 	"os"
 	"path"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/nuts-foundation/nuts-auth/logging"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
@@ -36,17 +55,17 @@ import (
 	"github.com/nuts-foundation/nuts-auth/testdata"
 	irma "github.com/privacybydesign/irmago"
 	irmaservercore "github.com/privacybydesign/irmago/server"
-	irmaserver "github.com/privacybydesign/irmago/server/irmaserver"
+	"github.com/privacybydesign/irmago/server/irmaserver"
 )
 
 func TestDefaultValidator_IsInitialized(t *testing.T) {
 	t.Run("No irma config returns false", func(t *testing.T) {
-		v := IrmaService{}
+		v := Service{}
 		assert.False(t, v.IsInitialized())
 	})
 
 	t.Run("with irma config returns true", func(t *testing.T) {
-		v := IrmaService{IrmaConfig: &irma.Configuration{}}
+		v := Service{IrmaConfig: &irma.Configuration{}}
 		assert.True(t, v.IsInitialized())
 	})
 }
@@ -206,14 +225,14 @@ func TestValidateContract(t *testing.T) {
 		},
 	}
 
-	authConfig := IrmaServiceConfig{
+	authConfig := ValidatorConfig{
 		IrmaConfigPath:            "../../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
 
 	irmaConfig, _ := GetIrmaConfig(authConfig)
 	irmaServer, _ := GetIrmaServer(authConfig)
-	validator := IrmaService{IrmaSessionHandler: irmaServer, IrmaConfig: irmaConfig, ContractTemplates: contract.StandardContractTemplates}
+	validator := Service{IrmaSessionHandler: irmaServer, IrmaConfig: irmaConfig, ContractTemplates: contract.StandardContractTemplates}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -231,7 +250,7 @@ func TestValidateContract(t *testing.T) {
 }
 
 func TestDefaultValidator_SessionStatus(t *testing.T) {
-	serviceConfig := IrmaServiceConfig{
+	serviceConfig := ValidatorConfig{
 		IrmaConfigPath:            "../../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
@@ -288,14 +307,14 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			v := IrmaService{
+			v := Service{
 				IrmaSessionHandler: tt.fields.IrmaServer,
 			}
 
 			got, _ := v.SessionStatus(tt.args.id)
 
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("IrmaService.SessionStatus() = %v, want %v", got, tt.want)
+				t.Errorf("Service.SessionStatus() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -303,14 +322,16 @@ func TestDefaultValidator_SessionStatus(t *testing.T) {
 
 type mockIrmaClient struct {
 	err           error
-	sessionResult irmaservercore.SessionResult
+	sessionResult *irmaservercore.SessionResult
+	irmaQr        *irma.Qr
+	sessionToken  string
 }
 
 func (m *mockIrmaClient) GetSessionResult(token string) *irmaservercore.SessionResult {
 	if m.err != nil {
 		return nil
 	}
-	return &m.sessionResult
+	return m.sessionResult
 }
 
 func (m *mockIrmaClient) StartSession(request interface{}, handler irmaservercore.SessionHandler) (*irma.Qr, string, error) {
@@ -318,12 +339,12 @@ func (m *mockIrmaClient) StartSession(request interface{}, handler irmaservercor
 		return nil, "", m.err
 	}
 
-	return nil, "", nil
+	return m.irmaQr, m.sessionToken, nil
 }
 
 // tests using mocks
 func TestDefaultValidator_SessionStatus2(t *testing.T) {
-	serviceConfig := IrmaServiceConfig{
+	serviceConfig := ValidatorConfig{
 		IrmaConfigPath:            "../../../testdata/irma",
 		SkipAutoUpdateIrmaSchemas: true,
 	}
@@ -333,7 +354,7 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 		rMock := registryMock.NewMockRegistryClient(ctrl)
 		cMock := cryptoMock.NewMockClient(ctrl)
 		iMock := mockIrmaClient{
-			sessionResult: irmaservercore.SessionResult{
+			sessionResult: &irmaservercore.SessionResult{
 				Token: "token",
 				Signature: &irma.SignedMessage{
 					Message: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan Demo EHR om namens verpleeghuis De nootjes en ondergetekende het Nuts netwerk te bevragen. Deze toestemming is geldig van dinsdag, 1 oktober 2019 13:30:42 tot dinsdag, 1 oktober 2019 14:30:42.",
@@ -342,7 +363,7 @@ func TestDefaultValidator_SessionStatus2(t *testing.T) {
 		}
 
 		irmaConfig, _ := GetIrmaConfig(serviceConfig)
-		v := IrmaService{
+		v := Service{
 			IrmaSessionHandler: &iMock,
 			IrmaConfig:         irmaConfig,
 			Crypto:             cMock,
@@ -538,14 +559,14 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	type TestContext struct {
 		ctrl  *gomock.Controller
-		v     IrmaService
+		v     Service
 		rMock *registryMock.MockRegistryClient
 	}
 	createContext := func(t *testing.T) TestContext {
 		ctrl := gomock.NewController(t)
 		rMock := registryMock.NewMockRegistryClient(ctrl)
 
-		v := IrmaService{
+		v := Service{
 			Registry: rMock,
 		}
 
@@ -592,6 +613,54 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	})
 }
 
+func TestService_VerifyVP(t *testing.T) {
+	t.Run("ok - valid VP", func(t *testing.T) {
+		validator, _ := defaultValidator(t)
+
+		irmaSignature := testdata.ValidIrmaContract
+		validIrmaContract := irma.SignedMessage{}
+		err := json.Unmarshal([]byte(irmaSignature), &validIrmaContract)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		rawSic, err := json.Marshal(validIrmaContract)
+
+		vp := VerifiablePresentation{
+			Proof: VPProof{
+				Proof:     contract.Proof{Type: ""},
+				Signature: string(rawSic),
+			},
+		}
+
+		rawIrmaVP, err := json.Marshal(vp)
+		if !assert.NoError(t, err) {
+			return
+		}
+		validationResult, err := validator.VerifyVP(rawIrmaVP)
+
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		if !assert.NotNil(t, validationResult) {
+			return
+		}
+	})
+
+	t.Run("nok - invalid rawVP", func(t *testing.T) {
+		validator := Service{}
+		validationResult, err := validator.VerifyVP([]byte{})
+
+		assert.Nil(t, validationResult)
+		if !assert.Error(t, err) {
+			return
+		}
+		assert.Equal(t, "could not verify VP: unexpected end of JSON input", err.Error())
+
+	})
+}
+
 func createJwt(cryptoInstance crypto.Client, iss core.PartyID, sub core.PartyID, contractStr string) []byte {
 	contract := SignedIrmaContract{}
 	err := json.Unmarshal([]byte(contractStr), &contract.IrmaContract)
@@ -621,7 +690,7 @@ var otherOrganizationID = registryTest.OrganizationID("00000002")
 
 // defaultValidator sets up a validator with a registry containing a single test organization.
 // The method is a singleton and always returns the same instance
-func defaultValidator(t *testing.T) (IrmaService, crypto.Client) {
+func defaultValidator(t *testing.T) (Service, crypto.Client) {
 	t.Helper()
 	os.Setenv("NUTS_IDENTITY", registryTest.VendorID("1234").String())
 	core.NutsConfig().Load(&cobra.Command{})
@@ -641,13 +710,13 @@ func defaultValidator(t *testing.T) (IrmaService, crypto.Client) {
 		t.Fatal(err)
 	}
 	address := "localhost:1323"
-	serviceConfig := IrmaServiceConfig{
+	serviceConfig := ValidatorConfig{
 		Address:                   address,
 		IrmaSchemeManager:         "pbdf",
 		SkipAutoUpdateIrmaSchemas: true,
 		IrmaConfigPath:            path.Join(testDirectory, "auth", "irma"),
 		//ActingPartyCn:             "CN=Awesomesoft",
-		PublicUrl: "http://" + address,
+		PublicURL: "http://" + address,
 	}
 	if err := os.MkdirAll(serviceConfig.IrmaConfigPath, 0777); err != nil {
 		logging.Log().Fatal(err)
@@ -661,7 +730,7 @@ func defaultValidator(t *testing.T) (IrmaService, crypto.Client) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return IrmaService{
+	return Service{
 		Registry:          testRegistry,
 		Crypto:            testCrypto,
 		IrmaConfig:        irmaConfig,

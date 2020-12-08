@@ -1,32 +1,38 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package services
 
 import (
 	"crypto/x509"
 	"encoding/json"
-	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
 )
 
 // CreateSessionRequest is used to create a contract signing session.
 type CreateSessionRequest struct {
-	// Type such as "BehandelaarLogin"
-	Type contract.Type
-	// Version of the contract such as "v1"
-	Version contract.Version
-	// Language of the contact such as "NL"
-	Language contract.Language
-	// LegalEntity denotes the organization of the user
-	LegalEntity string
-	// ValidFrom describes the time from which this contract should be considered valid
-	ValidFrom time.Time
-	// ValidFrom describes the time until this contract should be considered valid
-	ValidTo time.Time
-	// TemplateAttributes is an object containing extra template values. example: {"reason":"providing care"}
-	TemplateAttributes map[string]string
+	// todo correct Signing means type
+	SigningMeans string
+	// Message to sign
+	Message string
 }
 
 // CreateSessionResult contains the results needed to setup an irma flow
@@ -36,6 +42,7 @@ type CreateSessionResult struct {
 }
 
 // SessionStatusResult contains the current state of a session. If the session is DONE it also contains a JWT in the NutsAuthToken
+// deprecated
 type SessionStatusResult struct {
 	server.SessionResult
 	// NutsAuthToken contains the JWT if the sessionStatus is DONE
@@ -43,6 +50,7 @@ type SessionStatusResult struct {
 }
 
 // ValidationRequest is used to pass all information to ValidateContract
+// deprecated, moved to pkg/contract
 type ValidationRequest struct {
 	// ContractFormat specifies the type of format used for the contract, e.g. 'irma'
 	ContractFormat ContractFormat
@@ -66,7 +74,7 @@ type CreateAccessTokenRequest struct {
 type CreateJwtBearerTokenRequest struct {
 	Actor         string
 	Custodian     string
-	IdentityToken string
+	IdentityToken *string
 	Subject       *string
 }
 
@@ -84,7 +92,8 @@ type JwtBearerTokenResult struct {
 // verified by the authorization server.
 type NutsJwtBearerToken struct {
 	jwt.StandardClaims
-	AuthTokenContainer string            `json:"usi"`
+	// Base64 encoded VerifiablePresentation
+	UserIdentity       *string           `json:"usi"`
 	SubjectID          *string           `json:"sid"`
 	Scope              string            `json:"scope"`
 	SigningCertificate *x509.Certificate `json:-`
@@ -115,6 +124,7 @@ func (token NutsJwtBearerToken) AsMap() (map[string]interface{}, error) {
 }
 
 // ContractValidationResult contains the result of a contract validation
+// deprecated, moved to pkg/contract
 type ContractValidationResult struct {
 	ValidationResult ValidationState `json:"validation_result"`
 	ContractFormat   ContractFormat  `json:"contract_format"`
@@ -136,6 +146,7 @@ const IrmaTokenContainerType TokenContainerType = "irma"
 // NutsAuthenticationTokenContainer holds the base64 encoded token and a type which uniquely
 // identifies the means used to sign the contract
 // See the Nuts RFC002 section 6 :Authentication Token Container
+// deprecated, replace with VerifiablePresentation
 type NutsAuthenticationTokenContainer struct {
 	// Type indicates the type of the base64 encoded Token
 	Type TokenContainerType `json:"type"`

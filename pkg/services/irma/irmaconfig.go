@@ -1,11 +1,30 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package irma
 
 import (
 	"fmt"
-	"github.com/nuts-foundation/nuts-auth/logging"
 	"io/ioutil"
 	"os"
 	"sync"
+
+	"github.com/nuts-foundation/nuts-auth/logging"
 
 	"github.com/pkg/errors"
 	irma "github.com/privacybydesign/irmago"
@@ -35,7 +54,7 @@ var serverOnce = new(sync.Once)
 
 // GetIrmaConfig creates and returns an IRMA config.
 // The config sets the given irma path or a temporary folder. Then it downloads the schemas.
-func GetIrmaConfig(config IrmaServiceConfig) (irmaConfig *irma.Configuration, err error) {
+func GetIrmaConfig(config ValidatorConfig) (irmaConfig *irma.Configuration, err error) {
 	irmaConfig = _irmaConfig
 
 	configOnce.Do(func() {
@@ -63,11 +82,11 @@ func GetIrmaConfig(config IrmaServiceConfig) (irmaConfig *irma.Configuration, er
 
 // GetIrmaServer creates and starts the irma server instance.
 // The server can be used by a IRMA client like the app to handle IRMA sessions
-func GetIrmaServer(config IrmaServiceConfig) (irmaServer *irmaserver.Server, err error) {
+func GetIrmaServer(config ValidatorConfig) (irmaServer *irmaserver.Server, err error) {
 	irmaServer = _irmaServer
 
 	serverOnce.Do(func() {
-		baseURL := config.PublicUrl
+		baseURL := config.PublicURL
 
 		var configDir string
 		configDir, err = irmaConfigDir(config)
@@ -100,7 +119,7 @@ func GetIrmaServer(config IrmaServiceConfig) (irmaServer *irmaserver.Server, err
 	return
 }
 
-func irmaConfigDir(config IrmaServiceConfig) (string, error) {
+func irmaConfigDir(config ValidatorConfig) (string, error) {
 	path := config.IrmaConfigPath
 
 	if path == "" {

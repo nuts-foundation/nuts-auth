@@ -1,16 +1,40 @@
-package api
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package v0
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/nuts-foundation/nuts-registry/pkg"
+
+	"github.com/nuts-foundation/nuts-auth/mock"
 	servicesMock "github.com/nuts-foundation/nuts-auth/mock/services"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
+	"github.com/nuts-foundation/nuts-auth/pkg/services/validator"
 
 	irmaService "github.com/nuts-foundation/nuts-auth/pkg/services/irma"
 
@@ -22,7 +46,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
-	"github.com/nuts-foundation/nuts-auth/mock"
 	coreMock "github.com/nuts-foundation/nuts-go-core/mock"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
@@ -38,27 +61,28 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		tt := time.Now().Truncate(time.Second)
+		vf := tt.Format("2006-01-02T15:04:05-07:00")
+		vt := tt.Add(time.Hour * 13).Format("2006-01-02T15:04:05-07:00")
+		d := tt.Add(time.Hour * 13).Sub(tt)
 
-		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		ctx.contractMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
+		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), d).Return(
+			&contract2.Contract{
+				RawContractText: "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan ZorgDossier om namens Verpleeghuis de Hoeksteen en ondergetekende het Nuts netwerk te bevragen",
+				Template:        nil,
+				Params:          nil,
+			}, nil)
 
-		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
-			Type:        "BehandelaarLogin",
-			Version:     "v1",
-			Language:    "NL",
-			ValidFrom:   tt,
-			ValidTo:     tt.Add(time.Hour * 13),
-			LegalEntity: careOrgName,
-		}).Return(&services.CreateSessionResult{
+		ctx.contractMock.EXPECT().CreateSigningSession(services.CreateSessionRequest{
+			Message:      "NL:BehandelaarLogin:v1 Ondergetekende geeft toestemming aan ZorgDossier om namens Verpleeghuis de Hoeksteen en ondergetekende het Nuts netwerk te bevragen",
+			SigningMeans: "irma",
+		}).Return(irmaService.SessionPtr{
 			QrCodeInfo: irma.Qr{
 				URL:  "http://example.com" + irmaService.IrmaMountPath + "/123",
 				Type: "signing"},
-			SessionID: "abc-sessionid",
+			ID: "abc-sessionid",
 		}, nil)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
-		vf := tt.Format("2006-01-02T15:04:05-07:00")
-		vt := tt.Add(time.Hour * 13).Format("2006-01-02T15:04:05-07:00")
 		params := ContractSigningRequest{
 			Type:        "BehandelaarLogin",
 			Language:    "NL",
@@ -98,7 +122,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.Error(t, err)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
-		assert.Contains(t, httpError.Message, "Could not parse validFrom")
+		assert.Contains(t, httpError.Message, "could not parse validFrom")
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
 
 		jsonData = `{"language":"NL","legalEntity":"legalEntity","type":"BehandelaarLogin","valid_from":"2020-03-26T00:16:57+01:00","valid_to":"invalid time in validTo","version":"v1"}`
@@ -111,7 +135,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.Error(t, err)
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError = err.(*echo.HTTPError)
-		assert.Contains(t, httpError.Message, "Could not parse validTo")
+		assert.Contains(t, httpError.Message, "could not parse validTo")
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
 	})
 
@@ -139,17 +163,6 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		ctx.contractMock.EXPECT().OrganizationNameByID(careOrgID).Return(careOrgName, nil)
-
-		ctx.contractMock.EXPECT().CreateContractSession(services.CreateSessionRequest{
-			Type:        contract2.Type(params.Type),
-			Version:     "v1",
-			Language:    "NL",
-			LegalEntity: careOrgName,
-		}).Return(
-			nil, contract2.ErrContractNotFound)
-
 		wrapper := Wrapper{Auth: ctx.authMock}
 
 		jsonData, _ := json.Marshal(params)
@@ -161,6 +174,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
+		assert.Equal(t, "Unable to find contract: UnknownContract", httpError.Message)
 	})
 
 	t.Run("for an unknown legalEntity", func(t *testing.T) {
@@ -168,13 +182,13 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		params := ContractSigningRequest{
-			Type:        "UnknownContract",
+			Type:        "BehandelaarLogin",
 			Language:    "NL",
 			Version:     "v1",
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(false)
+		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, pkg.ErrOrganizationNotFound)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
 
@@ -187,6 +201,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
+		assert.Equal(t, "No organization registered for legalEntity: urn:oid:2.16.840.1.113883.2.4.6.1:987", httpError.Message)
 	})
 
 	t.Run("for an unregistered legal entity", func(t *testing.T) {
@@ -194,14 +209,13 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		params := ContractSigningRequest{
-			Type:        "UnknownContract",
+			Type:        "BehandelaarLogin",
 			Language:    "NL",
 			Version:     "v1",
 			LegalEntity: LegalEntity(careOrgID.String()),
 		}
 
-		ctx.contractMock.EXPECT().KeyExistsFor(gomock.Any()).Return(true)
-		ctx.contractMock.EXPECT().OrganizationNameByID(careOrgID).Return("", errors.New("error"))
+		ctx.notaryMock.EXPECT().DrawUpContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, validator.ErrMissingOrganizationKey)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
 
@@ -214,6 +228,7 @@ func TestWrapper_NutsAuthCreateSession(t *testing.T) {
 		assert.IsType(t, &echo.HTTPError{}, err)
 		httpError := err.(*echo.HTTPError)
 		assert.Equal(t, http.StatusBadRequest, httpError.Code)
+		assert.Equal(t, "Unknown legalEntity, this Nuts node does not seem to be managing 'urn:oid:2.16.840.1.113883.2.4.6.1:987'", httpError.Message)
 	})
 }
 
@@ -319,32 +334,23 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
 
-		cType := "KnownContract"
+		cType := "PractitionerLogin"
 		cVersion := "v1"
-		cLanguage := "NL"
+		cLanguage := "EN"
 		params := GetContractByTypeParams{
 			Version:  &cVersion,
 			Language: &cLanguage,
 		}
 
-		contract := contract2.Template{
-			Type:               contract2.Type(cType),
-			Version:            contract2.Version(cVersion),
-			Language:           contract2.Language(cLanguage),
-			TemplateAttributes: []string{"party"},
-			Template:           "ik geen toestemming aan {{party}}",
-		}
-
-		ta := []string{"party"}
+		a := contract2.StandardContractTemplates.Get(contract2.Type(cType), contract2.Language(cLanguage), contract2.Version(cVersion))
 		answer := Contract{
-			Type:               Type(cType),
-			Template:           &contract.Template,
-			Version:            Version(cVersion),
-			TemplateAttributes: &ta,
-			Language:           Language(cLanguage),
+			Language:           Language(a.Language),
+			Template:           &a.Template,
+			TemplateAttributes: &a.TemplateAttributes,
+			Type:               Type(a.Type),
+			Version:            Version(a.Version),
 		}
 
-		ctx.contractMock.EXPECT().ContractByType(contract2.Type(cType), contract2.Language(cLanguage), contract2.Version(cVersion)).Return(&contract, nil)
 		ctx.echoMock.EXPECT().JSON(http.StatusOK, answer)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
@@ -359,8 +365,6 @@ func TestWrapper_NutsAuthGetContractByType(t *testing.T) {
 
 		cType := "UnknownContract"
 		params := GetContractByTypeParams{}
-
-		ctx.contractMock.EXPECT().ContractByType(contract2.Type(cType), contract2.Language(""), contract2.Version("")).Return(nil, contract2.ErrContractNotFound)
 
 		wrapper := Wrapper{Auth: ctx.authMock}
 		err := wrapper.GetContractByType(ctx.echoMock, cType, params)
@@ -394,6 +398,7 @@ type TestContext struct {
 	echoMock     *coreMock.MockContext
 	authMock     *mock.MockAuthClient
 	oauthMock    *servicesMock.MockOAuthClient
+	notaryMock   *servicesMock.MockContractNotary
 	contractMock *servicesMock.MockContractClient
 	wrapper      Wrapper
 }
@@ -402,15 +407,20 @@ var createContext = func(t *testing.T) *TestContext {
 	ctrl := gomock.NewController(t)
 	authMock := mock.NewMockAuthClient(ctrl)
 	oauthMock := servicesMock.NewMockOAuthClient(ctrl)
-	authMock.EXPECT().OAuthClient().AnyTimes().Return(oauthMock)
+	notaryMock := servicesMock.NewMockContractNotary(ctrl)
 	contractMock := servicesMock.NewMockContractClient(ctrl)
+
+	authMock.EXPECT().OAuthClient().AnyTimes().Return(oauthMock)
 	authMock.EXPECT().ContractClient().AnyTimes().Return(contractMock)
+	authMock.EXPECT().ContractNotary().AnyTimes().Return(notaryMock)
+
 	return &TestContext{
 		ctrl:         ctrl,
 		echoMock:     coreMock.NewMockContext(ctrl),
 		authMock:     authMock,
 		oauthMock:    oauthMock,
 		contractMock: contractMock,
+		notaryMock:   notaryMock,
 		wrapper:      Wrapper{Auth: authMock},
 	}
 }
@@ -515,17 +525,19 @@ func TestWrapper_NutsAuthCreateAccessToken(t *testing.T) {
 	t.Run("valid request", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
+		pemBytes, _ := ioutil.ReadFile("../../testdata/certs/example.pem")
+		encodedPem := url.PathEscape(string(pemBytes))
 
 		params := CreateAccessTokenRequest{GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer", Assertion: validJwt}
 		bindPostBody(ctx, params)
 
 		pkgResponse := &services.AccessTokenResult{AccessToken: "foo"}
-		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, ClientCert: "cert"}).Return(pkgResponse, nil)
+		ctx.oauthMock.EXPECT().CreateAccessToken(services.CreateAccessTokenRequest{RawJwtBearerToken: validJwt, ClientCert: string(pemBytes)}).Return(pkgResponse, nil)
 
 		apiResponse := AccessTokenResponse{AccessToken: pkgResponse.AccessToken}
 		expectStatusOK(ctx, apiResponse)
 
-		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: "cert"})
+		err := ctx.wrapper.CreateAccessToken(ctx.echoMock, CreateAccessTokenParams{XSslClientCert: encodedPem})
 
 		assert.Nil(t, err)
 
@@ -564,7 +576,7 @@ func TestWrapper_NutsAuthCreateJwtBearerToken(t *testing.T) {
 		expectedRequest := services.CreateJwtBearerTokenRequest{
 			Actor:         body.Actor,
 			Custodian:     body.Custodian,
-			IdentityToken: body.Identity,
+			IdentityToken: &body.Identity,
 			Subject:       body.Subject,
 		}
 

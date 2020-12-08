@@ -26,8 +26,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-auth/logging"
 	"time"
+
+	"github.com/nuts-foundation/nuts-auth/logging"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
@@ -54,34 +55,36 @@ const errInvalidIssuerFmt = "invalid jwt.issuer: %w"
 const errInvalidSubjectFmt = "invalid jwt.subject: %w"
 
 type service struct {
-	vendorID          core.PartyID
-	crypto            nutsCrypto.Client
-	registry          nutsRegistry.RegistryClient
-	consent           nutsConsent.ConsentStoreClient
-	oauthKeyEntity    nutsCryptoTypes.KeyIdentifier
-	contractValidator services.ContractValidator
+	vendorID       core.PartyID
+	crypto         nutsCrypto.Client
+	registry       nutsRegistry.RegistryClient
+	consent        nutsConsent.ConsentStoreClient
+	oauthKeyEntity nutsCryptoTypes.KeyIdentifier
+	contractClient services.ContractClient
 }
 
 type validationContext struct {
-	rawJwtBearerToken        string
-	jwtBearerToken           *services.NutsJwtBearerToken
-	actorName                string
-	vendor                   core.PartyID
-	contractValidationResult *services.ContractValidationResult
+	rawJwtBearerToken          string
+	jwtBearerToken             *services.NutsJwtBearerToken
+	actorName                  string
+	vendor                     core.PartyID
+	contractVerificationResult *contract.VerificationResult
 }
 
-func NewOAuthService(vendorID core.PartyID, cryptoClient nutsCrypto.Client, registryClient nutsRegistry.RegistryClient, contractValidator services.ContractValidator) services.OAuthClient {
+// NewOAuthService accepts a vendorID, and several Nuts engines and returns an implementation of services.OAuthClient
+func NewOAuthService(vendorID core.PartyID, cryptoClient nutsCrypto.Client, registryClient nutsRegistry.RegistryClient, contractClient services.ContractClient) services.OAuthClient {
 	return &service{
-		vendorID:          vendorID,
-		crypto:            cryptoClient,
-		registry:          registryClient,
-		contractValidator: contractValidator,
+		vendorID:       vendorID,
+		crypto:         cryptoClient,
+		registry:       registryClient,
+		contractClient: contractClient,
 	}
 }
 
 // OauthBearerTokenMaxValidity is the number of seconds that a bearer token is valid
 const OauthBearerTokenMaxValidity = 5
 
+// Configure the service
 func (s *service) Configure() (err error) {
 	if s.vendorID.IsZero() {
 		err = errMissingVendorID
@@ -115,7 +118,7 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 
 	// check the maximum validity, according to RFC003 §5.2.1.4
 	if context.jwtBearerToken.ExpiresAt-context.jwtBearerToken.IssuedAt > OauthBearerTokenMaxValidity {
-		return nil, errors.New("JWT validity to long")
+		return nil, errors.New("JWT validity too long")
 	}
 
 	// check the actor against the registry, according to RFC003 §5.2.1.3
@@ -135,16 +138,21 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	}
 
 	// Validate the AuthTokenContainer, according to RFC003 §5.2.1.5
-	// todo: request.VendorIdentifier is deprecated, remove in 0.17
 	var err error
-	if context.contractValidationResult, err = s.contractValidator.ValidateJwt(context.jwtBearerToken.AuthTokenContainer, request.VendorIdentifier); err != nil {
-		return nil, fmt.Errorf("identity token validation failed: %w", err)
+	if context.jwtBearerToken.UserIdentity != nil {
+		var decoded []byte
+		if decoded, err = base64.StdEncoding.DecodeString(*context.jwtBearerToken.UserIdentity); err != nil {
+			return nil, fmt.Errorf("failed to decode base64 usi field: %w", err)
+		}
+		if context.contractVerificationResult, err = s.contractClient.VerifyVP(decoded); err != nil {
+			return nil, fmt.Errorf("identity verification failed: %w", err)
+		}
 	}
-	if context.contractValidationResult.ValidationResult == services.Invalid {
+	if context.contractVerificationResult.State == contract.Invalid {
 		return nil, errors.New("identity validation failed")
 	}
 	// checks if the name from the login contract matches with the registered name of the issuer.
-	if err = s.validateActor(&context); err != nil {
+	if err := s.validateActor(&context); err != nil {
 		return nil, err
 	}
 
@@ -166,9 +174,12 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 	return &services.AccessTokenResult{AccessToken: accessToken}, nil
 }
 
+// ErrLegalEntityNotProvided indicates that the legalEntity is missing
+var ErrLegalEntityNotProvided = errors.New("legalEntity not provided")
+
 // checks if the name from the login contract matches with the registered name of the issuer.
 func (s *service) validateActor(context *validationContext) error {
-	if context.contractValidationResult.ContractAttributes[contract.LegalEntityAttr] != context.actorName {
+	if context.contractVerificationResult.ContractAttributes[contract.LegalEntityAttr] != context.actorName {
 		return errors.New("legal entity mismatch")
 	}
 	return nil
@@ -223,11 +234,17 @@ func (s *service) validateClientCertificate(context *validationContext, pemEncod
 
 	c, err := cert.PemToX509([]byte(pemEncodedCertificate))
 	if err != nil {
+		logging.Log().Warnf("failed to decoded PEM encoded certificate %s", err.Error())
 		return errInvalidClientCert
 	}
 
 	chains, err := s.crypto.TrustStore().VerifiedChain(c, validationTime)
 	if err != nil || len(chains) == 0 {
+		msg := ""
+		if err != nil {
+			msg = err.Error()
+		}
+		logging.Log().Warnf("failed to verify certificate, chains: %d, err: %s", len(chains), msg)
 		return errInvalidClientCert
 	}
 
@@ -261,8 +278,9 @@ func (s *service) validateSubject(context *validationContext) error {
 	if err != nil {
 		return fmt.Errorf(errInvalidSubjectFmt, err)
 	}
-	if custodian.Vendor.String() != context.vendor.String() {
-		return fmt.Errorf(errInvalidSubjectFmt, errors.New("organisation.vendor doesn't match with vendorID of this node"))
+	nodeVendor := core.NutsConfig().VendorID()
+	if custodian.Vendor.String() != nodeVendor.String() {
+		return fmt.Errorf(errInvalidSubjectFmt, fmt.Errorf("subject.vendor: %s doesn't match with vendorID of this node: %s", custodian.Vendor.String(), nodeVendor.String()))
 	}
 
 	return nil
@@ -331,8 +349,8 @@ func claimsFromRequest(request services.CreateJwtBearerTokenRequest, audience st
 			NotBefore: 0,
 			Subject:   request.Custodian,
 		},
-		AuthTokenContainer: request.IdentityToken,
-		SubjectID:          request.Subject,
+		UserIdentity: request.IdentityToken,
+		SubjectID:    request.Subject,
 	}
 }
 
@@ -415,10 +433,10 @@ func (s *service) IntrospectAccessToken(accessToken string) (*services.NutsAcces
 // BuildAccessToken builds an access token based on the oauth claims and the identity of the user provided by the identityValidationResult
 // The token gets signed with the custodians private key and returned as a string.
 func (s *service) buildAccessToken(context *validationContext) (string, error) {
-	identityValidationResult := context.contractValidationResult
+	identityValidationResult := context.contractVerificationResult
 	jwtBearerToken := context.jwtBearerToken
 
-	if identityValidationResult.ValidationResult != services.Valid {
+	if identityValidationResult.State != contract.Valid {
 		return "", fmt.Errorf("could not build accessToken: %w", errors.New("invalid contract"))
 	}
 
@@ -446,7 +464,7 @@ func (s *service) buildAccessToken(context *validationContext) (string, error) {
 		GivenName:  identityValidationResult.DisclosedAttributes["gemeente.personalData.firstnames"],
 		Prefix:     identityValidationResult.DisclosedAttributes["gemeente.personalData.prefix"],
 		Name:       identityValidationResult.DisclosedAttributes["gemeente.personalData.fullname"],
-		Email:      identityValidationResult.DisclosedAttributes["pbdf.email.email"],
+		Email:      identityValidationResult.DisclosedAttributes["sidn-pbdf.email.email"],
 	}
 
 	var keyVals map[string]interface{}

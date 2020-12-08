@@ -1,7 +1,26 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package contract
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/cbroglie/mustache"
@@ -44,7 +63,7 @@ var NowFunc = time.Now
 // If SignerAttribute name starts with a dot '.', it uses the configured scheme manager
 var StandardSignerAttributes = []string{
 	".gemeente.personalData.firstnames",
-	"pbdf.pbdf.email.email",
+	"pbdf.sidn-pbdf.email.email",
 }
 
 func (c Template) timeLocation() *time.Location {
@@ -52,13 +71,16 @@ func (c Template) timeLocation() *time.Location {
 	return loc
 }
 
-func (c Template) Render(vars map[string]string, validFromOffset, validToOffset time.Duration) (*Contract, error) {
-	vars[ValidFromAttr] = monday.Format(time.Now().Add(validFromOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
-	vars[ValidToAttr] = monday.Format(time.Now().Add(validToOffset).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
+// Render a template using the given templates variables. The combination of validFrom and the duration configure the validFrom and validTo template attributes.
+// The ValidFrom or ValidTo provided in the vars map will be overwritten.
+// Note: For date calculation the Amsterdam timezone and Dutch locale is used.
+func (c Template) Render(vars map[string]string, validFrom time.Time, validDuration time.Duration) (*Contract, error) {
+	vars[ValidFromAttr] = monday.Format(validFrom.In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
+	vars[ValidToAttr] = monday.Format(validFrom.Add(validDuration).In(c.timeLocation()), timeLayout, monday.LocaleNlNL)
 
 	rawContractText, err := mustache.Render(c.Template, vars)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not render contract template: %w", err)
 	}
 
 	contract := &Contract{

@@ -28,7 +28,8 @@ Generate the api package from the OpenAPI specification
 
 .. code-block:: shell
 
-    oapi-codegen -generate server,types -package api docs/_static/nuts-auth.yaml > api/generated.go
+    oapi-codegen -generate server,types -package v0 docs/_static/nuts-auth.yaml > api/v0/generated.go
+    oapi-codegen -generate server,types -package experimental docs/_static/nuts-auth-experimental.yaml > api/experimental/generated.go
 
 Embed files like certificates from the bindata directory
 
@@ -43,8 +44,9 @@ When making changes to the client interface run the following command to regener
 
 .. code-block:: shell
 
-    mockgen -destination=mock/mock_auth_client.go -package=mock -source=pkg/auth.go
-    mockgen -destination=mock/services/mock.go -package=services -source=pkg/services/services.go
+    mockgen -destination=mock/mock_auth_client.go -package=mock_auth -source=pkg/auth.go
+    mockgen -destination=mock/services/mock.go -package=mock_services -source=pkg/services/services.go
+    mockgen -destination=mock/contract/signer_mock.go -source=pkg/contract/signer.go
 
 
 Building

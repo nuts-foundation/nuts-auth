@@ -1,3 +1,21 @@
+/*
+ * Nuts auth
+ * Copyright (C) 2020. Nuts community
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package x509
 
 import (
@@ -47,7 +65,7 @@ func TestUziValidator(t *testing.T) {
 		expected := map[string]string{
 			"agbCode":  "00000000",
 			"cardType": "N",
-			"oidCa":    "2.16.528.1.1007.99.218",
+			"oidCa":    "2.16.528.1.1007.99.218", // CIBG.Uzi test identifiers
 			"orgID":    "90000382",
 			"rollCode": "00.000",
 			"uziNr":    "900021219",

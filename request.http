@@ -1,3 +1,6 @@
+# Intellij specific config for easy testing of the api.
+# https://www.jetbrains.com/help/idea/exploring-http-syntax.html
+
 # For a quick start check out our HTTP Requests collection (Tools|HTTP Client|Open HTTP Requests Collection).
 #
 # Following HTTP Request Live Templates are available:
@@ -38,3 +41,65 @@ Content-Type: application/json
 }
 
 ###
+
+GET http://localhost:1323/internal/auth/experimental/contract/template/EN/PractitionerLogin?version=v3
+
+###
+
+PUT http://localhost:1323/internal/auth/experimental/contract/drawup
+Content-Type: application/json
+
+{
+  "language": "EN",
+  "version": "v3",
+  "type": "PractitionerLogin",
+  "legalEntity": "urn:oid:2.16.840.1.113883.2.4.6.1:12345678"
+}
+
+###
+
+POST http://localhost:1323/internal/auth/experimental/signature/session
+Content-Type: application/json
+
+{
+  "means": "dummy",
+  "payload": "ik verklaar dit"
+}
+
+###
+POST http://localhost:1323/internal/auth/experimental/sign
+Content-Type: application/json
+
+{
+  "means": "irma",
+  "payload": "NL:BehandelaarLogin:v3 Hierbij verklaar ik te handelen in naam van Zorghuis de goude hand. Deze verklaring is geldig van vandaag tot morgen."
+}
+
+###
+
+GET http://localhost:1323/internal/auth/experimental/signature/session/473c5341dd2cb8ac238125f4e38e9394
+
+###
+
+PUT http://localhost:1323/internal/auth/experimental/signature/verify
+Content-Type: application/json
+
+{
+  "verifiablePresentation": {
+    "@context": [
+      "https://www.w3.org/2018/credentials/v1"
+    ],
+    "proof": {
+      "Birthdate": "1980-01-01",
+      "Contract": "NL:BehandelaarLogin:v3 Hierbij verklaar ik te handelen in naam van Zorghuis de goude hand. Deze verklaring is geldig van vandaag tot morgen",
+      "Email": "tester@example.com",
+      "Initials": "I",
+      "Lastname": "Tester",
+      "Type": "NoSignature"
+    },
+    "type": [
+      "VerifiablePresentation",
+      "DummyVerifiablePresentation"
+    ]
+  }
+}
