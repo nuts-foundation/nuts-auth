@@ -3,7 +3,7 @@
 Nuts OAuth implementation manual
 ################################
 
-The Nuts OAuth flow is designed to get an access token from the custodian. The authorization server of the custodian will issue an access token if a valid bearer token with a valid signed contract is presented. The Nuts RFCs specify which means can be used to sign the contract. `RFC002 <https://nuts-foundation.gitbook.io/drafts/rfc/rfc002-authentication-token>`_ and `RFC003 <https://nuts-foundation.gitbook.io/drafts/rfc/rfc003-oauth2-authorization>`_ specify the supported means and the OAuth flow.
+The Nuts OAuth flow is designed to get an access token from the custodian. The authorization server of the custodian will issue an access token if a valid bearer token with a valid signed contract is presented. The Nuts RFCs specify which means can be used to sign the contract. `RFC002 <https://nuts-foundation.gitbook.io/drafts/rfc/rfc002-authentication-token>`_ and `RFC003 <https://nuts-foundation.gitbook.io/drafts/rfc/rfc003-oauth2-authorization>`_ specify the supported means and the OAuth flow. The access token is required to retrieve any form of data by an actor from a custodian. This makes sure the custodian gets the right metadata (eg: user name, patient context, etc). This metadata is used for role-based access control and logging.
 
 The Nuts OAuth flow consists of 4 steps:
 
@@ -12,16 +12,21 @@ The Nuts OAuth flow consists of 4 steps:
 - construct bearer token using signed contract
 - retrieve access token from authorization server of custodian
 
+..image:: https://gblobscdn.gitbook.com/assets%2F-MHUwt4RgjbUQ7BsyWka%2F-MHW06x719D7XNoczhFO%2F-MHW2qIEgMpYKKyWwiyQ%2FNuts%20oauth%20authorization%20flow.png
+    :width: 400
+    :alt: Oauth flow
+
+
 Constructing a formatted contract
 *********************************
 
-The current contract to use depends on the bolt that is to be used. Let's use the care insight bolt as an example. It uses the following contract:
+The current contract to use depends on the bolt that is to be used. Let's use the `care insight <https://nuts-foundation.gitbook.io/bolts/zorginzage/overzicht>`_ bolt as an example. It uses the following contract:
 
 .. code-block::
 
     EN:PractitionerLogin:v3 I hereby declare to act on behalf of {{LegalEntityAttr}}. This declaration is valid from {{ValidFromAttr}} until {{ValidToAttr}}.
 
-The ``EN:PractitionerLogin:v3`` part defines the **language**, **type** and **version**. The dutch version of the given contract would be ``NL:BehandelaarLogin:v3``.
+The ``EN:PractitionerLogin:v3`` part defines the **language**, **type** and **version**. The Dutch version of the given contract would be ``NL:BehandelaarLogin:v3``.
 
 You can draw up a contract by calling:
 
@@ -53,18 +58,18 @@ This will return a filled contract where the **legalEntity** has been transforme
         "message": "EN:PractitionerLogin:v3 I hereby declare to act on behalf of Nursing home A. This declaration is valid from Monday, 24 June 2019 14:32:00 until Monday, 24 June 2019 16:32:00."
     }
 
-The ``message`` part will have to used in the next step.
+The ``message`` part will be used in the next step.
 
 User signature
 **************
 
-The ``message`` part of the previous step needs to be presented to the user. The user can sign it using one of the supported means. The following steps use the *dummy* means as example.
+The ``message`` part of the previous step needs to be presented to the user. The user can sign it using one of the supported means. The following steps use the *dummy* means as example. The *dummy* means is ideal for local testing and/or debugging since it doesn't require a cryptographic means.
 
 Most of the means require the same steps:
 
 - start a session at the means backend
 - expose the session data to a user controlled device
-- poll the means backend of session updates
+- poll the means backend for session updates
 - retrieve user signature upon success
 
 A session can be started by doing the following request:
@@ -129,7 +134,7 @@ The previous paragraph showed us how to get a signed contract in the form of a *
       "scope": "nuts"
     }
 
-The ``scope`` field must be **nuts** according to spec and the ``identity`` field must be filled with the contents of the ``verifiablePresentation`` of the previous paragraph. The ``actor`` field must be filled with the *identifier* of the care organization the current user is representing. It must be the same as used in `Constructing a formatted contract`_. The *identifier* for the ``custodian`` field must have been obtained by other means. It can, for example, come from a registered consent record which granted this actor access to data at the custodian given a certain subject. The ``subject`` field is optional, when used it must identify a patient. ``urn:oid:2.16.840.1.113883.2.4.6.3:999999990`` is the Dutch citizen number ``999999990``.
+The ``scope`` field must be **nuts** and the ``identity`` field must be filled with the contents of the ``verifiablePresentation`` of the previous paragraph. The ``actor`` field must be filled with the *identifier* of the care organization the current user is representing. It must be the same as used in `Constructing a formatted contract`_. The *identifier* for the ``custodian`` field must have been obtained by other means. It can, for example, come from a registered consent record which granted this actor access to data at the custodian given a certain subject. The ``subject`` field is optional, when used it must identify a patient, e.g. ``urn:oid:2.16.840.1.113883.2.4.6.3:999999990`` is the Dutch citizen number ``999999990``.
 
 If the identifiers match with the contract, a bearer token in the form of a JWT is returned:
 
@@ -144,13 +149,12 @@ This bearer token can be used to get an access token at the custodian side.
 Access token
 ************
 
-The access token is issued by the authorization server at the custodian side. According to spec it may be anything as long as it's BASE64 encoded and it can fit in a HTTP header. The authorization server embedded in the Nuts OS implementation uses JWTs as access tokens.
+The access token is issued by the authorization server at the custodian side. It may be anything as long as it's BASE64 encoded and it can fit in a HTTP header. The authorization server embedded in the Nuts OS implementation uses JWTs as access tokens.
 
 To get an access token, perform the following steps:
 
 - find the authorization server endpoint
 - retrieve the access token
-- use the access token
 
 One way of obtaining the right endpoint is to use the Nuts registry. The Nuts registry holds OAuth endpoints for each vendor, care organization and service combination.
 
@@ -169,7 +173,7 @@ We'll use the access token endpoint on the Nuts OS implementation as reference e
     grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer
     &assertion=eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI...WSOR9zuNdW_nYHwTDQI4z7pVkUqgdEd-BhA
 
-the ``grant-type`` is fixed and equals **urn:ietf:params:oauth:grant-type:jwt-bearer**. The ``assertion`` is the **bearer token** from the previous paragraph. This request must be send over TLS and the sender must use a **client certificate**. `RFC003 <https://nuts-foundation.gitbook.io/drafts/rfc/rfc003-oauth2-authorization>`_ and `RFC008 <https://nuts-foundation.gitbook.io/drafts/rfc/rfc008-certificate-structure>`_ specify the requirements for the client certificate. The Nuts OS implementation contains a convenient endpoint for getting a client certificate signed by the vendor CA:
+the ``grant-type`` is fixed and equals **urn:ietf:params:oauth:grant-type:jwt-bearer**. The ``assertion`` is the **bearer token** from the previous paragraph. This request must be sent over TLS and the sender must use a **client certificate**. `RFC003 <https://nuts-foundation.gitbook.io/drafts/rfc/rfc003-oauth2-authorization>`_ and `RFC008 <https://nuts-foundation.gitbook.io/drafts/rfc/rfc008-certificate-structure>`_ specify the requirements for the client certificate. The Nuts OS implementation contains a convenient endpoint for getting a client certificate signed by the vendor CA:
 
 .. code-block::
 
@@ -182,7 +186,7 @@ the ``grant-type`` is fixed and equals **urn:ietf:params:oauth:grant-type:jwt-be
     AJwvfhf8Wy+jh97W8fPGwVZvUcRTrSESvGBV+kas4pd+K4E335Ifd1+XIg==
     -----END PUBLIC KEY-----
 
-The result will be the client certificate in pem encoding. The client is responsible for the storage of the key material. If the authorization server accepts the bearer token it'll return an access token:
+The result will be the client certificate in PEM encoding. The client is responsible for the storage of the key material. If the authorization server accepts the bearer token it'll return an access token:
 
 .. code-block::
 
