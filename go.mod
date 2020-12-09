@@ -15,11 +15,11 @@ require (
 	github.com/magiconair/properties v1.8.4
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/nuts-foundation/nuts-consent-store v0.15.1-0.20200929093957-21ccf5e25c74
-	github.com/nuts-foundation/nuts-crypto v0.15.1-0.20201113103650-0107d387c2e2
+	github.com/nuts-foundation/nuts-crypto v0.15.1-0.20201208085925-5ed4fc4da094
 	github.com/nuts-foundation/nuts-go-core v0.15.0
 	github.com/nuts-foundation/nuts-go-test v0.15.0
 	github.com/nuts-foundation/nuts-network v0.15.2-0.20201113140930-8c143894b265 // indirect
-	github.com/nuts-foundation/nuts-registry v0.15.2-0.20201113141322-7567aec59773
+	github.com/nuts-foundation/nuts-registry v0.15.2-0.20201209084850-eaf97181f92b
 	github.com/pkg/errors v0.9.1
 	github.com/privacybydesign/irmago v0.6.0
 	github.com/sirupsen/logrus v1.7.0

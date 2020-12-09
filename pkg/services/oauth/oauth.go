@@ -200,7 +200,7 @@ func (s *service) validateIssuer(context *validationContext) error {
 	if err != nil {
 		return fmt.Errorf(errInvalidIssuerFmt, err)
 	}
-	chains, err := s.crypto.TrustStore().VerifiedChain(context.jwtBearerToken.SigningCertificate, validationTime)
+	chains, err := s.crypto.TrustStore().VerifiedChain(context.jwtBearerToken.SigningCertificate, validationTime, []x509.ExtKeyUsage{x509.ExtKeyUsageAny})
 	if err != nil || len(chains) == 0 {
 		return fmt.Errorf(errInvalidIssuerFmt, err)
 	}
@@ -238,7 +238,7 @@ func (s *service) validateClientCertificate(context *validationContext, pemEncod
 		return errInvalidClientCert
 	}
 
-	chains, err := s.crypto.TrustStore().VerifiedChain(c, validationTime)
+	chains, err := s.crypto.TrustStore().VerifiedChain(c, validationTime, []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth})
 	if err != nil || len(chains) == 0 {
 		msg := ""
 		if err != nil {

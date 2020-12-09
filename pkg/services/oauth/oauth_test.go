@@ -668,11 +668,11 @@ type testTrustStore struct {
 	ca  *x509.Certificate
 }
 
-func (tss testTrustStore) Verify(certificate *x509.Certificate, t time.Time) error {
+func (tss testTrustStore) Verify(certificate *x509.Certificate, t time.Time, _ []x509.ExtKeyUsage) error {
 	return tss.err
 }
 
-func (tss testTrustStore) VerifiedChain(certificate *x509.Certificate, t time.Time) ([][]*x509.Certificate, error) {
+func (tss testTrustStore) VerifiedChain(certificate *x509.Certificate, t time.Time, _ []x509.ExtKeyUsage) ([][]*x509.Certificate, error) {
 	if tss.err != nil {
 		return nil, tss.err
 	}
