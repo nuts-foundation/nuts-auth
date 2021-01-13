@@ -16,16 +16,16 @@ type ContractLanguage string
 // ContractResponse defines model for ContractResponse.
 type ContractResponse struct {
 
-	// Language of the contract in all caps
+	// Language of the contract in all caps.
 	Language ContractLanguage `json:"language"`
 
-	// The contract message
+	// The contract message.
 	Message string `json:"message"`
 
-	// Type of which contract to sign
+	// Type of which contract to sign.
 	Type ContractType `json:"type"`
 
-	// Version of the contract
+	// Version of the contract.
 	Version ContractVersion `json:"version"`
 }
 
@@ -42,7 +42,7 @@ type CreateSignSessionRequest struct {
 	// Params are passed to the means. Should be documented in the means documentation.
 	Params map[string]interface{} `json:"params"`
 
-	// base64 encoded payload what needs to be signed
+	// Base64 encoded payload what needs to be signed.
 	Payload string `json:"payload"`
 }
 
@@ -62,13 +62,13 @@ type CreateSignSessionResponse struct {
 // DrawUpContractRequest defines model for DrawUpContractRequest.
 type DrawUpContractRequest struct {
 
-	// Language of the contract in all caps
+	// Language of the contract in all caps.
 	Language ContractLanguage `json:"language"`
 
-	// Identifier of the legalEntity as registered in the Nuts registry
+	// Identifier of the legalEntity as registered in the Nuts registry.
 	LegalEntity LegalEntity `json:"legalEntity"`
 
-	// Type of which contract to sign
+	// Type of which contract to sign.
 	Type ContractType `json:"type"`
 
 	// The duration this contract is valid, starting from validFrom or current time if validFrom is omitted. Uses this node default when omitted. Valid time units are: 's', 'm', 'h'
@@ -77,7 +77,7 @@ type DrawUpContractRequest struct {
 	// validFrom describes the time from which this contract should be considered valid. Current time is used when omitted.
 	ValidFrom *string `json:"validFrom,omitempty"`
 
-	// Version of the contract
+	// Version of the contract.
 	Version ContractVersion `json:"version"`
 }
 
@@ -87,7 +87,7 @@ type GetSignSessionStatusResponse struct {
 	// Status indicates the status of the signing proces. Values depend on the implementation of the signing means.
 	Status string `json:"status"`
 
-	// If the signature session is completed, this property contains the signature embedded in an w3c verifiable presentation
+	// If the signature session is completed, this property contains the signature embedded in an w3c verifiable presentation.
 	VerifiablePresentation *VerifiablePresentation `json:"verifiablePresentation,omitempty"`
 }
 
@@ -97,12 +97,28 @@ type LegalEntity string
 // SignatureVerificationRequest defines model for SignatureVerificationRequest.
 type SignatureVerificationRequest struct {
 
-	// If the signature session is completed, this property contains the signature embedded in an w3c verifiable presentation
+	// If the signature session is completed, this property contains the signature embedded in an w3c verifiable presentation.
 	VerifiablePresentation VerifiablePresentation `json:"VerifiablePresentation"`
 }
 
 // SignatureVerificationResponse defines model for SignatureVerificationResponse.
-type SignatureVerificationResponse bool
+type SignatureVerificationResponse struct {
+
+	// Key value pairs containing claims and their values.
+	Credentials *map[string]interface{} `json:"credentials,omitempty"`
+
+	// Key vale pairs containing the attributes of the issuer.
+	IssuerAttributes *map[string]interface{} `json:"issuerAttributes,omitempty"`
+
+	// The type of proof for the presentation.
+	ProofType *string `json:"proofType,omitempty"`
+
+	// Indicates the validity of the signature.
+	Validity bool `json:"validity"`
+
+	// Type of Verifiable credential.
+	VpType *string `json:"vpType,omitempty"`
+}
 
 // VerifiablePresentation defines model for VerifiablePresentation.
 type VerifiablePresentation struct {
@@ -216,3 +232,4 @@ func RegisterHandlers(router interface {
 	router.PUT("/internal/auth/experimental/signature/verify", wrapper.VerifySignature)
 
 }
+

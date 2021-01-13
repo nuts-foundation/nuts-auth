@@ -59,9 +59,29 @@ func (w Wrapper) VerifySignature(ctx echo.Context) error {
 
 	validationResult, err := w.Auth.ContractClient().VerifyVP(rawVP)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to verify the verifiable presentation: %s", err.Error()))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to verify the verifiable presentation: %s", err.Error()))
 	}
-	var result SignatureVerificationResponse = validationResult.State == contract.Valid
+	result := SignatureVerificationResponse{}
+	result.Validity = validationResult.State == contract.Valid
+	if result.Validity {
+		proofType := string(validationResult.ContractFormat)
+		result.ProofType = &proofType
+
+		credentials := map[string]interface{}{}
+		for key, val := range validationResult.ContractAttributes {
+			credentials[key] = val
+		}
+		result.Credentials = &credentials
+
+		issuerAttributes := map[string]interface{}{}
+		for key, val := range validationResult.DisclosedAttributes {
+			issuerAttributes[key] = val
+		}
+		result.IssuerAttributes = &issuerAttributes
+
+		vpType := "NutsDelegation"
+		result.VpType = &vpType
+	}
 	return ctx.JSON(http.StatusOK, result)
 }
 

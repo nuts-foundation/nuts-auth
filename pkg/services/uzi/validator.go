@@ -20,16 +20,17 @@ package uzi
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
-const VerifiablePresentationType = "uzi"
+const VerifiablePresentationType = "NutsUziPresentation"
 
 type UziVerifier struct {
-	UziValidator services.AuthenticationTokenParser
+	UziValidator services.VpProofValueParser
 }
 
 // Presentation is a VerifiablePresentation without valid cryptographic proofs
@@ -51,6 +52,21 @@ func (u UziVerifier) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verif
 		return nil, fmt.Errorf("could not parse raw verifiable presentation: %w", err)
 	}
 
+	if len(presentation.Proof.ProofValue) == 0 {
+		return nil, errors.New("could not verify empty proof")
+	}
+
+	typeMatch := false
+	for _, pType := range presentation.Type {
+		if typeMatch {
+			break
+		}
+		typeMatch = pType == VerifiablePresentationType
+	}
+	if !typeMatch {
+		return nil, fmt.Errorf("could not verify this verification type: '%v', should contain type: %s", presentation.Type, VerifiablePresentationType)
+	}
+
 	signedToken, err := u.UziValidator.Parse(presentation.Proof.ProofValue)
 	if err != nil {
 		return nil, fmt.Errorf("could not verify verifiable presentation: could not parse the proof: %w", err)
@@ -61,10 +77,15 @@ func (u UziVerifier) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verif
 		}, nil
 	}
 
+	disclosedAttributes, err := signedToken.SignerAttributes()
+	if err != nil {
+		return nil, fmt.Errorf("could not get disclosed attributes from signed contract: %w", err)
+	}
+
 	return &contract.VerificationResult{
 		State:               contract.Valid,
 		ContractFormat:      VerifiablePresentationType,
-		DisclosedAttributes: nil,
-		ContractAttributes:  nil,
+		DisclosedAttributes: disclosedAttributes,
+		ContractAttributes:  signedToken.Contract().Params,
 	}, nil
 }

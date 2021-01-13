@@ -445,6 +445,8 @@ func (s *service) buildAccessToken(context *validationContext) (string, error) {
 		return "", fmt.Errorf("could not build accessToken: %w", errors.New("subject is missing"))
 	}
 
+	disclosedAttributes := identityValidationResult.DisclosedAttributes
+
 	at := services.NutsAccessToken{
 		StandardClaims: jwt.StandardClaims{
 			// Expires in 15 minutes
@@ -460,11 +462,11 @@ func (s *service) buildAccessToken(context *validationContext) (string, error) {
 		// https://privacybydesign.foundation/attribute-index/en/pbdf.pbdf.email.html
 		// and
 		// https://openid.net/specs/openid-connect-basic-1_0.html#StandardClaims
-		FamilyName: identityValidationResult.DisclosedAttributes["gemeente.personalData.familyname"],
-		GivenName:  identityValidationResult.DisclosedAttributes["gemeente.personalData.firstnames"],
-		Prefix:     identityValidationResult.DisclosedAttributes["gemeente.personalData.prefix"],
-		Name:       identityValidationResult.DisclosedAttributes["gemeente.personalData.fullname"],
-		Email:      identityValidationResult.DisclosedAttributes["sidn-pbdf.email.email"],
+		FamilyName: disclosedAttributes["gemeente.personalData.familyname"],
+		GivenName:  disclosedAttributes["gemeente.personalData.firstnames"],
+		Prefix:     disclosedAttributes["gemeente.personalData.prefix"],
+		Name:       disclosedAttributes["gemeente.personalData.fullname"],
+		Email:      disclosedAttributes["sidn-pbdf.email.email"],
 	}
 
 	var keyVals map[string]interface{}

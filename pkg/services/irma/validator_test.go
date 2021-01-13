@@ -148,7 +148,7 @@ func TestValidateContract(t *testing.T) {
 			false,
 		},
 		{
-			"a forged contract it should be invalid",
+			"a forged contract should be invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ForgedIrmaContract)),
 				services.IrmaFormat,
@@ -157,9 +157,8 @@ func TestValidateContract(t *testing.T) {
 			},
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
 			&services.ContractValidationResult{
-				ValidationResult:    services.Invalid,
-				ContractFormat:      services.IrmaFormat,
-				DisclosedAttributes: nil,
+				ValidationResult: services.Invalid,
+				ContractFormat:   services.IrmaFormat,
 			},
 			false,
 		},
@@ -243,7 +242,7 @@ func TestValidateContract(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ValidateContract() = %v, want %v", got, tt.want)
+				t.Errorf("ValidateContract():\ngot:  %v\nwant: %v\n", got, tt.want)
 			}
 		})
 	}
@@ -576,7 +575,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	t.Run("Empty message returns error", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma.SignedMessage{}, Contract: &contract.Contract{}})
+		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma.SignedMessage{}, contract: &contract.Contract{}})
 
 		assert.NotNil(t, err)
 		assert.Error(t, contract.ErrInvalidContractText, err)
@@ -605,7 +604,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 		assert.Nil(t, err)
 
 		_, err = ctx.v.legalEntityFromContract(&SignedIrmaContract{
-			Contract: signedContract,
+			contract: signedContract,
 		})
 
 		assert.NotNil(t, err)
@@ -618,18 +617,12 @@ func TestService_VerifyVP(t *testing.T) {
 		validator, _ := defaultValidator(t)
 
 		irmaSignature := testdata.ValidIrmaContract
-		validIrmaContract := irma.SignedMessage{}
-		err := json.Unmarshal([]byte(irmaSignature), &validIrmaContract)
-		if !assert.NoError(t, err) {
-			return
-		}
-
-		rawSic, err := json.Marshal(validIrmaContract)
+		encodedIrmaSignature := base64.StdEncoding.EncodeToString([]byte(irmaSignature))
 
 		vp := VerifiablePresentation{
 			Proof: VPProof{
-				Proof:     contract.Proof{Type: ""},
-				Signature: string(rawSic),
+				Proof:      contract.Proof{Type: ""},
+				ProofValue: encodedIrmaSignature,
 			},
 		}
 

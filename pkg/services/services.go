@@ -71,9 +71,9 @@ type SignedToken interface {
 	Contract() contract.Contract
 }
 
-// AuthenticationTokenParser provides a uniform interface for Authentication services like IRMA or x509 signed tokens
-type AuthenticationTokenParser interface {
-	// Parse accepts a raw Auth token string. The parser tries to parse the token into a SignedToken.
+// VpProofValueParser provides a uniform interface for Authentication services like IRMA or x509 signed tokens
+type VpProofValueParser interface {
+	// Parse accepts a raw ProofValue from the VP as a string. The parser tries to parse the value into a SignedToken.
 	Parse(rawAuthToken string) (SignedToken, error)
 
 	// Verify accepts a SignedToken and verifies the signature using the crypto for the specific implementation of this interface.

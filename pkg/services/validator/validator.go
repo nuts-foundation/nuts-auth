@@ -97,6 +97,7 @@ func (s *service) Configure() (err error) {
 		Registry:          s.registry,
 		Crypto:            s.crypto,
 		IrmaServiceConfig: s.irmaServiceConfig,
+		ContractTemplates: contract.StandardContractTemplates,
 	}
 	// todo refactor and use signer/verifier
 	s.contractSessionHandler = irmaService
@@ -125,7 +126,7 @@ func (s *service) Configure() (err error) {
 		s.signers[dummy.ContractFormat] = d
 	}
 
-	if _, ok := cvMap[uzi.VerifiablePresentationType]; ok {
+	if _, ok := cvMap["uzi"]; ok {
 		crlGetter := x509.NewCachedHttpCrlService()
 		uziValidator, err := x509.NewUziValidator(x509.UziAcceptation, &contract.StandardContractTemplates, crlGetter)
 		uziVerifier := uzi.UziVerifier{UziValidator: uziValidator}

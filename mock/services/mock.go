@@ -324,7 +324,7 @@ func (mr *MockSignedTokenMockRecorder) Contract() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Contract", reflect.TypeOf((*MockSignedToken)(nil).Contract))
 }
 
-// MockAuthenticationTokenParser is a mock of AuthenticationTokenParser interface
+// MockAuthenticationTokenParser is a mock of VpProofValueParser interface
 type MockAuthenticationTokenParser struct {
 	ctrl     *gomock.Controller
 	recorder *MockAuthenticationTokenParserMockRecorder

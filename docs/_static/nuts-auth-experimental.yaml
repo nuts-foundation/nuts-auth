@@ -16,7 +16,7 @@ paths:
               $ref: "#/components/schemas/CreateSignSessionRequest"
       responses:
         201:
-          description: When the signing session was successfully created
+          description: When the signing session was successfully created.
           content:
             application/json:
               schema:
@@ -70,13 +70,13 @@ paths:
               $ref: "#/components/schemas/DrawUpContractRequest"
       responses:
         200:
-          description: When the contract was drawn up successfully
+          description: When the contract was drawn up successfully.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContractResponse"
         404:
-          description: When the combination of template, language and version was not found
+          description: When the combination of template, language and version was not found.
 
 components:
   schemas:
@@ -95,7 +95,7 @@ components:
           description: Params are passed to the means. Should be documented in the means documentation.
         payload:
           type: string
-          description: base64 encoded payload what needs to be signed
+          description: Base64 encoded payload what needs to be signed.
 
     CreateSignSessionResponse:
       required:
@@ -126,7 +126,7 @@ components:
           $ref: "#/components/schemas/VerifiablePresentation"
 
     VerifiablePresentation:
-      description: If the signature session is completed, this property contains the signature embedded in an w3c verifiable presentation
+      description: If the signature session is completed, this property contains the signature embedded in an w3c verifiable presentation.
       type: object
       required:
         - "@context"
@@ -153,24 +153,52 @@ components:
           $ref: "#/components/schemas/VerifiablePresentation"
 
     SignatureVerificationResponse:
-      description: Contains the verification result.
-      type: boolean
+      description: Contains the signature verification result.
+      type: object
+      required:
+        - validity
+      properties:
+        validity:
+          type: boolean
+          description: Indicates the validity of the signature.
+        vpType:
+          description: Type of Verifiable credential.
+          example: NutsDelegation
+          type: string
+        proofType:
+          description: The type of proof for the presentation.
+          type: string
+          example: uzi
+        issuerAttributes:
+          description: Key vale pairs containing the attributes of the issuer.
+          type: object
+          example:
+            uziNr: 9000382
+            firstName: Henk
+            lastName: de Vries
+        credentials:
+          description: Key value pairs containing claims and their values.
+          type: object
+          example:
+            organisation: Zorgcentrum de Oosterlanden
+            validFrom: 2020-12-16T10:57:00
+            validTo: 2020-12-16T12:57:00
 
     ContractType:
       type: string
-      description: "Type of which contract to sign"
+      description: Type of which contract to sign.
       example: "BehandelaarLogin"
     ContractLanguage:
       type: string
-      description: "Language of the contract in all caps"
+      description: Language of the contract in all caps.
       example: "NL"
     ContractVersion:
       type: string
-      description: "Version of the contract"
+      description: Version of the contract.
       example: "v1"
     LegalEntity:
       type: string
-      description: "Identifier of the legalEntity as registered in the Nuts registry"
+      description: Identifier of the legalEntity as registered in the Nuts registry.
       example: "urn:oid:2.16.840.1.113883.2.4.6.1:48000000"
 
     ContractResponse:
@@ -182,7 +210,7 @@ components:
       properties:
         message:
           type: string
-          description: The contract message
+          description: The contract message.
           example: I hereby declare that Pro Gen - Italia should be make requests in my name
         type:
           $ref: "#/components/schemas/ContractType"
@@ -208,7 +236,7 @@ components:
           $ref: "#/components/schemas/LegalEntity"
         validFrom:
           type: string
-          description: "validFrom describes the time from which this contract should be considered valid. Current time is used when omitted."
+          description: validFrom describes the time from which this contract should be considered valid. Current time is used when omitted.
           example: "2019-06-24T14:32:00+02:00"
         validDuration:
           type: string

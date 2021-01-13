@@ -31,7 +31,7 @@ const (
 // VerifierType is the type for a specific verifier
 type VerifierType string
 
-// Verifier defines the funcs needed to verify a VerifiablePresentation
+// Verifier defines the interface needed to verify a VerifiablePresentation
 type Verifier interface {
 	// VerifyVP validates a verifiable presentation.
 	// When the verifier could not handle the verifiable presentation, an error should be thrown.

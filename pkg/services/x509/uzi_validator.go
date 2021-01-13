@@ -181,13 +181,14 @@ func NewUziValidator(env UziEnv, contractTemplates *contract.TemplateStore, crls
 	return
 }
 
-// Parse tries to parse a string as a base64 encoded JWT.
-// The jwt should contain at leas one certificate in the x509 header
+// Parse tries to parse a UZI ProofValue into a UziSignedToken
+// A Uzi ProofValue is encoded as a JWT.
+// The jwt should contain at least one certificate in the x509 header
 // It tries to find the contract in the given contractStore.
 // No other verifications are performed.
 // Make sure to call Verify to perform the actual crypto verifications
-func (u UziValidator) Parse(rawAuthToken string) (services.SignedToken, error) {
-	x509Token, err := u.validator.Parse(rawAuthToken)
+func (u UziValidator) Parse(rawProofValue string) (services.SignedToken, error) {
+	x509Token, err := u.validator.Parse(rawProofValue)
 	if err != nil {
 		return nil, err
 	}

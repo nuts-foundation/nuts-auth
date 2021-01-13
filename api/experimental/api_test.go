@@ -408,8 +408,21 @@ func TestWrapper_VerifySignature(t *testing.T) {
 		ContractAttributes:  nil,
 	}
 
+	vpType := "NutsDelegation"
+	issuerAttributes := map[string]interface{}{}
+	credentials := map[string]interface{}{}
+	proofType := ""
+
+	expectedResponse := SignatureVerificationResponse{
+		Credentials:      &credentials,
+		IssuerAttributes: &issuerAttributes,
+		ProofType:        &proofType,
+		Validity:         true,
+		VpType:           &vpType,
+	}
+
 	ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(verificationResult, nil)
-	ctx.echoMock.EXPECT().JSON(http.StatusOK, SignatureVerificationResponse(true))
+	ctx.echoMock.EXPECT().JSON(http.StatusOK, expectedResponse)
 
 	err := ctx.wrapper.VerifySignature(ctx.echoMock)
 	assert.NoError(t, err)

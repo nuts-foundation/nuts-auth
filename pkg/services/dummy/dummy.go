@@ -79,6 +79,19 @@ type Proof struct {
 	Email string
 }
 
+type DummySignedToken struct {
+	signerAttributes map[string]string
+	contract         contract.Contract
+}
+
+func (d DummySignedToken) SignerAttributes() (map[string]string, error) {
+	return d.signerAttributes, nil
+}
+
+func (d DummySignedToken) Contract() contract.Contract {
+	return d.contract
+}
+
 type sessionPointer struct {
 	sessionID string
 }

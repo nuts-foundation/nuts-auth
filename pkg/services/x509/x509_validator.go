@@ -170,7 +170,7 @@ var nowFunc = time.Now
 // Verify verifies a JwtX509Token.
 // It checks the signature algorithm
 // It verifies if the certificate used to sign the token has a valid chain
-// It checks the signature of the jst agains the provided leaf certificate in the x509 header
+// It checks the signature of the jst against the provided leaf certificate in the x509 header
 // It performs additional JWT checks on optional fields like exp, nbf, iat etc.
 // Note: it does not verifies the extended key usage! This should be performed by hand.
 func (validator JwtX509Validator) Verify(x509Token *JwtX509Token) error {
