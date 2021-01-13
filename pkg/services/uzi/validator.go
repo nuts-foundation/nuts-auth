@@ -48,7 +48,7 @@ type Proof struct {
 	ProofValue string
 }
 
-// Verify implements the VerifiablePresentation Verifier interface. It can verify an Uzi VP.
+// VerifyVP implements the VerifiablePresentation Verifier interface. It can verify an Uzi VP.
 // It checks the signature, the attributes and the contract.
 // Returns the contract.VerificationResult or an error if something went wrong.
 func (u Verifier) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
