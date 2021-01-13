@@ -79,27 +79,34 @@ type Proof struct {
 	Email string
 }
 
-type DummySignedToken struct {
+// SignedToken is the Dummy implementation of a Signed token.
+// It can be used in the dummy.Service service.
+type SignedToken struct {
 	signerAttributes map[string]string
 	contract         contract.Contract
 }
 
-func (d DummySignedToken) SignerAttributes() (map[string]string, error) {
+// SignerAttributes returns the attributes used to sign the token
+func (d SignedToken) SignerAttributes() (map[string]string, error) {
 	return d.signerAttributes, nil
 }
 
-func (d DummySignedToken) Contract() contract.Contract {
+// Contract returns the contract
+func (d SignedToken) Contract() contract.Contract {
 	return d.contract
 }
 
+// sessionPointer contains a information to facilitate session discoverability for the signing means
 type sessionPointer struct {
 	sessionID string
 }
 
+// SessionID returns a string which can be used by the signing means to find the session
 func (s sessionPointer) SessionID() string {
 	return s.sessionID
 }
 
+// Payload returns always the dummy value
 func (s sessionPointer) Payload() []byte {
 	return []byte("dummy")
 }
@@ -116,13 +123,14 @@ type signingSessionResult struct {
 	Request string
 }
 
+// Status returns the current state of the signing session
 func (d signingSessionResult) Status() string {
 	return d.State
 }
 
+// VerifiablePresentation returns the contract.VerifiablePresentation if the session is completed, nil otherwise.
 func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePresentation, error) {
 	// todo: the contract template should be used to select the dummy attributes to add
-	// reqContract := d.Request
 
 	if d.Status() != SessionCompleted {
 		return nil, nil
@@ -144,6 +152,7 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 	}, nil
 }
 
+// VerifyVP check a Dummy VerifiablePresentation. It Returns a verificationResult if all was fine, an error otherwise.
 func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
 	if d.InStrictMode {
 		return nil, errNotEnabled
@@ -207,6 +216,9 @@ func (d Dummy) SigningSessionStatus(sessionID string) (contract.SigningSessionRe
 	}, nil
 }
 
+// StartSigningSession starts a Dummy session. It takes any string and stores it under a random sessionID.
+// This method is not available in strictMode
+// returns the sessionPointer with the sessionID
 func (d Dummy) StartSigningSession(rawContractText string) (contract.SessionPointer, error) {
 	if d.InStrictMode {
 		return nil, errNotEnabled
