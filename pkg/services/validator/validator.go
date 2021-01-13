@@ -129,7 +129,7 @@ func (s *service) Configure() (err error) {
 	if _, ok := cvMap["uzi"]; ok {
 		crlGetter := x509.NewCachedHttpCrlService()
 		uziValidator, err := x509.NewUziValidator(x509.UziAcceptation, &contract.StandardContractTemplates, crlGetter)
-		uziVerifier := uzi.UziVerifier{UziValidator: uziValidator}
+		uziVerifier := uzi.Verifier{UziValidator: uziValidator}
 
 		if err != nil {
 			return fmt.Errorf("could not initiate uzi validator: %w", err)

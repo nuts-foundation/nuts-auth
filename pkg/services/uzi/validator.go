@@ -27,9 +27,11 @@ import (
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
+// VerifiablePresentationType contains the string used in the VerifiablePresentation type array to indicate the Uzi means
 const VerifiablePresentationType = "NutsUziPresentation"
 
-type UziVerifier struct {
+// Verifier implements the Verifier interface and verifies the VerifiablePresentations of the NutsUziPresentation type.
+type Verifier struct {
 	UziValidator services.VpProofValueParser
 }
 
@@ -40,12 +42,16 @@ type Presentation struct {
 	Proof Proof
 }
 
+// Proof contains the Proof part of the Verifiable presentation of the NutsUziPresentation type
 type Proof struct {
 	Type       string
 	ProofValue string
 }
 
-func (u UziVerifier) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
+// Verify implements the VerifiablePresentation Verifier interface. It can verify an Uzi VP.
+// It checks the signature, the attributes and the contract.
+// Returns the contract.VerificationResult or an error if something went wrong.
+func (u Verifier) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
 
 	presentation := Presentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &presentation); err != nil {

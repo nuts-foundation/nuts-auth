@@ -43,10 +43,16 @@ type SignedIrmaContract struct {
 	proofStatus irma.ProofStatus
 }
 
+// SignerAttributes returns a map of irma attributes minus the root:
+// {
+//   "gemeente.personalData.fullname": "Henk de Vries",
+//   "sidn-pbdf.email.email": "henk.devries@example.com",
+// },
 func (s SignedIrmaContract) SignerAttributes() (map[string]string, error) {
 	return s.attributes, nil
 }
 
+// Contract returns the signed contract.Contract by the irma contract
 func (s SignedIrmaContract) Contract() contract.Contract {
 	return *s.contract
 }

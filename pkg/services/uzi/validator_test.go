@@ -54,7 +54,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		tokenParser := mock_services.NewMockAuthenticationTokenParser(ctrl)
 		tokenParser.EXPECT().Parse(proofValue).Return(signedToken, nil)
 		tokenParser.EXPECT().Verify(gomock.Any()).Return(nil)
-		uziVerifier := &UziVerifier{UziValidator: tokenParser}
+		uziVerifier := &Verifier{UziValidator: tokenParser}
 
 		res, err := uziVerifier.VerifyVP(vp)
 		if !assert.NoError(t, err) {
@@ -67,7 +67,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 	})
 
 	t.Run("nok - garbage input", func(t *testing.T) {
-		uziVerifier := &UziVerifier{}
+		uziVerifier := &Verifier{}
 		res, err := uziVerifier.VerifyVP([]byte("123"))
 		if !assert.Error(t, err) {
 			return
@@ -81,7 +81,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		defer ctrl.Finish()
 
 		tokenParser := mock_services.NewMockAuthenticationTokenParser(ctrl)
-		uziVerifier := &UziVerifier{UziValidator: tokenParser}
+		uziVerifier := &Verifier{UziValidator: tokenParser}
 
 		vp := []byte(`{ "@context": [ "https://www.w3.org/2018/credentials/v1" ] }`)
 
@@ -110,7 +110,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 }`, proofValue))
 
 		tokenParser := mock_services.NewMockAuthenticationTokenParser(ctrl)
-		uziVerifier := &UziVerifier{UziValidator: tokenParser}
+		uziVerifier := &Verifier{UziValidator: tokenParser}
 
 		res, err := uziVerifier.VerifyVP(vp)
 		if !assert.Error(t, err) {
@@ -128,7 +128,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 
 		tokenParser := mock_services.NewMockAuthenticationTokenParser(ctrl)
 		tokenParser.EXPECT().Parse(proofValue).Return(nil, errors.New("could not parse"))
-		uziVerifier := &UziVerifier{UziValidator: tokenParser}
+		uziVerifier := &Verifier{UziValidator: tokenParser}
 
 		res, err := uziVerifier.VerifyVP(vp)
 
@@ -150,7 +150,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		tokenParser := mock_services.NewMockAuthenticationTokenParser(ctrl)
 		tokenParser.EXPECT().Parse(proofValue).Return(signedToken, nil)
 		tokenParser.EXPECT().Verify(gomock.Any()).Return(nil)
-		uziVerifier := &UziVerifier{UziValidator: tokenParser}
+		uziVerifier := &Verifier{UziValidator: tokenParser}
 
 		res, err := uziVerifier.VerifyVP(vp)
 
@@ -171,7 +171,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		tokenParser := mock_services.NewMockAuthenticationTokenParser(ctrl)
 		tokenParser.EXPECT().Parse(proofValue).Return(signedToken, nil)
 		tokenParser.EXPECT().Verify(signedToken).Return(errors.New("invalid proof"))
-		uziVerifier := &UziVerifier{UziValidator: tokenParser}
+		uziVerifier := &Verifier{UziValidator: tokenParser}
 
 		res, err := uziVerifier.VerifyVP(vp)
 		if !assert.NoError(t, err) {
