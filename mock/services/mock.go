@@ -324,31 +324,31 @@ func (mr *MockSignedTokenMockRecorder) Contract() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Contract", reflect.TypeOf((*MockSignedToken)(nil).Contract))
 }
 
-// MockAuthenticationTokenParser is a mock of VpProofValueParser interface
-type MockAuthenticationTokenParser struct {
+// MockVpProofValueParser is a mock of VpProofValueParser interface
+type MockVpProofValueParser struct {
 	ctrl     *gomock.Controller
-	recorder *MockAuthenticationTokenParserMockRecorder
+	recorder *MockVpProofValueParserMockRecorder
 }
 
-// MockAuthenticationTokenParserMockRecorder is the mock recorder for MockAuthenticationTokenParser
-type MockAuthenticationTokenParserMockRecorder struct {
-	mock *MockAuthenticationTokenParser
+// MockVpProofValueParserMockRecorder is the mock recorder for MockVpProofValueParser
+type MockVpProofValueParserMockRecorder struct {
+	mock *MockVpProofValueParser
 }
 
-// NewMockAuthenticationTokenParser creates a new mock instance
-func NewMockAuthenticationTokenParser(ctrl *gomock.Controller) *MockAuthenticationTokenParser {
-	mock := &MockAuthenticationTokenParser{ctrl: ctrl}
-	mock.recorder = &MockAuthenticationTokenParserMockRecorder{mock}
+// NewMockVpProofValueParser creates a new mock instance
+func NewMockVpProofValueParser(ctrl *gomock.Controller) *MockVpProofValueParser {
+	mock := &MockVpProofValueParser{ctrl: ctrl}
+	mock.recorder = &MockVpProofValueParserMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockAuthenticationTokenParser) EXPECT() *MockAuthenticationTokenParserMockRecorder {
+func (m *MockVpProofValueParser) EXPECT() *MockVpProofValueParserMockRecorder {
 	return m.recorder
 }
 
 // Parse mocks base method
-func (m *MockAuthenticationTokenParser) Parse(rawAuthToken string) (services.SignedToken, error) {
+func (m *MockVpProofValueParser) Parse(rawAuthToken string) (services.SignedToken, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Parse", rawAuthToken)
 	ret0, _ := ret[0].(services.SignedToken)
@@ -357,13 +357,13 @@ func (m *MockAuthenticationTokenParser) Parse(rawAuthToken string) (services.Sig
 }
 
 // Parse indicates an expected call of Parse
-func (mr *MockAuthenticationTokenParserMockRecorder) Parse(rawAuthToken interface{}) *gomock.Call {
+func (mr *MockVpProofValueParserMockRecorder) Parse(rawAuthToken interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parse", reflect.TypeOf((*MockAuthenticationTokenParser)(nil).Parse), rawAuthToken)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parse", reflect.TypeOf((*MockVpProofValueParser)(nil).Parse), rawAuthToken)
 }
 
 // Verify mocks base method
-func (m *MockAuthenticationTokenParser) Verify(token services.SignedToken) error {
+func (m *MockVpProofValueParser) Verify(token services.SignedToken) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Verify", token)
 	ret0, _ := ret[0].(error)
@@ -371,9 +371,9 @@ func (m *MockAuthenticationTokenParser) Verify(token services.SignedToken) error
 }
 
 // Verify indicates an expected call of Verify
-func (mr *MockAuthenticationTokenParserMockRecorder) Verify(token interface{}) *gomock.Call {
+func (mr *MockVpProofValueParserMockRecorder) Verify(token interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockAuthenticationTokenParser)(nil).Verify), token)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockVpProofValueParser)(nil).Verify), token)
 }
 
 // MockContractNotary is a mock of ContractNotary interface

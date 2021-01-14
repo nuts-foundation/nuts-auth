@@ -156,7 +156,7 @@ type ServerInterface interface {
 	// Get the current status of a signing session
 	// (GET /internal/auth/experimental/signature/session/{sessionID})
 	GetSignSessionStatus(ctx echo.Context, sessionID string) error
-	// Verify a signature in the form of a verifiable credential
+	// Verify a signature in the form of a verifiable presentation
 	// (PUT /internal/auth/experimental/signature/verify)
 	VerifySignature(ctx echo.Context) error
 }

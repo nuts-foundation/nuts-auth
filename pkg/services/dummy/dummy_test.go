@@ -182,7 +182,7 @@ func TestDummy_VerifyVP(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Equal(t, contract.Valid, vr.Validity)
-		assert.Equal(t, ContractFormat, string(vr.VPType))
+		assert.Equal(t, VerifiablePresentationType, vr.VPType)
 	})
 
 	t.Run("error - incorrect json", func(t *testing.T) {
