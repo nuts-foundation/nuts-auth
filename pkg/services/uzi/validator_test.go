@@ -61,7 +61,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 			return
 		}
 		assert.NotNil(t, res)
-		assert.Equal(t, contract.Valid, res.State)
+		assert.Equal(t, contract.Valid, res.Validity)
 		assert.Equal(t, "Henk de Vries", res.DisclosedAttributes["name"])
 		assert.Equal(t, "2020-12-10T13:57:00", res.ContractAttributes["validFrom"])
 	})
@@ -178,7 +178,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 			return
 		}
 		assert.NotNil(t, res)
-		assert.Equal(t, contract.Invalid, res.State)
+		assert.Equal(t, contract.Invalid, res.Validity)
 		assert.Empty(t, res.DisclosedAttributes)
 		assert.Empty(t, res.ContractAttributes)
 	})

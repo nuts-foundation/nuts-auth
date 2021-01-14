@@ -43,7 +43,7 @@ paths:
   /internal/auth/experimental/signature/verify:
     put:
       operationId: verifySignature
-      summary: Verify a signature in the form of a verifiable credential
+      summary: Verify a signature in the form of a verifiable presentation
       requestBody:
         required: true
         content:

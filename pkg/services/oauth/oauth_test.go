@@ -117,7 +117,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 	t.Run("invalid identity token", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(&contract.VerificationResult{State: contract.Invalid}, nil)
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(&contract.VPVerificationResult{Validity: contract.Invalid}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Times(2).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().AnyTimes().Return(testTrustStore{ca: vendorCA(t)})
 
@@ -134,7 +134,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 	t.Run("valid - with legal base", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(&contract.VerificationResult{State: contract.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(&contract.VPVerificationResult{Validity: contract.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().AnyTimes().Return(testTrustStore{ca: vendorCA(t)})
@@ -376,7 +376,7 @@ func TestOAuthService_buildAccessToken(t *testing.T) {
 		defer ctx.ctrl.Finish()
 
 		tokenCtx := &validationContext{
-			contractVerificationResult: &contract.VerificationResult{State: contract.Valid},
+			contractVerificationResult: &contract.VPVerificationResult{Validity: contract.Valid},
 			jwtBearerToken:             &services.NutsJwtBearerToken{},
 		}
 
@@ -392,7 +392,7 @@ func TestOAuthService_buildAccessToken(t *testing.T) {
 		ctx.cryptoMock.EXPECT().SignJWT(gomock.Any(), gomock.Any()).Return("expectedAT", nil)
 
 		tokenCtx := &validationContext{
-			contractVerificationResult: &contract.VerificationResult{State: contract.Valid},
+			contractVerificationResult: &contract.VPVerificationResult{Validity: contract.Valid},
 			jwtBearerToken:             &services.NutsJwtBearerToken{StandardClaims: jwt.StandardClaims{Subject: organizationID.String()}},
 		}
 

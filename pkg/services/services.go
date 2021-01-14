@@ -88,13 +88,14 @@ type ContractNotary interface {
 	ValidateContract(contractToValidate contract.Contract, orgID core.PartyID, checkTime time.Time) (bool, error)
 }
 
-// ContractClient defines functions for creating and validating signed contracts
+// ContractClient defines functions for creating and validating verifiable credentials
 type ContractClient interface {
 	// VerifyVP verifies if the proof of the VerifiablePresentation is valid
-	VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error)
+	VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerificationResult, error)
 
 	// CreateSigningSession creates a signing session for the requested contract and means
 	CreateSigningSession(sessionRequest CreateSessionRequest) (contract.SessionPointer, error)
+
 	// SigningSessionStatus returns the status of the current signing session or ErrSessionNotFound is sessionID is unknown
 	SigningSessionStatus(sessionID string) (contract.SigningSessionResult, error)
 

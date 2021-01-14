@@ -201,7 +201,7 @@ func (api *Wrapper) ValidateContract(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	// convert internal result back to generated api format
+	// convert internal result back to API format
 	signerAttributes := make(map[string]interface{})
 	for k, v := range validationResponse.DisclosedAttributes {
 		signerAttributes[k] = v

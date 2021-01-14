@@ -453,10 +453,10 @@ func (m *MockContractClient) EXPECT() *MockContractClientMockRecorder {
 }
 
 // VerifyVP mocks base method
-func (m *MockContractClient) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
+func (m *MockContractClient) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerificationResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "VerifyVP", rawVerifiablePresentation)
-	ret0, _ := ret[0].(*contract.VerificationResult)
+	ret0, _ := ret[0].(*contract.VPVerificationResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

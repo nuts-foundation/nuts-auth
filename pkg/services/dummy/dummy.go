@@ -29,10 +29,10 @@ import (
 )
 
 // ContractFormat is the contract format type
-const ContractFormat = "dummy"
+const ContractFormat = contract.SigningMeans("dummy")
 
 // VerifiablePresentationType is the dummy verifiable presentation type
-const VerifiablePresentationType = "DummyVerifiablePresentation"
+const VerifiablePresentationType = contract.VPType("DummyVerifiablePresentation")
 
 // NoSignatureType is a VerifiablePresentation Proof type where no signature is given
 const NoSignatureType = "NoSignature"
@@ -139,7 +139,7 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 	return Presentation{
 		VerifiablePresentationBase: contract.VerifiablePresentationBase{
 			Context: []string{contract.VerifiableCredentialContext},
-			Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
+			Type:    []contract.VPType{contract.VerifiablePresentationType, VerifiablePresentationType},
 		},
 		Proof: Proof{
 			Type:      NoSignatureType,
@@ -153,7 +153,7 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 }
 
 // VerifyVP check a Dummy VerifiablePresentation. It Returns a verificationResult if all was fine, an error otherwise.
-func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
+func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerificationResult, error) {
 	if d.InStrictMode {
 		return nil, errNotEnabled
 	}
@@ -168,9 +168,9 @@ func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificatio
 		return nil, err
 	}
 
-	return &contract.VerificationResult{
-		State:          contract.Valid,
-		ContractFormat: ContractFormat,
+	return &contract.VPVerificationResult{
+		Validity: contract.Valid,
+		VPType:   VerifiablePresentationType,
 		DisclosedAttributes: map[string]string{
 			"initials":  p.Proof.Initials,
 			"lastname":  p.Proof.Lastname,

@@ -154,9 +154,9 @@ func TestContract_VerifyVP(t *testing.T) {
 		}
 
 		mockVerifier := servicesMock.NewMockContractClient(ctrl)
-		mockVerifier.EXPECT().VerifyVP(rawVP).Return(&contract.VerificationResult{State: contract.Valid}, nil)
+		mockVerifier.EXPECT().VerifyVP(rawVP).Return(&contract.VPVerificationResult{Validity: contract.Valid}, nil)
 
-		validator := service{verifiers: map[string]contract.Verifier{"bar": mockVerifier}}
+		validator := service{verifiers: map[contract.VPType]contract.Verifier{"bar": mockVerifier}}
 
 		validationResult, err := validator.VerifyVP(rawVP)
 
@@ -166,7 +166,7 @@ func TestContract_VerifyVP(t *testing.T) {
 		if !assert.NotNil(t, validationResult) {
 			return
 		}
-		assert.Equal(t, contract.Valid, validationResult.State)
+		assert.Equal(t, contract.Valid, validationResult.Validity)
 	})
 
 	t.Run("nok - unknown VerifiablePresentation", func(t *testing.T) {
@@ -232,7 +232,7 @@ func TestContract_SigningSessionStatus(t *testing.T) {
 		mockSigner := contractMock.NewMockSigner(ctrl)
 		mockSigner.EXPECT().SigningSessionStatus(sessionID).Return(&contractMock.MockSigningSessionResult{}, nil)
 
-		validator := service{signers: map[string]contract.Signer{"bar": mockSigner}}
+		validator := service{signers: map[contract.SigningMeans]contract.Signer{"bar": mockSigner}}
 
 		signingSessionResult, err := validator.SigningSessionStatus(sessionID)
 		if !assert.NoError(t, err) {
@@ -275,7 +275,7 @@ func createContext(t *testing.T) *testContext {
 	contractValidatorMock := servicesMock.NewMockContractValidator(ctrl)
 	contractSessionHandler := servicesMock.NewMockContractSessionHandler(ctrl)
 
-	signers := map[string]contract.Signer{}
+	signers := map[contract.SigningMeans]contract.Signer{}
 	signerMock := contractMock.NewMockSigner(ctrl)
 	signers["irma"] = signerMock
 

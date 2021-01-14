@@ -61,10 +61,11 @@ func (w Wrapper) VerifySignature(ctx echo.Context) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to verify the verifiable presentation: %s", err.Error()))
 	}
+	// Convert internal validationResult to api SignatureVerificationResponse
 	result := SignatureVerificationResponse{}
-	result.Validity = validationResult.State == contract.Valid
+	result.Validity = validationResult.Validity == contract.Valid
 	if result.Validity {
-		proofType := string(validationResult.ContractFormat)
+		proofType := string(validationResult.VPType)
 		result.ProofType = &proofType
 
 		credentials := map[string]interface{}{}
@@ -92,7 +93,7 @@ func (w Wrapper) CreateSignSession(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("could not parse request body: %s", err.Error()))
 	}
 	createSessionRequest := services.CreateSessionRequest{
-		SigningMeans: requestParams.Means,
+		SigningMeans: contract.SigningMeans(requestParams.Means),
 		Message:      requestParams.Payload,
 	}
 	sessionPtr, err := w.Auth.ContractClient().CreateSigningSession(createSessionRequest)

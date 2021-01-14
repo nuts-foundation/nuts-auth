@@ -161,7 +161,7 @@ func (s SigningSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 	return VerifiablePresentation{
 		VerifiablePresentationBase: contract.VerifiablePresentationBase{
 			Context: []string{contract.VerifiableCredentialContext},
-			Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
+			Type:    []contract.VPType{contract.VerifiablePresentationType, VerifiablePresentationType},
 		},
 		Proof: VPProof{
 			Proof: contract.Proof{

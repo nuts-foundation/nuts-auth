@@ -68,7 +68,7 @@ type validationContext struct {
 	jwtBearerToken             *services.NutsJwtBearerToken
 	actorName                  string
 	vendor                     core.PartyID
-	contractVerificationResult *contract.VerificationResult
+	contractVerificationResult *contract.VPVerificationResult
 }
 
 // NewOAuthService accepts a vendorID, and several Nuts engines and returns an implementation of services.OAuthClient
@@ -148,7 +148,7 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 			return nil, fmt.Errorf("identity verification failed: %w", err)
 		}
 	}
-	if context.contractVerificationResult.State == contract.Invalid {
+	if context.contractVerificationResult.Validity == contract.Invalid {
 		return nil, errors.New("identity validation failed")
 	}
 	// checks if the name from the login contract matches with the registered name of the issuer.
@@ -436,7 +436,7 @@ func (s *service) buildAccessToken(context *validationContext) (string, error) {
 	identityValidationResult := context.contractVerificationResult
 	jwtBearerToken := context.jwtBearerToken
 
-	if identityValidationResult.State != contract.Valid {
+	if identityValidationResult.Validity != contract.Valid {
 		return "", fmt.Errorf("could not build accessToken: %w", errors.New("invalid contract"))
 	}
 

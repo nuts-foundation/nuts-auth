@@ -45,10 +45,10 @@ import (
 // todo rename to verifier
 
 // VerifiablePresentationType is the irma verifiable presentation type
-const VerifiablePresentationType = "NutsIrmaPresentation"
+const VerifiablePresentationType = contract.VPType("NutsIrmaPresentation")
 
 // ContractFormat holds the readable identifier of this signing means.
-const ContractFormat = "irma"
+const ContractFormat = contract.SigningMeans("irma")
 
 // Service validates contracts using the IRMA logic.
 type Service struct {
@@ -94,7 +94,7 @@ type VPProof struct {
 
 // VerifyVP expects the given raw VerifiablePresentation to be of the correct type
 // todo: type check?
-func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
+func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerificationResult, error) {
 	// Extract the Irma message
 	vp := VerifiablePresentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &vp); err != nil {
@@ -118,9 +118,9 @@ func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificat
 		return nil, fmt.Errorf("could not verify vp: could not get signer attributes: %w", err)
 	}
 
-	return &contract.VerificationResult{
-		State:               contract.State(cvr.ValidationResult),
-		ContractFormat:      contract.Format(cvr.ContractFormat),
+	return &contract.VPVerificationResult{
+		Validity:            contract.State(cvr.ValidationResult),
+		VPType:              contract.VPType(cvr.ContractFormat),
 		DisclosedAttributes: signerAttributes,
 		ContractAttributes:  signedContract.Contract().Params,
 	}, nil

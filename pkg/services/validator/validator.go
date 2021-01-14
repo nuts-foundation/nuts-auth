@@ -56,14 +56,15 @@ type Config struct {
 type service struct {
 	config                 Config
 	contractSessionHandler services.ContractSessionHandler
-	contractValidator      services.ContractValidator
-	irmaServiceConfig      irma.ValidatorConfig
-	irmaServer             *irmaserver.Server
-	crypto                 nutscrypto.Client
+	// deprecated
+	contractValidator services.ContractValidator
+	irmaServiceConfig irma.ValidatorConfig
+	irmaServer        *irmaserver.Server
+	crypto            nutscrypto.Client
 	// todo: remove this when the deprecated ValidateJwt is removed
 	registry  registry.RegistryClient
-	verifiers map[string]contract.Verifier
-	signers   map[string]contract.Signer
+	verifiers map[contract.VPType]contract.Verifier
+	signers   map[contract.SigningMeans]contract.Signer
 }
 
 // NewContractInstance accepts a Config and several Nuts engines and returns a new instance of services.ContractClient
@@ -103,21 +104,21 @@ func (s *service) Configure() (err error) {
 	s.contractSessionHandler = irmaService
 	s.contractValidator = irmaService
 
-	s.verifiers = map[string]contract.Verifier{}
-	s.signers = map[string]contract.Signer{}
+	s.verifiers = map[contract.VPType]contract.Verifier{}
+	s.signers = map[contract.SigningMeans]contract.Signer{}
 
-	cvMap := make(map[string]bool, len(s.config.ContractValidators))
+	cvMap := make(map[contract.SigningMeans]bool, len(s.config.ContractValidators))
 	for _, cv := range s.config.ContractValidators {
-		cvMap[cv] = true
+		cvMap[contract.SigningMeans(cv)] = true
 	}
 
 	// todo config to VP types
-	if _, ok := cvMap["irma"]; ok {
+	if _, ok := cvMap[irma.ContractFormat]; ok {
 		s.verifiers[irma.VerifiablePresentationType] = irmaService
 		s.signers[irma.ContractFormat] = irmaService
 	}
 
-	if _, ok := cvMap["dummy"]; ok && !core.NutsConfig().InStrictMode() {
+	if _, ok := cvMap[dummy.ContractFormat]; ok && !core.NutsConfig().InStrictMode() {
 		d := dummy.Dummy{
 			Sessions: map[string]string{},
 			Status:   map[string]string{},
@@ -126,7 +127,7 @@ func (s *service) Configure() (err error) {
 		s.signers[dummy.ContractFormat] = d
 	}
 
-	if _, ok := cvMap["uzi"]; ok {
+	if _, ok := cvMap[uzi.ContractFormat]; ok {
 		crlGetter := x509.NewCachedHttpCrlService()
 		uziValidator, err := x509.NewUziValidator(x509.UziAcceptation, &contract.StandardContractTemplates, crlGetter)
 		uziVerifier := uzi.Verifier{UziValidator: uziValidator}
@@ -141,7 +142,7 @@ func (s *service) Configure() (err error) {
 	return
 }
 
-func (s *service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
+func (s *service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerificationResult, error) {
 	vp := contract.BaseVerifiablePresentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &vp); err != nil {
 		return nil, fmt.Errorf("unable to verifyVP: %w", err)
@@ -265,6 +266,7 @@ func (s *service) ContractSessionStatus(sessionID string) (*services.SessionStat
 
 // ValidateContract validates a given contract. Currently two Type's are accepted: Irma and Jwt.
 // Both types should be passed as a base64 encoded string in the ContractString of the request paramContractString of the request param
+// deprecated
 func (s *service) ValidateContract(request services.ValidationRequest) (*services.ContractValidationResult, error) {
 	var actingPartyCN *string
 	if request.ActingPartyCN != "" {

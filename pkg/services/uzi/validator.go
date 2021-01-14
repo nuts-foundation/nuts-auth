@@ -27,8 +27,11 @@ import (
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
+// ContractFormat is the contract format type
+const ContractFormat = contract.SigningMeans("uzi")
+
 // VerifiablePresentationType contains the string used in the VerifiablePresentation type array to indicate the Uzi means
-const VerifiablePresentationType = "NutsUziPresentation"
+const VerifiablePresentationType = contract.VPType("NutsUziPresentation")
 
 // Verifier implements the Verifier interface and verifies the VerifiablePresentations of the NutsUziPresentation type.
 type Verifier struct {
@@ -50,8 +53,8 @@ type Proof struct {
 
 // VerifyVP implements the VerifiablePresentation Verifier interface. It can verify an Uzi VP.
 // It checks the signature, the attributes and the contract.
-// Returns the contract.VerificationResult or an error if something went wrong.
-func (u Verifier) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
+// Returns the contract.VPVerificationResult or an error if something went wrong.
+func (u Verifier) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerificationResult, error) {
 
 	presentation := Presentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &presentation); err != nil {
@@ -78,8 +81,8 @@ func (u Verifier) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verifica
 		return nil, fmt.Errorf("could not verify verifiable presentation: could not parse the proof: %w", err)
 	}
 	if err := u.UziValidator.Verify(signedToken); err != nil {
-		return &contract.VerificationResult{
-			State: contract.Invalid,
+		return &contract.VPVerificationResult{
+			Validity: contract.Invalid,
 		}, nil
 	}
 
@@ -88,9 +91,9 @@ func (u Verifier) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verifica
 		return nil, fmt.Errorf("could not get disclosed attributes from signed contract: %w", err)
 	}
 
-	return &contract.VerificationResult{
-		State:               contract.Valid,
-		ContractFormat:      VerifiablePresentationType,
+	return &contract.VPVerificationResult{
+		Validity:            contract.Valid,
+		VPType:              VerifiablePresentationType,
 		DisclosedAttributes: disclosedAttributes,
 		ContractAttributes:  signedToken.Contract().Params,
 	}, nil

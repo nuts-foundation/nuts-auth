@@ -401,9 +401,9 @@ func TestWrapper_VerifySignature(t *testing.T) {
 
 	bindPostBody(&ctx, postParams)
 
-	verificationResult := &contract.VerificationResult{
-		State:               contract.Valid,
-		ContractFormat:      "",
+	verificationResult := &contract.VPVerificationResult{
+		Validity:            contract.Valid,
+		VPType:              "",
 		DisclosedAttributes: nil,
 		ContractAttributes:  nil,
 	}
