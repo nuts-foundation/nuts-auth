@@ -65,8 +65,6 @@ func (w Wrapper) VerifySignature(ctx echo.Context) error {
 	result := SignatureVerificationResponse{}
 	result.Validity = validationResult.Validity == contract.Valid
 	if result.Validity {
-		proofType := string(validationResult.VPType)
-		result.ProofType = &proofType
 
 		credentials := map[string]interface{}{}
 		for key, val := range validationResult.ContractAttributes {
@@ -80,7 +78,7 @@ func (w Wrapper) VerifySignature(ctx echo.Context) error {
 		}
 		result.IssuerAttributes = &issuerAttributes
 
-		vpType := "NutsDelegation"
+		vpType := string(validationResult.VPType)
 		result.VpType = &vpType
 	}
 	return ctx.JSON(http.StatusOK, result)

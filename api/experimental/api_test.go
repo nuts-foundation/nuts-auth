@@ -403,20 +403,18 @@ func TestWrapper_VerifySignature(t *testing.T) {
 
 	verificationResult := &contract.VPVerificationResult{
 		Validity:            contract.Valid,
-		VPType:              "",
+		VPType:              "AVPType",
 		DisclosedAttributes: nil,
 		ContractAttributes:  nil,
 	}
 
-	vpType := "NutsDelegation"
+	vpType := "AVPType"
 	issuerAttributes := map[string]interface{}{}
 	credentials := map[string]interface{}{}
-	proofType := ""
 
 	expectedResponse := SignatureVerificationResponse{
 		Credentials:      &credentials,
 		IssuerAttributes: &issuerAttributes,
-		ProofType:        &proofType,
 		Validity:         true,
 		VpType:           &vpType,
 	}

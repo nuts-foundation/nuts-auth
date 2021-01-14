@@ -165,10 +165,6 @@ components:
           description: Type of Verifiable credential.
           example: NutsDelegation
           type: string
-        proofType:
-          description: The type of proof for the presentation.
-          type: string
-          example: uzi
         issuerAttributes:
           description: Key vale pairs containing the attributes of the issuer.
           type: object

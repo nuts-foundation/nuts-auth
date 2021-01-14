@@ -110,9 +110,6 @@ type SignatureVerificationResponse struct {
 	// Key vale pairs containing the attributes of the issuer.
 	IssuerAttributes *map[string]interface{} `json:"issuerAttributes,omitempty"`
 
-	// The type of proof for the presentation.
-	ProofType *string `json:"proofType,omitempty"`
-
 	// Indicates the validity of the signature.
 	Validity bool `json:"validity"`
 
