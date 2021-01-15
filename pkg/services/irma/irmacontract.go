@@ -71,7 +71,10 @@ type contractVerifier struct {
 
 // Parse an IRMA Authentication Token. A token is a base64 encoded IRMA contract.
 func (cv *contractVerifier) Parse(rawAuthToken string) (services.SignedToken, error) {
-	decodedAuthToken, _ := base64.StdEncoding.DecodeString(rawAuthToken)
+	decodedAuthToken, err := base64.StdEncoding.DecodeString(rawAuthToken)
+	if err != nil {
+		return nil, fmt.Errorf("unable to Parse VP: %w", err)
+	}
 	return cv.ParseIrmaContract(decodedAuthToken)
 }
 

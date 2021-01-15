@@ -51,7 +51,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		signedToken.EXPECT().SignerAttributes().Return(map[string]string{"name": "Henk de Vries"}, nil)
 		signedToken.EXPECT().Contract().Return(contract.Contract{Params: map[string]string{"validFrom": "2020-12-10T13:57:00"}})
 
-		tokenParser := mock_services.NewMockVpProofValueParser(ctrl)
+		tokenParser := mock_services.NewMockVPProofValueParser(ctrl)
 		tokenParser.EXPECT().Parse(proofValue).Return(signedToken, nil)
 		tokenParser.EXPECT().Verify(gomock.Any()).Return(nil)
 		uziVerifier := &Verifier{UziValidator: tokenParser}
@@ -72,7 +72,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		if !assert.Error(t, err) {
 			return
 		}
-		assert.Equal(t, "could not parse raw verifiable presentation: json: cannot unmarshal number into Go value of type uzi.Presentation", err.Error())
+		assert.Equal(t, "could not parse raw verifiable presentation: json: cannot unmarshal number into Go value of type uzi.verifiablePresentation", err.Error())
 		assert.Nil(t, res)
 	})
 
@@ -80,7 +80,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		tokenParser := mock_services.NewMockVpProofValueParser(ctrl)
+		tokenParser := mock_services.NewMockVPProofValueParser(ctrl)
 		uziVerifier := &Verifier{UziValidator: tokenParser}
 
 		vp := []byte(`{ "@context": [ "https://www.w3.org/2018/credentials/v1" ] }`)
@@ -109,7 +109,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
   }
 }`, proofValue))
 
-		tokenParser := mock_services.NewMockVpProofValueParser(ctrl)
+		tokenParser := mock_services.NewMockVPProofValueParser(ctrl)
 		uziVerifier := &Verifier{UziValidator: tokenParser}
 
 		res, err := uziVerifier.VerifyVP(vp, nil)
@@ -126,7 +126,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		tokenParser := mock_services.NewMockVpProofValueParser(ctrl)
+		tokenParser := mock_services.NewMockVPProofValueParser(ctrl)
 		tokenParser.EXPECT().Parse(proofValue).Return(nil, errors.New("could not parse"))
 		uziVerifier := &Verifier{UziValidator: tokenParser}
 
@@ -147,7 +147,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		signedToken := mock_services.NewMockSignedToken(ctrl)
 		signedToken.EXPECT().SignerAttributes().Return(nil, errors.New("could not parse certificate"))
 
-		tokenParser := mock_services.NewMockVpProofValueParser(ctrl)
+		tokenParser := mock_services.NewMockVPProofValueParser(ctrl)
 		tokenParser.EXPECT().Parse(proofValue).Return(signedToken, nil)
 		tokenParser.EXPECT().Verify(gomock.Any()).Return(nil)
 		uziVerifier := &Verifier{UziValidator: tokenParser}
@@ -168,7 +168,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 
 		signedToken := &mock_services.MockSignedToken{}
 
-		tokenParser := mock_services.NewMockVpProofValueParser(ctrl)
+		tokenParser := mock_services.NewMockVPProofValueParser(ctrl)
 		tokenParser.EXPECT().Parse(proofValue).Return(signedToken, nil)
 		tokenParser.EXPECT().Verify(signedToken).Return(errors.New("invalid proof"))
 		uziVerifier := &Verifier{UziValidator: tokenParser}

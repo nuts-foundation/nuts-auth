@@ -36,28 +36,27 @@ const VerifiablePresentationType = contract.VPType("NutsUziPresentation")
 
 // Verifier implements the Verifier interface and verifies the VerifiablePresentations of the NutsUziPresentation type.
 type Verifier struct {
-	UziValidator services.VpProofValueParser
+	UziValidator services.VPProofValueParser
 }
 
-// Presentation is a VerifiablePresentation without valid cryptographic proofs
-// It is only usable in non-strict mode.
-type Presentation struct {
+// verifiablePresentation is the NutsUziPresentation specific data structure and can be used for parsing and unmarshalling
+type verifiablePresentation struct {
 	contract.VerifiablePresentationBase
-	Proof Proof
+	Proof proof
 }
 
-// Proof contains the Proof part of the Verifiable presentation of the NutsUziPresentation type
-type Proof struct {
+// proof contains the uzi specific proof part of the Verifiable presentation of the NutsUziPresentation type
+type proof struct {
 	Type       string
 	ProofValue string
 }
 
-// VerifyVP implements the VerifiablePresentation Verifier interface. It can verify an Uzi VP.
+// VerifyVP implements the verifiablePresentation Verifier interface. It can verify an Uzi VP.
 // It checks the signature, the attributes and the contract.
 // Returns the contract.VPVerificationResult or an error if something went wrong.
-func (u Verifier) VerifyVP(rawVerifiablePresentation []byte, checkTime *time.Time) (*contract.VPVerificationResult, error) {
+func (u Verifier) VerifyVP(rawVerifiablePresentation []byte, _ *time.Time) (*contract.VPVerificationResult, error) {
 
-	presentation := Presentation{}
+	presentation := verifiablePresentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &presentation); err != nil {
 		return nil, fmt.Errorf("could not parse raw verifiable presentation: %w", err)
 	}
