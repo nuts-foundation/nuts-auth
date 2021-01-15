@@ -59,7 +59,7 @@ func (w Wrapper) VerifySignature(ctx echo.Context) error {
 
 	checkTime := time.Now()
 	if requestParams.CheckTime != nil {
-		checkTime, err = time.Parse("2006-01-02T15:04:05-07:00", *requestParams.CheckTime)
+		checkTime, err = time.Parse(time.RFC3339, *requestParams.CheckTime)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("could not parse checkTime: %s", err.Error()))
 		}
@@ -69,26 +69,28 @@ func (w Wrapper) VerifySignature(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to verify the verifiable presentation: %s", err.Error()))
 	}
 	// Convert internal validationResult to api SignatureVerificationResponse
-	result := SignatureVerificationResponse{}
-	result.Validity = validationResult.Validity == contract.Valid
-	if result.Validity {
+	response := SignatureVerificationResponse{}
+	if validationResult.Validity == contract.Valid {
+		response.Validity = true
 
 		credentials := map[string]interface{}{}
 		for key, val := range validationResult.ContractAttributes {
 			credentials[key] = val
 		}
-		result.Credentials = &credentials
+		response.Credentials = &credentials
 
 		issuerAttributes := map[string]interface{}{}
 		for key, val := range validationResult.DisclosedAttributes {
 			issuerAttributes[key] = val
 		}
-		result.IssuerAttributes = &issuerAttributes
+		response.IssuerAttributes = &issuerAttributes
 
 		vpType := string(validationResult.VPType)
-		result.VpType = &vpType
+		response.VpType = &vpType
+	} else {
+		response.Validity = false
 	}
-	return ctx.JSON(http.StatusOK, result)
+	return ctx.JSON(http.StatusOK, response)
 }
 
 // CreateSignSession handles the CreateSignSession http request. It parses the parameters, finds the means handler and returns a session pointer which can be used to monitor the session.
