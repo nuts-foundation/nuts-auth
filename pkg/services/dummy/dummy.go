@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
@@ -153,7 +154,7 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 }
 
 // VerifyVP check a Dummy VerifiablePresentation. It Returns a verificationResult if all was fine, an error otherwise.
-func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerificationResult, error) {
+func (d Dummy) VerifyVP(rawVerifiablePresentation []byte, checkTime *time.Time) (*contract.VPVerificationResult, error) {
 	if d.InStrictMode {
 		return nil, errNotEnabled
 	}

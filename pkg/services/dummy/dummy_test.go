@@ -151,7 +151,7 @@ func TestDummy_VerifyVP(t *testing.T) {
 			InStrictMode: true,
 		}
 
-		_, err := d.VerifyVP([]byte{})
+		_, err := d.VerifyVP([]byte{}, nil)
 
 		assert.Error(t, err)
 		assert.Equal(t, errNotEnabled, err)
@@ -178,7 +178,7 @@ func TestDummy_VerifyVP(t *testing.T) {
 		}
 
 		j, _ := json.Marshal(p)
-		vr, err := d.VerifyVP(j)
+		vr, err := d.VerifyVP(j, nil)
 
 		assert.NoError(t, err)
 		assert.Equal(t, contract.Valid, vr.Validity)
@@ -190,7 +190,7 @@ func TestDummy_VerifyVP(t *testing.T) {
 			InStrictMode: false,
 		}
 
-		_, err := d.VerifyVP([]byte("not json"))
+		_, err := d.VerifyVP([]byte("not json"), nil)
 
 		assert.Error(t, err)
 	})
@@ -207,7 +207,7 @@ func TestDummy_VerifyVP(t *testing.T) {
 		}
 
 		j, _ := json.Marshal(p)
-		_, err := d.VerifyVP(j)
+		_, err := d.VerifyVP(j, nil)
 
 		assert.Error(t, err)
 	})

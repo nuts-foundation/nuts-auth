@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"github.com/nuts-foundation/nuts-auth/logging"
 	"strings"
+	"time"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
@@ -158,7 +159,8 @@ func parseSignerAttributes(attributes [][]*irma.DisclosedAttribute) map[string]s
 }
 
 // verifyAll verifies the contract contents, the signer attributes and the proof status and returns a ContractValidationResult
-func (cv *contractVerifier) verifyAll(signedContract *SignedIrmaContract, actingPartyCn *string) (*services.ContractValidationResult, error) {
+// It can be used by both the old JWT verifier and the new VPVerifier
+func (cv *contractVerifier) verifyAll(signedContract *SignedIrmaContract, actingPartyCn *string, checkTime *time.Time) (*services.ContractValidationResult, error) {
 	res := &services.ContractValidationResult{
 		ContractFormat: services.IrmaFormat,
 	}
@@ -171,7 +173,7 @@ func (cv *contractVerifier) verifyAll(signedContract *SignedIrmaContract, acting
 	}
 
 	var err error
-	res, err = cv.validateContractContents(signedContract, res, actingPartyCn)
+	res, err = cv.validateContractContents(signedContract, res, actingPartyCn, checkTime)
 	if err != nil {
 		return nil, err
 	}
@@ -180,13 +182,17 @@ func (cv *contractVerifier) verifyAll(signedContract *SignedIrmaContract, acting
 
 // validateContractContents validates at the actual contract contents.
 // Is the timeframe valid and does the common name corresponds with the contract message.
-func (cv *contractVerifier) validateContractContents(signedContract *SignedIrmaContract, validationResult *services.ContractValidationResult, actingPartyCn *string) (*services.ContractValidationResult, error) {
+func (cv *contractVerifier) validateContractContents(signedContract *SignedIrmaContract, validationResult *services.ContractValidationResult, actingPartyCn *string, checkTimeP *time.Time) (*services.ContractValidationResult, error) {
 	if validationResult.ValidationResult == services.Invalid {
 		return validationResult, nil
 	}
 
+	checkTime := time.Now()
+	if checkTimeP != nil {
+		checkTime = *checkTimeP
+	}
 	// Validate time frame
-	if err := signedContract.contract.Verify(); err != nil {
+	if err := signedContract.contract.VerifyForGivenTime(checkTime); err != nil {
 		validationResult.ValidationResult = services.Invalid
 		return validationResult, nil
 	}

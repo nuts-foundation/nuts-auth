@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/nuts-foundation/nuts-auth/logging"
 	"github.com/nuts-foundation/nuts-auth/pkg/services/dummy"
@@ -63,7 +64,7 @@ type service struct {
 	crypto            nutscrypto.Client
 	// todo: remove this when the deprecated ValidateJwt is removed
 	registry  registry.RegistryClient
-	verifiers map[contract.VPType]contract.Verifier
+	verifiers map[contract.VPType]contract.VPVerifier
 	signers   map[contract.SigningMeans]contract.Signer
 }
 
@@ -104,7 +105,7 @@ func (s *service) Configure() (err error) {
 	s.contractSessionHandler = irmaService
 	s.contractValidator = irmaService
 
-	s.verifiers = map[contract.VPType]contract.Verifier{}
+	s.verifiers = map[contract.VPType]contract.VPVerifier{}
 	s.signers = map[contract.SigningMeans]contract.Signer{}
 
 	cvMap := make(map[contract.SigningMeans]bool, len(s.config.ContractValidators))
@@ -142,7 +143,7 @@ func (s *service) Configure() (err error) {
 	return
 }
 
-func (s *service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerificationResult, error) {
+func (s *service) VerifyVP(rawVerifiablePresentation []byte, checkTime *time.Time) (*contract.VPVerificationResult, error) {
 	vp := contract.BaseVerifiablePresentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &vp); err != nil {
 		return nil, fmt.Errorf("unable to verifyVP: %w", err)
@@ -168,7 +169,7 @@ func (s *service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerifi
 		return nil, fmt.Errorf("unknown VerifiablePresentation type: %s", t)
 	}
 
-	return s.verifiers[t].VerifyVP(rawVerifiablePresentation)
+	return s.verifiers[t].VerifyVP(rawVerifiablePresentation, checkTime)
 }
 
 func (s *service) SigningSessionStatus(sessionID string) (contract.SigningSessionResult, error) {
@@ -274,9 +275,9 @@ func (s *service) ValidateContract(request services.ValidationRequest) (*service
 	}
 
 	if request.ContractFormat == services.IrmaFormat {
-		return s.contractValidator.ValidateContract(request.ContractString, services.IrmaFormat, actingPartyCN)
+		return s.contractValidator.ValidateContract(request.ContractString, services.IrmaFormat, actingPartyCN, nil)
 	} else if request.ContractFormat == services.JwtFormat {
-		return s.contractValidator.ValidateJwt(request.ContractString, actingPartyCN)
+		return s.contractValidator.ValidateJwt(request.ContractString, actingPartyCN, nil)
 	}
 	return nil, fmt.Errorf("format %v: %w", request.ContractFormat, contract.ErrUnknownContractFormat)
 }

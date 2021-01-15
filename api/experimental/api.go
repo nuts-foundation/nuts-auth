@@ -57,7 +57,14 @@ func (w Wrapper) VerifySignature(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert the verifiable presentation: %s", err.Error()))
 	}
 
-	validationResult, err := w.Auth.ContractClient().VerifyVP(rawVP)
+	checkTime := time.Now()
+	if requestParams.CheckTime != nil {
+		checkTime, err = time.Parse("2006-01-02T15:04:05-07:00", *requestParams.CheckTime)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("could not parse checkTime: %s", err.Error()))
+		}
+	}
+	validationResult, err := w.Auth.ContractClient().VerifyVP(rawVP, &checkTime)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to verify the verifiable presentation: %s", err.Error()))
 	}

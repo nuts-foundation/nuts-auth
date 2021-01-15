@@ -393,11 +393,12 @@ func TestWrapper_VerifySignature(t *testing.T) {
 	ctx := createContext(t)
 	defer ctx.ctrl.Finish()
 
-	postParams := SignatureVerificationRequest{VerifiablePresentation{
-		Context: []string{"http://example.com"},
-		Proof:   map[string]interface{}{"foo": "bar"},
-		Type:    []string{"TestCredential"},
-	}}
+	postParams := SignatureVerificationRequest{
+		VerifiablePresentation: VerifiablePresentation{
+			Context: []string{"http://example.com"},
+			Proof:   map[string]interface{}{"foo": "bar"},
+			Type:    []string{"TestCredential"},
+		}}
 
 	bindPostBody(&ctx, postParams)
 

@@ -151,6 +151,10 @@ components:
       properties:
         VerifiablePresentation:
           $ref: "#/components/schemas/VerifiablePresentation"
+        checkTime:
+          description: Moment in time to check the validity of the signature. If omitted, the current time is used.
+          type: string
+          example: "2019-06-24T14:32:00+02:00"
 
     SignatureVerificationResponse:
       description: Contains the signature verification result.

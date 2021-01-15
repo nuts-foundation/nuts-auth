@@ -156,9 +156,9 @@ func TestContract_VerifyVP(t *testing.T) {
 		mockVerifier := servicesMock.NewMockContractClient(ctrl)
 		mockVerifier.EXPECT().VerifyVP(rawVP).Return(&contract.VPVerificationResult{Validity: contract.Valid}, nil)
 
-		validator := service{verifiers: map[contract.VPType]contract.Verifier{"bar": mockVerifier}}
+		validator := service{verifiers: map[contract.VPType]contract.VPVerifier{"bar": mockVerifier}}
 
-		validationResult, err := validator.VerifyVP(rawVP)
+		validationResult, err := validator.VerifyVP(rawVP, nil)
 
 		if !assert.NoError(t, err) {
 			return
@@ -179,7 +179,7 @@ func TestContract_VerifyVP(t *testing.T) {
 			return
 		}
 
-		validationResult, err := validator.VerifyVP(rawVP)
+		validationResult, err := validator.VerifyVP(rawVP, nil)
 		if !assert.Error(t, err) {
 			return
 		}
@@ -199,7 +199,7 @@ func TestContract_VerifyVP(t *testing.T) {
 			return
 		}
 
-		validationResult, err := validator.VerifyVP(rawVP)
+		validationResult, err := validator.VerifyVP(rawVP, nil)
 		if !assert.Error(t, err) {
 			return
 		}
@@ -211,7 +211,7 @@ func TestContract_VerifyVP(t *testing.T) {
 
 	t.Run("nok - invalid rawVP", func(t *testing.T) {
 		validator := service{}
-		validationResult, err := validator.VerifyVP([]byte{})
+		validationResult, err := validator.VerifyVP([]byte{}, nil)
 		if !assert.Error(t, err) {
 			return
 		}

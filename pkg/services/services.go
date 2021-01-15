@@ -33,9 +33,9 @@ import (
 // deprecated
 type ContractValidator interface {
 	// ValidateContract validates a signed login contract, actingPartyCN is deprecated and thus optional
-	ValidateContract(contract string, format ContractFormat, actingPartyCN *string) (*ContractValidationResult, error)
+	ValidateContract(contract string, format ContractFormat, actingPartyCN *string, checkTime *time.Time) (*ContractValidationResult, error)
 	// ValidateJwt validates a JWT that contains a signed login contract, actingPartyCN is deprecated and thus optional
-	ValidateJwt(contract string, actingPartyCN *string) (*ContractValidationResult, error)
+	ValidateJwt(contract string, actingPartyCN *string, checkTime *time.Time) (*ContractValidationResult, error)
 	IsInitialized() bool
 }
 
@@ -90,8 +90,7 @@ type ContractNotary interface {
 
 // ContractClient defines functions for creating and validating verifiable credentials
 type ContractClient interface {
-	// VerifyVP verifies if the proof of the VerifiablePresentation is valid
-	VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerificationResult, error)
+	contract.VPVerifier
 
 	// CreateSigningSession creates a signing session for the requested contract and means
 	CreateSigningSession(sessionRequest CreateSessionRequest) (contract.SessionPointer, error)

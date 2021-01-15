@@ -99,6 +99,9 @@ type SignatureVerificationRequest struct {
 
 	// If the signature session is completed, this property contains the signature embedded in an w3c verifiable presentation.
 	VerifiablePresentation VerifiablePresentation `json:"VerifiablePresentation"`
+
+	// Moment in time to check the validity of the signature. If omitted, the current time is used.
+	CheckTime *string `json:"checkTime,omitempty"`
 }
 
 // SignatureVerificationResponse defines model for SignatureVerificationResponse.

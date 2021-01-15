@@ -18,6 +18,8 @@
 
 package contract
 
+import "time"
+
 // State contains the result of the verification. It van be VALID or INVALID. This makes it human readable.
 type State string
 
@@ -31,16 +33,17 @@ const (
 // VerifierType is the type for a specific verifier
 type VerifierType string
 
-// Verifier defines the interface needed to verify a VerifiablePresentation
-type Verifier interface {
+// VPVerifier defines the interface needed to verify a VerifiablePresentation
+type VPVerifier interface {
 	// VerifyVP validates a verifiable presentation.
 	// When the verifier could not handle the verifiable presentation, an error should be thrown.
-	VerifyVP(rawVerifiablePresentation []byte) (*VPVerificationResult, error)
+	VerifyVP(rawVerifiablePresentation []byte, checkTime *time.Time) (*VPVerificationResult, error)
 }
 
-// VPType describes the Verifiable Presentation. Based on the format an appropriate validator can be selected.
+// VPType holds the type of the Verifiable Presentation. Based on the format an appropriate validator can be selected.
 type VPType string
 
+// SigningMeans holds the unique nuts name of the singing means.
 type SigningMeans string
 
 // VerifiablePresentationBase holds the basic fields for a VerifiableCredential

@@ -54,7 +54,7 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 	t.Run("an empty contract is Invalid", func(t *testing.T) {
 		sic := &SignedIrmaContract{}
 		cv := irmaContractVerifier(t)
-		res, err := cv.verifyAll(sic, nil)
+		res, err := cv.verifyAll(sic, nil, nil)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -76,8 +76,8 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 			contract.NowFunc = oldNowFunc
 		}()
 		location, _ := time.LoadLocation(contract.AmsterdamTimeZone)
-		contract.NowFunc = func() time.Time { return time.Date(2019, time.October, 1, 13, 46, 00, 0, location) }
-		res, err := cv.verifyAll(sic.(*SignedIrmaContract), &ap)
+		checkTime := time.Date(2019, time.October, 1, 13, 46, 00, 0, location)
+		res, err := cv.verifyAll(sic.(*SignedIrmaContract), &ap, &checkTime)
 		assert.NoError(t, err)
 		assert.Equal(t, services.Valid, res.ValidationResult)
 	})
@@ -103,7 +103,7 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		res, err := cv.verifyAll(sic.(*SignedIrmaContract), nil)
+		res, err := cv.verifyAll(sic.(*SignedIrmaContract), nil, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, services.Invalid, res.ValidationResult)
 	})

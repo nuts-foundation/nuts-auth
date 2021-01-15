@@ -144,7 +144,7 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 		if decoded, err = base64.StdEncoding.DecodeString(*context.jwtBearerToken.UserIdentity); err != nil {
 			return nil, fmt.Errorf("failed to decode base64 usi field: %w", err)
 		}
-		if context.contractVerificationResult, err = s.contractClient.VerifyVP(decoded); err != nil {
+		if context.contractVerificationResult, err = s.contractClient.VerifyVP(decoded, nil); err != nil {
 			return nil, fmt.Errorf("identity verification failed: %w", err)
 		}
 	}

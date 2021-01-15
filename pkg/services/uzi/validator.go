@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
@@ -54,7 +55,7 @@ type Proof struct {
 // VerifyVP implements the VerifiablePresentation Verifier interface. It can verify an Uzi VP.
 // It checks the signature, the attributes and the contract.
 // Returns the contract.VPVerificationResult or an error if something went wrong.
-func (u Verifier) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerificationResult, error) {
+func (u Verifier) VerifyVP(rawVerifiablePresentation []byte, checkTime *time.Time) (*contract.VPVerificationResult, error) {
 
 	presentation := Presentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &presentation); err != nil {

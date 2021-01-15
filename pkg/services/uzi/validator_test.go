@@ -56,7 +56,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		tokenParser.EXPECT().Verify(gomock.Any()).Return(nil)
 		uziVerifier := &Verifier{UziValidator: tokenParser}
 
-		res, err := uziVerifier.VerifyVP(vp)
+		res, err := uziVerifier.VerifyVP(vp, nil)
 		if !assert.NoError(t, err) {
 			return
 		}
@@ -68,7 +68,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 
 	t.Run("nok - garbage input", func(t *testing.T) {
 		uziVerifier := &Verifier{}
-		res, err := uziVerifier.VerifyVP([]byte("123"))
+		res, err := uziVerifier.VerifyVP([]byte("123"), nil)
 		if !assert.Error(t, err) {
 			return
 		}
@@ -85,7 +85,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 
 		vp := []byte(`{ "@context": [ "https://www.w3.org/2018/credentials/v1" ] }`)
 
-		res, err := uziVerifier.VerifyVP(vp)
+		res, err := uziVerifier.VerifyVP(vp, nil)
 
 		if !assert.Error(t, err) {
 			return
@@ -112,7 +112,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		tokenParser := mock_services.NewMockVpProofValueParser(ctrl)
 		uziVerifier := &Verifier{UziValidator: tokenParser}
 
-		res, err := uziVerifier.VerifyVP(vp)
+		res, err := uziVerifier.VerifyVP(vp, nil)
 		if !assert.Error(t, err) {
 			return
 		}
@@ -130,7 +130,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		tokenParser.EXPECT().Parse(proofValue).Return(nil, errors.New("could not parse"))
 		uziVerifier := &Verifier{UziValidator: tokenParser}
 
-		res, err := uziVerifier.VerifyVP(vp)
+		res, err := uziVerifier.VerifyVP(vp, nil)
 
 		if !assert.Error(t, err) {
 			return
@@ -152,7 +152,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		tokenParser.EXPECT().Verify(gomock.Any()).Return(nil)
 		uziVerifier := &Verifier{UziValidator: tokenParser}
 
-		res, err := uziVerifier.VerifyVP(vp)
+		res, err := uziVerifier.VerifyVP(vp, nil)
 
 		if !assert.Error(t, err) {
 			return
@@ -173,7 +173,7 @@ func TestUziValidator_VerifyVP(t *testing.T) {
 		tokenParser.EXPECT().Verify(signedToken).Return(errors.New("invalid proof"))
 		uziVerifier := &Verifier{UziValidator: tokenParser}
 
-		res, err := uziVerifier.VerifyVP(vp)
+		res, err := uziVerifier.VerifyVP(vp, nil)
 		if !assert.NoError(t, err) {
 			return
 		}

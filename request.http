@@ -130,6 +130,7 @@ PUT http://localhost:1323/internal/auth/experimental/signature/verify
 Content-Type: application/json
 
 {
+  "checkTime": "2019-10-01T13:30:42+01:00",
   "verifiablePresentation": {
     "@context": [
       "https://www.w3.org/2018/credentials/v1"

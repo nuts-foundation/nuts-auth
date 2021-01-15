@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/nuts-foundation/nuts-auth/logging"
 
@@ -94,7 +95,7 @@ type VPProof struct {
 
 // VerifyVP expects the given raw VerifiablePresentation to be of the correct type
 // todo: type check?
-func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerificationResult, error) {
+func (v Service) VerifyVP(rawVerifiablePresentation []byte, checkTime *time.Time) (*contract.VPVerificationResult, error) {
 	// Extract the Irma message
 	vp := VerifiablePresentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &vp); err != nil {
@@ -108,7 +109,7 @@ func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerific
 		return nil, err
 	}
 
-	cvr, err := contractValidator.verifyAll(signedContract.(*SignedIrmaContract), nil)
+	cvr, err := contractValidator.verifyAll(signedContract.(*SignedIrmaContract), nil, checkTime)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +131,7 @@ func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VPVerific
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
 // Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
 // deprecated
-func (v Service) ValidateContract(b64EncodedContract string, format services.ContractFormat, actingPartyCN *string) (*services.ContractValidationResult, error) {
+func (v Service) ValidateContract(b64EncodedContract string, format services.ContractFormat, actingPartyCN *string, checkTime *time.Time) (*services.ContractValidationResult, error) {
 	if format == services.IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
@@ -142,16 +143,16 @@ func (v Service) ValidateContract(b64EncodedContract string, format services.Con
 		if err != nil {
 			return nil, err
 		}
-		return contractValidator.verifyAll(signedContract.(*SignedIrmaContract), actingPartyCN)
+		return contractValidator.verifyAll(signedContract.(*SignedIrmaContract), actingPartyCN, checkTime)
 	}
 	return nil, contract.ErrUnknownContractFormat
 }
 
 // ValidateJwt validates a JWT formatted identity token
 // deprecated
-func (v Service) ValidateJwt(token string, actingPartyCN *string) (*services.ContractValidationResult, error) {
+func (v Service) ValidateJwt(rawJwt string, actingPartyCN *string, checkTime *time.Time) (*services.ContractValidationResult, error) {
 	parser := &jwt.Parser{ValidMethods: services.ValidJWTAlg}
-	parsedToken, err := parser.ParseWithClaims(token, &services.NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
+	parsedToken, err := parser.ParseWithClaims(rawJwt, &services.NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity, err := parseTokenIssuer(token.Claims.(*services.NutsIdentityToken).Issuer)
 		if err != nil {
 			return nil, err
@@ -194,7 +195,7 @@ func (v Service) ValidateJwt(token string, actingPartyCN *string) (*services.Con
 	if err != nil {
 		return nil, err
 	}
-	return contractValidator.verifyAll(signedContract.(*SignedIrmaContract), actingPartyCN)
+	return contractValidator.verifyAll(signedContract.(*SignedIrmaContract), actingPartyCN, checkTime)
 }
 
 // SessionStatus returns the current status of a certain session.
