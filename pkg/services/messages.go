@@ -25,12 +25,13 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	irma "github.com/privacybydesign/irmago"
 	"github.com/privacybydesign/irmago/server"
+
+	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 )
 
 // CreateSessionRequest is used to create a contract signing session.
 type CreateSessionRequest struct {
-	// todo correct Signing means type
-	SigningMeans string
+	SigningMeans contract.SigningMeans
 	// Message to sign
 	Message string
 }
@@ -136,12 +137,6 @@ type ContractValidationResult struct {
 
 // TokenContainerType is used in the NutsAuthenticationTokenContainer to tell the type of the
 type TokenContainerType string
-
-// UziTokenContainerType indicate the NutsAuthenticationTokenContainer token is an Uzi signed JWT
-const UziTokenContainerType TokenContainerType = "uzi"
-
-// IrmaTokenContainerType indicate the NutsAuthenticationTokenContainer token is an irma token
-const IrmaTokenContainerType TokenContainerType = "irma"
 
 // NutsAuthenticationTokenContainer holds the base64 encoded token and a type which uniquely
 // identifies the means used to sign the contract

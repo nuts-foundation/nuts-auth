@@ -18,7 +18,9 @@
 
 package contract
 
-// State contains the outcome of the verification. It van be VALID or INVALID. This makes it human readable.
+import "time"
+
+// State contains the result of the verification. It van be VALID or INVALID. This makes it human readable.
 type State string
 
 const (
@@ -31,18 +33,24 @@ const (
 // VerifierType is the type for a specific verifier
 type VerifierType string
 
-// Verifier defines the funcs needed to verify a VerifiablePresentation
-type Verifier interface {
+// VPVerifier defines the interface needed to verify a VerifiablePresentation
+type VPVerifier interface {
 	// VerifyVP validates a verifiable presentation.
 	// When the verifier could not handle the verifiable presentation, an error should be thrown.
-	VerifyVP(rawVerifiablePresentation []byte) (*VerificationResult, error)
+	VerifyVP(rawVerifiablePresentation []byte, checkTime *time.Time) (*VPVerificationResult, error)
 }
+
+// VPType holds the type of the Verifiable Presentation. Based on the format an appropriate validator can be selected.
+type VPType string
+
+// SigningMeans holds the unique nuts name of the singing means.
+type SigningMeans string
 
 // VerifiablePresentationBase holds the basic fields for a VerifiableCredential
 // todo: move or use lib
 type VerifiablePresentationBase struct {
 	Context []string `json:"@context"`
-	Type    []string
+	Type    []VPType
 }
 
 // VerifiableCredentialContext is the v1 base context for VPs
@@ -51,7 +59,7 @@ const VerifiableCredentialContext = "https://www.w3.org/2018/credentials/v1"
 
 // VerifiablePresentationType is used as one of the types for a VerifiablePresentation
 // todo move
-const VerifiablePresentationType = "VerifiablePresentation"
+const VerifiablePresentationType = VPType("VerifiablePresentation")
 
 // VerifiablePresentation represents a W3C Verifiable Presentation
 type VerifiablePresentation interface {
@@ -61,7 +69,7 @@ type VerifiablePresentation interface {
 type BaseVerifiablePresentation struct {
 	Context []string               `json:"@context"`
 	Proof   map[string]interface{} `json:"proof"`
-	Type    []string               `json:"type"`
+	Type    []VPType               `json:"type"`
 }
 
 // Proof represents the Proof part of a Verifiable Presentation
@@ -70,15 +78,19 @@ type Proof struct {
 	Type string `json:"type"`
 }
 
-// Format describes the format of a signed contract. Based on the format an appropriate validator can be selected.
-type Format string
-
-// VerificationResult contains the result of a contract validation
-type VerificationResult struct {
-	State          State  `json:"state"`
-	ContractFormat Format `json:"contract_format"`
+// VPVerificationResult contains the result of a contract validation
+type VPVerificationResult struct {
+	// Validity indicates if the Presentation is valid
+	// It can contains the "VALID" or "INVALID" status.
+	// Validators must only set the Validity to "VALID" if the whole VP, including the embedded
+	// contract are valid at the given moment in time.
+	Validity State
+	// VPType contains the the VP type like "NutsUziPresentation".
+	VPType VPType
+	// ContractID contains the identifier string of the signed contract message like: "EN:PractitionerLogin:v3"
+	ContractID string
 	// DisclosedAttributes contain the attributes used to sign this contract
-	DisclosedAttributes map[string]string `json:"disclosed_attributes"`
+	DisclosedAttributes map[string]string
 	// ContractAttributes contain the attributes used to fill the contract
-	ContractAttributes map[string]string `json:"contract_attributes"`
+	ContractAttributes map[string]string
 }

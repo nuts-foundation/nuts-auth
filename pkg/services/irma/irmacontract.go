@@ -19,11 +19,13 @@
 package irma
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/nuts-foundation/nuts-auth/logging"
 	"strings"
+	"time"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
@@ -36,7 +38,24 @@ import (
 // SignedIrmaContract holds the contract and additional methods to parse and validate.
 type SignedIrmaContract struct {
 	IrmaContract irma.SignedMessage
-	Contract     *contract.Contract
+	contract     *contract.Contract
+	attributes   map[string]string
+	// Cached proofStatus because attribute extraction and signature validation is performed during parsing
+	proofStatus irma.ProofStatus
+}
+
+// SignerAttributes returns a map of irma attributes minus the root:
+// {
+//   "gemeente.personalData.fullname": "Henk de Vries",
+//   "sidn-pbdf.email.email": "henk.devries@example.com",
+// },
+func (s SignedIrmaContract) SignerAttributes() (map[string]string, error) {
+	return s.attributes, nil
+}
+
+// Contract returns the signed contract.Contract by the irma contract
+func (s SignedIrmaContract) Contract() contract.Contract {
+	return *s.contract
 }
 
 // A IrmaContract is valid when:
@@ -50,11 +69,27 @@ type contractVerifier struct {
 	validContracts contract.TemplateStore
 }
 
-// parseSignedIrmaContract parses a json string containing a signed irma contract.
-func (cv *contractVerifier) parseSignedIrmaContract(rawContract string) (*SignedIrmaContract, error) {
+// Parse an IRMA Authentication Token. A token is a base64 encoded IRMA contract.
+func (cv *contractVerifier) Parse(rawAuthToken string) (services.SignedToken, error) {
+	decodedAuthToken, err := base64.StdEncoding.DecodeString(rawAuthToken)
+	if err != nil {
+		return nil, fmt.Errorf("unable to Parse VP: %w", err)
+	}
+	return cv.ParseIrmaContract(decodedAuthToken)
+}
+
+// ParseIrmaContract accepts a json encoded irma contract and performs the following operations/validations:
+// * Checks the irma signature
+// * Parses the signed attributes
+// * Checks if the contract message is set
+// * Parses the contract from the message
+// Returns a signedIrmaContract
+// Note that the irma contract validation is performed during the parsing phase.
+// This is because parsing and attribute extraction is done in one step.
+func (cv *contractVerifier) ParseIrmaContract(jsonIrmaContract []byte) (services.SignedToken, error) {
 	signedIrmaContract := &SignedIrmaContract{}
 
-	if err := json.Unmarshal([]byte(rawContract), &signedIrmaContract.IrmaContract); err != nil {
+	if err := json.Unmarshal(jsonIrmaContract, &signedIrmaContract.IrmaContract); err != nil {
 		return nil, fmt.Errorf("could not parse IRMA contract: %w", err)
 	}
 
@@ -62,86 +97,105 @@ func (cv *contractVerifier) parseSignedIrmaContract(rawContract string) (*Signed
 		return nil, fmt.Errorf("could not parse contract: empty message")
 	}
 
+	attributes, status, err := signedIrmaContract.IrmaContract.Verify(cv.irmaConfig, nil)
+	signerAttributes := parseSignerAttributes(attributes)
+
 	contractMessage := signedIrmaContract.IrmaContract.Message
 	c, err := contract.ParseContractString(contractMessage, cv.validContracts)
 	if err != nil {
 		return nil, err
 	}
-	signedIrmaContract.Contract = c
+
+	signedIrmaContract.contract = c
+	signedIrmaContract.proofStatus = status
+	signedIrmaContract.attributes = signerAttributes
 
 	return signedIrmaContract, nil
 }
 
-func (cv *contractVerifier) verifyAll(signedContract *SignedIrmaContract, actingPartyCn *string) (*services.ContractValidationResult, error) {
-	res, err := cv.verifySignature(signedContract)
-	if err != nil {
-		return res, err
+// Verify checks if the SignedIrmaContract:
+// * Has a valid irma signature (stored in proofStatus during parsing)
+// * Has a valid contract
+// Returns an error if one of the checks fails
+func (cv *contractVerifier) Verify(token services.SignedToken) error {
+	irmaToken, ok := token.(SignedIrmaContract)
+	if !ok {
+		return errors.New("could not verify token: could not cast token to SignedIrmaToken")
 	}
-	res, err = cv.validateContractContents(signedContract, res, actingPartyCn)
+	if irmaToken.proofStatus != irma.ProofStatusValid {
+		return fmt.Errorf("irma proof invalid: %s", irmaToken.proofStatus)
+	}
+	return token.Contract().Verify()
+}
+
+// parseSignedIrmaContract parses a json string containing a signed irma contract.
+func (cv *contractVerifier) parseSignedIrmaContract(rawContract string) (*SignedIrmaContract, error) {
+	signedToken, err := cv.Parse(rawContract)
+	if err != nil {
+		return nil, err
+	}
+	return signedToken.(*SignedIrmaContract), nil
+}
+
+func parseSignerAttributes(attributes [][]*irma.DisclosedAttribute) map[string]string {
+	if len(attributes) == 0 {
+		return map[string]string{}
+	}
+	// take the attributes rawvalue and add them to a list.
+	disclosedAttributes := make(map[string]string, len(attributes[0]))
+	strictMode := core.NutsConfig().InStrictMode()
+	for _, att := range attributes[0] {
+		// Check schemaManager. Only the pdbf root is accepted in strictMode.
+		schemaManager := att.Identifier.Root()
+		if strictMode && schemaManager != "pbdf" {
+			logging.Log().Infof("IRMA schemeManager %s is not valid in strictMode", schemaManager)
+			continue
+		}
+		identifier := att.Identifier.String()
+		// strip of the schemeManager
+		if i := strings.Index(identifier, "."); i != -1 {
+			identifier = identifier[i+1:]
+		}
+		disclosedAttributes[identifier] = *att.RawValue
+	}
+	return disclosedAttributes
+}
+
+// verifyAll verifies the contract contents, the signer attributes and the proof status and returns a ContractValidationResult
+// It can be used by both the old JWT verifier and the new VPVerifier
+func (cv *contractVerifier) verifyAll(signedContract *SignedIrmaContract, actingPartyCn *string, checkTime *time.Time) (*services.ContractValidationResult, error) {
+	res := &services.ContractValidationResult{
+		ContractFormat: services.IrmaFormat,
+	}
+
+	if signedContract.proofStatus == irma.ProofStatusValid {
+		res.ValidationResult = services.Valid
+		res.DisclosedAttributes = signedContract.attributes
+	} else {
+		res.ValidationResult = services.Invalid
+	}
+
+	var err error
+	res, err = cv.validateContractContents(signedContract, res, actingPartyCn, checkTime)
 	if err != nil {
 		return nil, err
 	}
 	return cv.verifyRequiredAttributes(signedContract, res)
 }
 
-// verifySignature verifies the IRMA signature.
-// Returns a ContractValidationResult
-// Note: This method only checks the IRMA crypto, not the attributes used or the contents of the contract.
-func (cv *contractVerifier) verifySignature(signedContract *SignedIrmaContract) (*services.ContractValidationResult, error) {
-	// Actual verification
-	attributes, status, err := signedContract.IrmaContract.Verify(cv.irmaConfig, nil)
-	if err != nil {
-		return nil, fmt.Errorf("contract signature verification failed: %w", err)
-	}
-
-	var disclosedAttributes map[string]string
-	// wrapper around irma status result
-	validationResult := services.Invalid
-	if status == irma.ProofStatusValid {
-		validationResult = services.Valid
-
-		// a contract needs attributes
-		if len(attributes) == 0 {
-			return nil, fmt.Errorf("contract does not have any attributes")
-		}
-
-		// take the attributes rawvalue and add them to a list.
-		disclosedAttributes = make(map[string]string, len(attributes[0]))
-		strictMode := core.NutsConfig().InStrictMode()
-		for _, att := range attributes[0] {
-			// Check schemaManager. Only the pdbf root is accepted in strictMode.
-			schemaManager := att.Identifier.Root()
-			if strictMode && schemaManager != "pbdf" {
-				logging.Log().Infof("IRMA schemeManager %s is not valid in strictMode", schemaManager)
-				validationResult = services.Invalid
-			}
-			identifier := att.Identifier.String()
-			// strip of the schemeManager
-			if i := strings.Index(identifier, "."); i != -1 {
-				identifier = identifier[i+1:]
-			}
-			disclosedAttributes[identifier] = *att.RawValue
-		}
-	}
-
-	// Assemble and return the validation response
-	return &services.ContractValidationResult{
-		ValidationResult:    validationResult,
-		ContractFormat:      services.IrmaFormat,
-		DisclosedAttributes: disclosedAttributes,
-	}, nil
-
-}
-
 // validateContractContents validates at the actual contract contents.
 // Is the timeframe valid and does the common name corresponds with the contract message.
-func (cv *contractVerifier) validateContractContents(signedContract *SignedIrmaContract, validationResult *services.ContractValidationResult, actingPartyCn *string) (*services.ContractValidationResult, error) {
+func (cv *contractVerifier) validateContractContents(signedContract *SignedIrmaContract, validationResult *services.ContractValidationResult, actingPartyCn *string, checkTimeP *time.Time) (*services.ContractValidationResult, error) {
 	if validationResult.ValidationResult == services.Invalid {
 		return validationResult, nil
 	}
 
+	checkTime := time.Now()
+	if checkTimeP != nil {
+		checkTime = *checkTimeP
+	}
 	// Validate time frame
-	if err := signedContract.Contract.Verify(); err != nil {
+	if err := signedContract.contract.VerifyForGivenTime(checkTime); err != nil {
 		validationResult.ValidationResult = services.Invalid
 		return validationResult, nil
 	}
@@ -149,7 +203,7 @@ func (cv *contractVerifier) validateContractContents(signedContract *SignedIrmaC
 	// Validate ActingParty Common Name
 	// todo remove in 0.17
 	if actingPartyCn != nil {
-		ok, err := validateActingParty(signedContract.Contract.Params, *actingPartyCn)
+		ok, err := validateActingParty(signedContract.contract.Params, *actingPartyCn)
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +214,7 @@ func (cv *contractVerifier) validateContractContents(signedContract *SignedIrmaC
 	}
 
 	// all valid fill contractAttributes
-	validationResult.ContractAttributes = signedContract.Contract.Params
+	validationResult.ContractAttributes = signedContract.contract.Params
 
 	return validationResult, nil
 }
@@ -184,12 +238,13 @@ func validateActingParty(params map[string]string, actingParty string) (bool, er
 	return actingParty == actingPartyFromContract, nil
 }
 
+// verifyRequiredAttributes checks if all attributes required by a contract template are actually present in the signature
 func (cv *contractVerifier) verifyRequiredAttributes(signedIrmaContract *SignedIrmaContract, validationResult *services.ContractValidationResult) (*services.ContractValidationResult, error) {
 	if validationResult.ValidationResult == services.Invalid {
 		return validationResult, nil
 	}
 
-	contractTemplate := signedIrmaContract.Contract.Template
+	contractTemplate := signedIrmaContract.contract.Template
 
 	// use a map to ignore duplicates. Allows us to compare lengths
 	validationRes := make(map[string]bool)

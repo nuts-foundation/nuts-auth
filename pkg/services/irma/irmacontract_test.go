@@ -20,6 +20,7 @@ package irma
 
 import (
 	"testing"
+	"time"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 
@@ -53,10 +54,9 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 	t.Run("an empty contract is Invalid", func(t *testing.T) {
 		sic := &SignedIrmaContract{}
 		cv := irmaContractVerifier(t)
-		res, err := cv.verifySignature(sic)
-		res, err = cv.verifyRequiredAttributes(sic, res)
+		res, err := cv.verifyAll(sic, nil, nil)
 		if !assert.NoError(t, err) {
-			t.FailNow()
+			return
 		}
 		assert.Equal(t, services.Invalid, res.ValidationResult)
 	})
@@ -65,17 +65,20 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		validJsonContract := testdata.ValidIrmaContract
 		cv := irmaContractVerifier(t)
 
-		sic, err := cv.parseSignedIrmaContract(validJsonContract)
+		sic, err := cv.ParseIrmaContract([]byte(validJsonContract))
 		if !assert.NoError(t, err) {
 			return
 		}
-		res, err := cv.verifySignature(sic)
-		res, err = cv.verifyRequiredAttributes(sic, res)
+		ap := "Demo EHR"
+
+		location, _ := time.LoadLocation(contract.AmsterdamTimeZone)
+		checkTime := time.Date(2019, time.October, 1, 13, 46, 00, 0, location)
+		res, err := cv.verifyAll(sic.(*SignedIrmaContract), &ap, &checkTime)
 		assert.NoError(t, err)
 		assert.Equal(t, services.Valid, res.ValidationResult)
 	})
 
-	t.Run("valid contract signed with wrong attributes is Invalid", func(t *testing.T) {
+	t.Run("valid contract signed with a missing attributes fails validation", func(t *testing.T) {
 		validTestContracts := contract.TemplateStore{
 			"NL": {"BehandelaarLogin": {
 				"v1": &contract.Template{
@@ -92,12 +95,11 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		cv := &contractVerifier{irmaConfig(t), validTestContracts}
 
 		validJsonContract := testdata.ValidIrmaContract2
-		sic, err := cv.parseSignedIrmaContract(validJsonContract)
+		sic, err := cv.ParseIrmaContract([]byte(validJsonContract))
 		if !assert.NoError(t, err) {
-			t.FailNow()
+			return
 		}
-		res, err := cv.verifySignature(sic)
-		res, err = cv.verifyRequiredAttributes(sic, res)
+		res, err := cv.verifyAll(sic.(*SignedIrmaContract), nil, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, services.Invalid, res.ValidationResult)
 	})

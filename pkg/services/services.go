@@ -33,9 +33,9 @@ import (
 // deprecated
 type ContractValidator interface {
 	// ValidateContract validates a signed login contract, actingPartyCN is deprecated and thus optional
-	ValidateContract(contract string, format ContractFormat, actingPartyCN *string) (*ContractValidationResult, error)
+	ValidateContract(contract string, format ContractFormat, actingPartyCN *string, checkTime *time.Time) (*ContractValidationResult, error)
 	// ValidateJwt validates a JWT that contains a signed login contract, actingPartyCN is deprecated and thus optional
-	ValidateJwt(contract string, actingPartyCN *string) (*ContractValidationResult, error)
+	ValidateJwt(contract string, actingPartyCN *string, checkTime *time.Time) (*ContractValidationResult, error)
 	IsInitialized() bool
 }
 
@@ -71,9 +71,9 @@ type SignedToken interface {
 	Contract() contract.Contract
 }
 
-// AuthenticationTokenParser provides a uniform interface for Authentication services like IRMA or x509 signed tokens
-type AuthenticationTokenParser interface {
-	// Parse accepts a raw Auth token string. The parser tries to parse the token into a SignedToken.
+// VPProofValueParser provides a uniform interface for Authentication services like IRMA or x509 signed tokens
+type VPProofValueParser interface {
+	// Parse accepts a raw ProofValue from the VP as a string. The parser tries to parse the value into a SignedToken.
 	Parse(rawAuthToken string) (SignedToken, error)
 
 	// Verify accepts a SignedToken and verifies the signature using the crypto for the specific implementation of this interface.
@@ -88,13 +88,13 @@ type ContractNotary interface {
 	ValidateContract(contractToValidate contract.Contract, orgID core.PartyID, checkTime time.Time) (bool, error)
 }
 
-// ContractClient defines functions for creating and validating signed contracts
+// ContractClient defines functions for creating and validating verifiable credentials
 type ContractClient interface {
-	// VerifyVP verifies if the proof of the VerifiablePresentation is valid
-	VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error)
+	contract.VPVerifier
 
 	// CreateSigningSession creates a signing session for the requested contract and means
 	CreateSigningSession(sessionRequest CreateSessionRequest) (contract.SessionPointer, error)
+
 	// SigningSessionStatus returns the status of the current signing session or ErrSessionNotFound is sessionID is unknown
 	SigningSessionStatus(sessionID string) (contract.SigningSessionResult, error)
 

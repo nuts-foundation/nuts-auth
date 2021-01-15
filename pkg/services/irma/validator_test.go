@@ -148,7 +148,7 @@ func TestValidateContract(t *testing.T) {
 			false,
 		},
 		{
-			"a forged contract it should be invalid",
+			"a forged contract should be invalid",
 			args{
 				base64.StdEncoding.EncodeToString([]byte(testdata.ForgedIrmaContract)),
 				services.IrmaFormat,
@@ -157,9 +157,8 @@ func TestValidateContract(t *testing.T) {
 			},
 			time.Date(2019, time.October, 1, 13, 46, 00, 0, location),
 			&services.ContractValidationResult{
-				ValidationResult:    services.Invalid,
-				ContractFormat:      services.IrmaFormat,
-				DisclosedAttributes: nil,
+				ValidationResult: services.Invalid,
+				ContractFormat:   services.IrmaFormat,
 			},
 			false,
 		},
@@ -236,14 +235,13 @@ func TestValidateContract(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			contract.NowFunc = func() time.Time { return tt.date }
-			got, err := validator.ValidateContract(tt.args.contract, tt.args.format, &tt.args.actingPartyCN)
+			got, err := validator.ValidateContract(tt.args.contract, tt.args.format, &tt.args.actingPartyCN, &tt.date)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateContract() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ValidateContract() = %v, want %v", got, tt.want)
+				t.Errorf("ValidateContract():\ngot:  %v\nwant: %v\n", got, tt.want)
 			}
 		})
 	}
@@ -390,24 +388,15 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 	os.Setenv("NUTS_IDENTITY", registryTest.VendorID("1").String())
 
 	t.Run("valid jwt", func(t *testing.T) {
-
-		oldFunc := contract.NowFunc
-
-		contract.NowFunc = func() time.Time {
-			now, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
-			if err != nil {
-				panic(err)
-			}
-			return now
-		}
-		defer func() {
-			contract.NowFunc = oldFunc
-		}()
-
 		token := createJwt(cryptoInstance, organizationID, organizationID, testdata.ValidIrmaContract)
 		actingParty := "Demo EHR"
 
-		result, err := validator.ValidateJwt(string(token), &actingParty)
+		checkTime, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
+		if err != nil {
+			return
+		}
+
+		result, err := validator.ValidateJwt(string(token), &actingParty, &checkTime)
 		if assert.NoError(t, err) && assert.NotNil(t, result) {
 			assert.Equal(t, services.ValidationState("VALID"), result.ValidationResult)
 			assert.Equal(t, services.ContractFormat("irma"), result.ContractFormat)
@@ -416,20 +405,6 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 	})
 
 	t.Run("missing legalEntity", func(t *testing.T) {
-
-		oldFunc := contract.NowFunc
-
-		contract.NowFunc = func() time.Time {
-			now, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
-			if err != nil {
-				panic(err)
-			}
-			return now
-		}
-		defer func() {
-			contract.NowFunc = oldFunc
-		}()
-
 		var payload services.NutsIdentityToken
 
 		var claims map[string]interface{}
@@ -438,12 +413,17 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 
 		token, err := cryptoInstance.SignJWT(claims, cryptoTypes.KeyForEntity(cryptoTypes.LegalEntity{URI: organizationID.String()}))
 		if err != nil {
-			t.FailNow()
+			return
+		}
+
+		checkTime, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
+		if err != nil {
+			return
 		}
 
 		actingParty := "Demo EHR"
 
-		result, err := validator.ValidateJwt(token, &actingParty)
+		result, err := validator.ValidateJwt(token, &actingParty, &checkTime)
 		if assert.Nil(t, result) && assert.NotNil(t, err) {
 			assert.EqualError(t, err, ErrLegalEntityNotProvided.Error())
 		}
@@ -452,7 +432,7 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 	t.Run("invalid formatted jwt", func(t *testing.T) {
 		token := "foo.bar.sig"
 
-		result, err := validator.ValidateJwt(token, nil)
+		result, err := validator.ValidateJwt(token, nil, nil)
 
 		assert.Nil(t, result)
 		assert.Error(t, err)
@@ -460,22 +440,14 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 	})
 
 	t.Run("invalid signature", func(t *testing.T) {
-		oldFunc := contract.NowFunc
-
-		contract.NowFunc = func() time.Time {
-			now, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
-			if err != nil {
-				panic(err)
-			}
-			return now
-		}
-		defer func() {
-			contract.NowFunc = oldFunc
-		}()
-
 		token := createJwt(cryptoInstance, organizationID, organizationID, testdata.ForgedIrmaContract)
 
-		result, err := validator.ValidateJwt(string(token), nil)
+		checkTime, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
+		if err != nil {
+			return
+		}
+
+		result, err := validator.ValidateJwt(string(token), nil, &checkTime)
 
 		if assert.NotNil(t, result) && assert.Nil(t, err) {
 			assert.Equal(t, services.Invalid, result.ValidationResult)
@@ -485,60 +457,38 @@ func TestDefaultValidator_ValidateJwt(t *testing.T) {
 	t.Run("wrong issuer", func(t *testing.T) {
 		token := createJwt(cryptoInstance, registryTest.OrganizationID("wrong_issuer"), organizationID, testdata.ValidIrmaContract)
 
-		result, err := validator.ValidateJwt(string(token), nil)
+		result, err := validator.ValidateJwt(string(token), nil, nil)
 		assert.Nil(t, result)
 		assert.Error(t, err)
 		assert.Equal(t, "urn:oid:2.16.840.1.113883.2.4.6.1:wrong_issuer: organization not found", err.Error())
 	})
 
 	t.Run("wrong scheme manager", func(t *testing.T) {
-		oldFunc := contract.NowFunc
-
-		contract.NowFunc = func() time.Time {
-			now, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
-			if err != nil {
-				panic(err)
-			}
-			return now
-		}
-		defer func() {
-			contract.NowFunc = oldFunc
-		}()
-
 		os.Setenv("NUTS_STRICTMODE", "true")
 		cfg := core.NutsConfig()
 		if err := cfg.Load(&cobra.Command{}); err != nil {
 			t.Fatal("not expected error", err)
 		}
 
+		checkTime, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
+		if err != nil {
+			return
+		}
+
 		if assert.True(t, core.NutsConfig().InStrictMode()) {
 			token := createJwt(cryptoInstance, organizationID, organizationID, testdata.ValidIrmaContract)
 			actingParty := "Demo EHR"
-			result, err := validator.ValidateJwt(string(token), &actingParty)
+			result, err := validator.ValidateJwt(string(token), &actingParty, &checkTime)
 			if assert.NoError(t, err) && assert.NotNil(t, result) {
 				assert.Equal(t, services.ValidationState("INVALID"), result.ValidationResult)
 			}
 		}
 		os.Unsetenv("NUTS_STRICTMODE")
-
 	})
 }
 
 func TestDefaultValidator_createJwt(t *testing.T) {
 	t.Run("Create valid JWT", func(t *testing.T) {
-		oldFunc := contract.NowFunc
-
-		contract.NowFunc = func() time.Time {
-			now, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
-			if err != nil {
-				panic(err)
-			}
-			return now
-		}
-		defer func() {
-			contract.NowFunc = oldFunc
-		}()
-
 		validator, _ := defaultValidator(t)
 
 		var c = SignedIrmaContract{}
@@ -546,9 +496,14 @@ func TestDefaultValidator_createJwt(t *testing.T) {
 
 		tokenString, err := validator.CreateIdentityTokenFromIrmaContract(&c, organizationID)
 
+		checkTime, err := time.Parse(time.RFC3339, "2019-10-01T13:38:45+02:00")
+		if err != nil {
+			return
+		}
+
 		if assert.Nil(t, err) && assert.NotEmpty(t, tokenString) {
 			actingPartyCN := "Demo EHR"
-			result, err := validator.ValidateJwt(tokenString, &actingPartyCN)
+			result, err := validator.ValidateJwt(tokenString, &actingPartyCN, &checkTime)
 			if assert.NoError(t, err) && assert.NotNil(t, result) {
 				assert.Equal(t, services.Valid, result.ValidationResult)
 			}
@@ -576,7 +531,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 	t.Run("Empty message returns error", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma.SignedMessage{}, Contract: &contract.Contract{}})
+		_, err := ctx.v.legalEntityFromContract(&SignedIrmaContract{IrmaContract: irma.SignedMessage{}, contract: &contract.Contract{}})
 
 		assert.NotNil(t, err)
 		assert.Error(t, contract.ErrInvalidContractText, err)
@@ -605,7 +560,7 @@ func TestDefaultValidator_legalEntityFromContract(t *testing.T) {
 		assert.Nil(t, err)
 
 		_, err = ctx.v.legalEntityFromContract(&SignedIrmaContract{
-			Contract: signedContract,
+			contract: signedContract,
 		})
 
 		assert.NotNil(t, err)
@@ -618,18 +573,12 @@ func TestService_VerifyVP(t *testing.T) {
 		validator, _ := defaultValidator(t)
 
 		irmaSignature := testdata.ValidIrmaContract
-		validIrmaContract := irma.SignedMessage{}
-		err := json.Unmarshal([]byte(irmaSignature), &validIrmaContract)
-		if !assert.NoError(t, err) {
-			return
-		}
-
-		rawSic, err := json.Marshal(validIrmaContract)
+		encodedIrmaSignature := base64.StdEncoding.EncodeToString([]byte(irmaSignature))
 
 		vp := VerifiablePresentation{
 			Proof: VPProof{
-				Proof:     contract.Proof{Type: ""},
-				Signature: string(rawSic),
+				Proof:      contract.Proof{Type: ""},
+				ProofValue: encodedIrmaSignature,
 			},
 		}
 
@@ -637,7 +586,7 @@ func TestService_VerifyVP(t *testing.T) {
 		if !assert.NoError(t, err) {
 			return
 		}
-		validationResult, err := validator.VerifyVP(rawIrmaVP)
+		validationResult, err := validator.VerifyVP(rawIrmaVP, nil)
 
 		if !assert.NoError(t, err) {
 			return
@@ -650,7 +599,7 @@ func TestService_VerifyVP(t *testing.T) {
 
 	t.Run("nok - invalid rawVP", func(t *testing.T) {
 		validator := Service{}
-		validationResult, err := validator.VerifyVP([]byte{})
+		validationResult, err := validator.VerifyVP([]byte{}, nil)
 
 		assert.Nil(t, validationResult)
 		if !assert.Error(t, err) {

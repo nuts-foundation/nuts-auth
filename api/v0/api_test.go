@@ -396,7 +396,7 @@ func (e OAuthErrorMatcher) String() string {
 type TestContext struct {
 	ctrl         *gomock.Controller
 	echoMock     *coreMock.MockContext
-	authMock     *mock.MockAuthClient
+	authMock     *mock_auth.MockAuthClient
 	oauthMock    *servicesMock.MockOAuthClient
 	notaryMock   *servicesMock.MockContractNotary
 	contractMock *servicesMock.MockContractClient
@@ -405,7 +405,7 @@ type TestContext struct {
 
 var createContext = func(t *testing.T) *TestContext {
 	ctrl := gomock.NewController(t)
-	authMock := mock.NewMockAuthClient(ctrl)
+	authMock := mock_auth.NewMockAuthClient(ctrl)
 	oauthMock := servicesMock.NewMockOAuthClient(ctrl)
 	notaryMock := servicesMock.NewMockContractNotary(ctrl)
 	contractMock := servicesMock.NewMockContractClient(ctrl)

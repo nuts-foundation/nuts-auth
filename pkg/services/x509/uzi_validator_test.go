@@ -73,7 +73,9 @@ func TestUziValidator(t *testing.T) {
 		}
 		attrs, err := signedToken.SignerAttributes()
 
-		assert.NoError(t, err)
+		if !assert.NoError(t, err) {
+			return
+		}
 		assert.Equal(t, expected, attrs)
 		assert.Equal(t, contract.Type("BehandelaarLogin"), signedToken.Contract().Template.Type)
 		assert.Equal(t, contract.Language("NL"), signedToken.Contract().Template.Language)

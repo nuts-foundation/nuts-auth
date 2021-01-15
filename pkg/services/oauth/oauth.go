@@ -68,7 +68,7 @@ type validationContext struct {
 	jwtBearerToken             *services.NutsJwtBearerToken
 	actorName                  string
 	vendor                     core.PartyID
-	contractVerificationResult *contract.VerificationResult
+	contractVerificationResult *contract.VPVerificationResult
 }
 
 // NewOAuthService accepts a vendorID, and several Nuts engines and returns an implementation of services.OAuthClient
@@ -144,11 +144,11 @@ func (s *service) CreateAccessToken(request services.CreateAccessTokenRequest) (
 		if decoded, err = base64.StdEncoding.DecodeString(*context.jwtBearerToken.UserIdentity); err != nil {
 			return nil, fmt.Errorf("failed to decode base64 usi field: %w", err)
 		}
-		if context.contractVerificationResult, err = s.contractClient.VerifyVP(decoded); err != nil {
+		if context.contractVerificationResult, err = s.contractClient.VerifyVP(decoded, nil); err != nil {
 			return nil, fmt.Errorf("identity verification failed: %w", err)
 		}
 	}
-	if context.contractVerificationResult.State == contract.Invalid {
+	if context.contractVerificationResult.Validity == contract.Invalid {
 		return nil, errors.New("identity validation failed")
 	}
 	// checks if the name from the login contract matches with the registered name of the issuer.
@@ -436,7 +436,7 @@ func (s *service) buildAccessToken(context *validationContext) (string, error) {
 	identityValidationResult := context.contractVerificationResult
 	jwtBearerToken := context.jwtBearerToken
 
-	if identityValidationResult.State != contract.Valid {
+	if identityValidationResult.Validity != contract.Valid {
 		return "", fmt.Errorf("could not build accessToken: %w", errors.New("invalid contract"))
 	}
 
@@ -444,6 +444,8 @@ func (s *service) buildAccessToken(context *validationContext) (string, error) {
 	if issuer == "" {
 		return "", fmt.Errorf("could not build accessToken: %w", errors.New("subject is missing"))
 	}
+
+	disclosedAttributes := identityValidationResult.DisclosedAttributes
 
 	at := services.NutsAccessToken{
 		StandardClaims: jwt.StandardClaims{
@@ -460,11 +462,11 @@ func (s *service) buildAccessToken(context *validationContext) (string, error) {
 		// https://privacybydesign.foundation/attribute-index/en/pbdf.pbdf.email.html
 		// and
 		// https://openid.net/specs/openid-connect-basic-1_0.html#StandardClaims
-		FamilyName: identityValidationResult.DisclosedAttributes["gemeente.personalData.familyname"],
-		GivenName:  identityValidationResult.DisclosedAttributes["gemeente.personalData.firstnames"],
-		Prefix:     identityValidationResult.DisclosedAttributes["gemeente.personalData.prefix"],
-		Name:       identityValidationResult.DisclosedAttributes["gemeente.personalData.fullname"],
-		Email:      identityValidationResult.DisclosedAttributes["sidn-pbdf.email.email"],
+		FamilyName: disclosedAttributes["gemeente.personalData.familyname"],
+		GivenName:  disclosedAttributes["gemeente.personalData.firstnames"],
+		Prefix:     disclosedAttributes["gemeente.personalData.prefix"],
+		Name:       disclosedAttributes["gemeente.personalData.fullname"],
+		Email:      disclosedAttributes["sidn-pbdf.email.email"],
 	}
 
 	var keyVals map[string]interface{}

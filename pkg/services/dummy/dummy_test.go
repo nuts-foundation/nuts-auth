@@ -151,7 +151,7 @@ func TestDummy_VerifyVP(t *testing.T) {
 			InStrictMode: true,
 		}
 
-		_, err := d.VerifyVP([]byte{})
+		_, err := d.VerifyVP([]byte{}, nil)
 
 		assert.Error(t, err)
 		assert.Equal(t, errNotEnabled, err)
@@ -165,7 +165,7 @@ func TestDummy_VerifyVP(t *testing.T) {
 		p := Presentation{
 			VerifiablePresentationBase: contract.VerifiablePresentationBase{
 				Context: []string{contract.VerifiableCredentialContext},
-				Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
+				Type:    []contract.VPType{contract.VerifiablePresentationType, VerifiablePresentationType},
 			},
 			Proof: Proof{
 				Type:      NoSignatureType,
@@ -178,11 +178,11 @@ func TestDummy_VerifyVP(t *testing.T) {
 		}
 
 		j, _ := json.Marshal(p)
-		vr, err := d.VerifyVP(j)
+		vr, err := d.VerifyVP(j, nil)
 
 		assert.NoError(t, err)
-		assert.Equal(t, contract.Valid, vr.State)
-		assert.Equal(t, ContractFormat, string(vr.ContractFormat))
+		assert.Equal(t, contract.Valid, vr.Validity)
+		assert.Equal(t, VerifiablePresentationType, vr.VPType)
 	})
 
 	t.Run("error - incorrect json", func(t *testing.T) {
@@ -190,7 +190,7 @@ func TestDummy_VerifyVP(t *testing.T) {
 			InStrictMode: false,
 		}
 
-		_, err := d.VerifyVP([]byte("not json"))
+		_, err := d.VerifyVP([]byte("not json"), nil)
 
 		assert.Error(t, err)
 	})
@@ -207,7 +207,7 @@ func TestDummy_VerifyVP(t *testing.T) {
 		}
 
 		j, _ := json.Marshal(p)
-		_, err := d.VerifyVP(j)
+		_, err := d.VerifyVP(j, nil)
 
 		assert.Error(t, err)
 	})
@@ -238,7 +238,7 @@ func TestSigningSessionResult_VerifiablePresentation(t *testing.T) {
 		dvp := vp.(Presentation)
 
 		assert.Equal(t, []string{contract.VerifiableCredentialContext}, dvp.Context)
-		assert.Equal(t, []string{contract.VerifiablePresentationType, VerifiablePresentationType}, dvp.Type)
+		assert.Equal(t, []contract.VPType{contract.VerifiablePresentationType, VerifiablePresentationType}, dvp.Type)
 		assert.Equal(t, "", dvp.Proof.Contract)
 		assert.Equal(t, "1980-01-01", dvp.Proof.Birthdate)
 		assert.Equal(t, "tester@example.com", dvp.Proof.Email)

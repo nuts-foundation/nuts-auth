@@ -57,12 +57,40 @@ func (w Wrapper) VerifySignature(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to convert the verifiable presentation: %s", err.Error()))
 	}
 
-	validationResult, err := w.Auth.ContractClient().VerifyVP(rawVP)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("unable to verify the verifiable presentation: %s", err.Error()))
+	checkTime := time.Now()
+	if requestParams.CheckTime != nil {
+		checkTime, err = time.Parse(time.RFC3339, *requestParams.CheckTime)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("could not parse checkTime: %s", err.Error()))
+		}
 	}
-	var result SignatureVerificationResponse = validationResult.State == contract.Valid
-	return ctx.JSON(http.StatusOK, result)
+	validationResult, err := w.Auth.ContractClient().VerifyVP(rawVP, &checkTime)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("unable to verify the verifiable presentation: %s", err.Error()))
+	}
+	// Convert internal validationResult to api SignatureVerificationResponse
+	response := SignatureVerificationResponse{}
+	if validationResult.Validity == contract.Valid {
+		response.Validity = true
+
+		credentials := map[string]interface{}{}
+		for key, val := range validationResult.ContractAttributes {
+			credentials[key] = val
+		}
+		response.Credentials = &credentials
+
+		issuerAttributes := map[string]interface{}{}
+		for key, val := range validationResult.DisclosedAttributes {
+			issuerAttributes[key] = val
+		}
+		response.IssuerAttributes = &issuerAttributes
+
+		vpType := string(validationResult.VPType)
+		response.VpType = &vpType
+	} else {
+		response.Validity = false
+	}
+	return ctx.JSON(http.StatusOK, response)
 }
 
 // CreateSignSession handles the CreateSignSession http request. It parses the parameters, finds the means handler and returns a session pointer which can be used to monitor the session.
@@ -72,7 +100,7 @@ func (w Wrapper) CreateSignSession(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("could not parse request body: %s", err.Error()))
 	}
 	createSessionRequest := services.CreateSessionRequest{
-		SigningMeans: requestParams.Means,
+		SigningMeans: contract.SigningMeans(requestParams.Means),
 		Message:      requestParams.Payload,
 	}
 	sessionPtr, err := w.Auth.ContractClient().CreateSigningSession(createSessionRequest)

@@ -117,7 +117,7 @@ func (v Service) SigningSessionStatus(sessionID string) (contract.SigningSession
 			if err != nil {
 				return nil, err
 			}
-			sic := &SignedIrmaContract{*result.Signature, c}
+			sic := &SignedIrmaContract{IrmaContract: *result.Signature, contract: c}
 
 			le, err := v.legalEntityFromContract(sic)
 			if err != nil {
@@ -161,13 +161,13 @@ func (s SigningSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 	return VerifiablePresentation{
 		VerifiablePresentationBase: contract.VerifiablePresentationBase{
 			Context: []string{contract.VerifiableCredentialContext},
-			Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
+			Type:    []contract.VPType{contract.VerifiablePresentationType, VerifiablePresentationType},
 		},
 		Proof: VPProof{
 			Proof: contract.Proof{
 				Type: NutsIrmaSignedContract,
 			},
-			Signature: b64,
+			ProofValue: b64,
 		},
 	}, nil
 }

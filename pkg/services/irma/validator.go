@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/nuts-foundation/nuts-auth/logging"
 
@@ -45,12 +46,12 @@ import (
 // todo rename to verifier
 
 // VerifiablePresentationType is the irma verifiable presentation type
-const VerifiablePresentationType = "NutsIrmaPresentation"
+const VerifiablePresentationType = contract.VPType("NutsIrmaPresentation")
 
 // ContractFormat holds the readable identifier of this signing means.
-const ContractFormat = "irma"
+const ContractFormat = contract.SigningMeans("irma")
 
-// Service validates contracts using the irma logic.
+// Service validates contracts using the IRMA logic.
 type Service struct {
 	IrmaSessionHandler SessionHandler
 	IrmaConfig         *irma.Configuration
@@ -89,12 +90,12 @@ type VerifiablePresentation struct {
 // VPProof is a specific IrmaProof for the specific VerifiablePresentation
 type VPProof struct {
 	contract.Proof
-	Signature string `json:"proofValue"`
+	ProofValue string `json:"proofValue"`
 }
 
 // VerifyVP expects the given raw VerifiablePresentation to be of the correct type
 // todo: type check?
-func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
+func (v Service) VerifyVP(rawVerifiablePresentation []byte, checkTime *time.Time) (*contract.VPVerificationResult, error) {
 	// Extract the Irma message
 	vp := VerifiablePresentation{}
 	if err := json.Unmarshal(rawVerifiablePresentation, &vp); err != nil {
@@ -103,21 +104,26 @@ func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificat
 
 	// Create the irma contract validator
 	contractValidator := contractVerifier{v.IrmaConfig, v.ContractTemplates}
-	signedContract, err := contractValidator.parseSignedIrmaContract(vp.Proof.Signature)
+	signedContract, err := contractValidator.Parse(vp.Proof.ProofValue)
 	if err != nil {
 		return nil, err
 	}
 
-	cvr, err := contractValidator.verifyAll(signedContract, nil)
+	cvr, err := contractValidator.verifyAll(signedContract.(*SignedIrmaContract), nil, checkTime)
 	if err != nil {
 		return nil, err
 	}
 
-	return &contract.VerificationResult{
-		State:               contract.State(cvr.ValidationResult),
-		ContractFormat:      contract.Format(cvr.ContractFormat),
-		DisclosedAttributes: cvr.DisclosedAttributes,
-		ContractAttributes:  cvr.ContractAttributes,
+	signerAttributes, err := signedContract.SignerAttributes()
+	if err != nil {
+		return nil, fmt.Errorf("could not verify vp: could not get signer attributes: %w", err)
+	}
+
+	return &contract.VPVerificationResult{
+		Validity:            contract.State(cvr.ValidationResult),
+		VPType:              contract.VPType(cvr.ContractFormat),
+		DisclosedAttributes: signerAttributes,
+		ContractAttributes:  signedContract.Contract().Params,
 	}, nil
 }
 
@@ -125,7 +131,7 @@ func (v Service) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificat
 // It decodes the base64 encoded contract, parses the contract string, and validates the contract.
 // Returns nil, ErrUnknownContractFormat if the contract used in the message is unknown
 // deprecated
-func (v Service) ValidateContract(b64EncodedContract string, format services.ContractFormat, actingPartyCN *string) (*services.ContractValidationResult, error) {
+func (v Service) ValidateContract(b64EncodedContract string, format services.ContractFormat, actingPartyCN *string, checkTime *time.Time) (*services.ContractValidationResult, error) {
 	if format == services.IrmaFormat {
 		contract, err := base64.StdEncoding.DecodeString(b64EncodedContract)
 		if err != nil {
@@ -133,20 +139,20 @@ func (v Service) ValidateContract(b64EncodedContract string, format services.Con
 		}
 		// Create the irma contract validator
 		contractValidator := contractVerifier{v.IrmaConfig, v.ContractTemplates}
-		signedContract, err := contractValidator.parseSignedIrmaContract(string(contract))
+		signedContract, err := contractValidator.ParseIrmaContract(contract)
 		if err != nil {
 			return nil, err
 		}
-		return contractValidator.verifyAll(signedContract, actingPartyCN)
+		return contractValidator.verifyAll(signedContract.(*SignedIrmaContract), actingPartyCN, checkTime)
 	}
 	return nil, contract.ErrUnknownContractFormat
 }
 
 // ValidateJwt validates a JWT formatted identity token
 // deprecated
-func (v Service) ValidateJwt(token string, actingPartyCN *string) (*services.ContractValidationResult, error) {
+func (v Service) ValidateJwt(rawJwt string, actingPartyCN *string, checkTime *time.Time) (*services.ContractValidationResult, error) {
 	parser := &jwt.Parser{ValidMethods: services.ValidJWTAlg}
-	parsedToken, err := parser.ParseWithClaims(token, &services.NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
+	parsedToken, err := parser.ParseWithClaims(rawJwt, &services.NutsIdentityToken{}, func(token *jwt.Token) (i interface{}, e error) {
 		legalEntity, err := parseTokenIssuer(token.Claims.(*services.NutsIdentityToken).Issuer)
 		if err != nil {
 			return nil, err
@@ -185,8 +191,11 @@ func (v Service) ValidateJwt(token string, actingPartyCN *string) (*services.Con
 
 	// Create the irma contract validator
 	contractValidator := contractVerifier{v.IrmaConfig, v.ContractTemplates}
-	signedContract, err := contractValidator.parseSignedIrmaContract(string(contractStr))
-	return contractValidator.verifyAll(signedContract, actingPartyCN)
+	signedContract, err := contractValidator.ParseIrmaContract(contractStr)
+	if err != nil {
+		return nil, err
+	}
+	return contractValidator.verifyAll(signedContract.(*SignedIrmaContract), actingPartyCN, checkTime)
 }
 
 // SessionStatus returns the current status of a certain session.
@@ -199,7 +208,10 @@ func (v Service) SessionStatus(id services.SessionID) (*services.SessionStatusRe
 		)
 		if result.Signature != nil {
 			c, err := contract.ParseContractString(result.Signature.Message, v.ContractTemplates)
-			sic := &SignedIrmaContract{*result.Signature, c}
+			sic := &SignedIrmaContract{
+				IrmaContract: *result.Signature,
+				contract:     c,
+			}
 			if err != nil {
 				return nil, err
 			}
@@ -222,7 +234,7 @@ func (v Service) SessionStatus(id services.SessionID) (*services.SessionStatusRe
 }
 
 func (v Service) legalEntityFromContract(sic *SignedIrmaContract) (core.PartyID, error) {
-	params := sic.Contract.Params
+	params := sic.contract.Params
 
 	if _, ok := params[contract.LegalEntityAttr]; !ok {
 		return core.PartyID{}, ErrLegalEntityNotProvided

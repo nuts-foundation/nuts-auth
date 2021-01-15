@@ -114,21 +114,6 @@ func (mr *MockSessionPointerMockRecorder) Payload() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Payload", reflect.TypeOf((*MockSessionPointer)(nil).Payload))
 }
 
-// MarshalJSON mocks base method
-func (m *MockSessionPointer) MarshalJSON() ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MarshalJSON")
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// MarshalJSON indicates an expected call of MarshalJSON
-func (mr *MockSessionPointerMockRecorder) MarshalJSON() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarshalJSON", reflect.TypeOf((*MockSessionPointer)(nil).MarshalJSON))
-}
-
 // MockSigningSessionResult is a mock of SigningSessionResult interface
 type MockSigningSessionResult struct {
 	ctrl     *gomock.Controller

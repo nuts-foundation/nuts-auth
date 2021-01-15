@@ -23,16 +23,17 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/nuts-foundation/nuts-auth/pkg/contract"
 	"github.com/nuts-foundation/nuts-auth/pkg/services"
 )
 
 // ContractFormat is the contract format type
-const ContractFormat = "dummy"
+const ContractFormat = contract.SigningMeans("dummy")
 
 // VerifiablePresentationType is the dummy verifiable presentation type
-const VerifiablePresentationType = "DummyVerifiablePresentation"
+const VerifiablePresentationType = contract.VPType("DummyVerifiablePresentation")
 
 // NoSignatureType is a VerifiablePresentation Proof type where no signature is given
 const NoSignatureType = "NoSignature"
@@ -79,14 +80,34 @@ type Proof struct {
 	Email string
 }
 
+// SignedToken is the Dummy implementation of a Signed token.
+// It can be used in the dummy.Service service.
+type SignedToken struct {
+	signerAttributes map[string]string
+	contract         contract.Contract
+}
+
+// SignerAttributes returns the attributes used to sign the token
+func (d SignedToken) SignerAttributes() (map[string]string, error) {
+	return d.signerAttributes, nil
+}
+
+// Contract returns the contract
+func (d SignedToken) Contract() contract.Contract {
+	return d.contract
+}
+
+// sessionPointer contains a information to facilitate session discoverability for the signing means
 type sessionPointer struct {
 	sessionID string
 }
 
+// SessionID returns a string which can be used by the signing means to find the session
 func (s sessionPointer) SessionID() string {
 	return s.sessionID
 }
 
+// Payload returns always the dummy value
 func (s sessionPointer) Payload() []byte {
 	return []byte("dummy")
 }
@@ -103,13 +124,14 @@ type signingSessionResult struct {
 	Request string
 }
 
+// Status returns the current state of the signing session
 func (d signingSessionResult) Status() string {
 	return d.State
 }
 
+// VerifiablePresentation returns the contract.VerifiablePresentation if the session is completed, nil otherwise.
 func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePresentation, error) {
 	// todo: the contract template should be used to select the dummy attributes to add
-	// reqContract := d.Request
 
 	if d.Status() != SessionCompleted {
 		return nil, nil
@@ -118,7 +140,7 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 	return Presentation{
 		VerifiablePresentationBase: contract.VerifiablePresentationBase{
 			Context: []string{contract.VerifiableCredentialContext},
-			Type:    []string{contract.VerifiablePresentationType, VerifiablePresentationType},
+			Type:    []contract.VPType{contract.VerifiablePresentationType, VerifiablePresentationType},
 		},
 		Proof: Proof{
 			Type:      NoSignatureType,
@@ -131,7 +153,8 @@ func (d signingSessionResult) VerifiablePresentation() (contract.VerifiablePrese
 	}, nil
 }
 
-func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.VerificationResult, error) {
+// VerifyVP check a Dummy VerifiablePresentation. It Returns a verificationResult if all was fine, an error otherwise.
+func (d Dummy) VerifyVP(rawVerifiablePresentation []byte, checkTime *time.Time) (*contract.VPVerificationResult, error) {
 	if d.InStrictMode {
 		return nil, errNotEnabled
 	}
@@ -146,9 +169,9 @@ func (d Dummy) VerifyVP(rawVerifiablePresentation []byte) (*contract.Verificatio
 		return nil, err
 	}
 
-	return &contract.VerificationResult{
-		State:          contract.Valid,
-		ContractFormat: ContractFormat,
+	return &contract.VPVerificationResult{
+		Validity: contract.Valid,
+		VPType:   VerifiablePresentationType,
 		DisclosedAttributes: map[string]string{
 			"initials":  p.Proof.Initials,
 			"lastname":  p.Proof.Lastname,
@@ -194,6 +217,9 @@ func (d Dummy) SigningSessionStatus(sessionID string) (contract.SigningSessionRe
 	}, nil
 }
 
+// StartSigningSession starts a Dummy session. It takes any string and stores it under a random sessionID.
+// This method is not available in strictMode
+// returns the sessionPointer with the sessionID
 func (d Dummy) StartSigningSession(rawContractText string) (contract.SessionPointer, error) {
 	if d.InStrictMode {
 		return nil, errNotEnabled

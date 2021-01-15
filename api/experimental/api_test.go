@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
@@ -390,27 +391,145 @@ func TestWrapper_VerifySignature(t *testing.T) {
 		})
 	}
 
-	ctx := createContext(t)
-	defer ctx.ctrl.Finish()
+	t.Run("ok - VP without checkTime", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
 
-	postParams := SignatureVerificationRequest{VerifiablePresentation{
-		Context: []string{"http://example.com"},
-		Proof:   map[string]interface{}{"foo": "bar"},
-		Type:    []string{"TestCredential"},
-	}}
+		postParams := SignatureVerificationRequest{
+			VerifiablePresentation: VerifiablePresentation{
+				Context: []string{"http://example.com"},
+				Proof:   map[string]interface{}{"foo": "bar"},
+				Type:    []string{"TestCredential"},
+			}}
 
-	bindPostBody(&ctx, postParams)
+		bindPostBody(&ctx, postParams)
 
-	verificationResult := &contract.VerificationResult{
-		State:               contract.Valid,
-		ContractFormat:      "",
-		DisclosedAttributes: nil,
-		ContractAttributes:  nil,
-	}
+		verificationResult := &contract.VPVerificationResult{
+			Validity:            contract.Valid,
+			VPType:              "AVPType",
+			DisclosedAttributes: map[string]string{"name": "John"},
+			ContractAttributes:  map[string]string{"validTo": "now"},
+		}
 
-	ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(verificationResult, nil)
-	ctx.echoMock.EXPECT().JSON(http.StatusOK, SignatureVerificationResponse(true))
+		vpType := "AVPType"
+		issuerAttributes := map[string]interface{}{"name": "John"}
+		credentials := map[string]interface{}{"validTo": "now"}
 
-	err := ctx.wrapper.VerifySignature(ctx.echoMock)
-	assert.NoError(t, err)
+		expectedResponse := SignatureVerificationResponse{
+			Credentials:      &credentials,
+			IssuerAttributes: &issuerAttributes,
+			Validity:         true,
+			VpType:           &vpType,
+		}
+
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any(), gomock.Any()).Return(verificationResult, nil)
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, expectedResponse)
+
+		err := ctx.wrapper.VerifySignature(ctx.echoMock)
+		assert.NoError(t, err)
+	})
+
+	t.Run("ok - but invalid VP", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		postParams := SignatureVerificationRequest{
+			VerifiablePresentation: VerifiablePresentation{}}
+
+		bindPostBody(&ctx, postParams)
+
+		verificationResult := &contract.VPVerificationResult{
+			Validity: contract.Invalid,
+		}
+
+		expectedResponse := SignatureVerificationResponse{
+			Validity: false,
+		}
+
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any(), gomock.Any()).Return(verificationResult, nil)
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, expectedResponse)
+
+		err := ctx.wrapper.VerifySignature(ctx.echoMock)
+		assert.NoError(t, err)
+	})
+
+	t.Run("ok - valid checkTime", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		checkTimeParam := "2021-01-15T09:59:00+01:00"
+		postParams := SignatureVerificationRequest{
+			CheckTime: &checkTimeParam,
+			VerifiablePresentation: VerifiablePresentation{
+				Context: []string{"http://example.com"},
+				Proof:   map[string]interface{}{"foo": "bar"},
+				Type:    []string{"TestCredential"},
+			}}
+
+		bindPostBody(&ctx, postParams)
+
+		verificationResult := &contract.VPVerificationResult{
+			Validity: contract.Valid,
+		}
+
+		vpType := ""
+		issuerAttributes := map[string]interface{}{}
+		credentials := map[string]interface{}{}
+
+		expectedResponse := SignatureVerificationResponse{
+			Credentials:      &credentials,
+			IssuerAttributes: &issuerAttributes,
+			Validity:         true,
+			VpType:           &vpType,
+		}
+
+		checkTime, err := time.Parse(time.RFC3339, checkTimeParam)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any(), &checkTime).Return(verificationResult, nil)
+		ctx.echoMock.EXPECT().JSON(http.StatusOK, expectedResponse)
+
+		err = ctx.wrapper.VerifySignature(ctx.echoMock)
+		assert.NoError(t, err)
+	})
+
+	t.Run("nok - invalid checkTime", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		invalidCheckTime := "invalid formatted timestamp"
+		postParams := SignatureVerificationRequest{
+			CheckTime:              &invalidCheckTime,
+			VerifiablePresentation: VerifiablePresentation{},
+		}
+
+		bindPostBody(&ctx, postParams)
+
+		err := ctx.wrapper.VerifySignature(ctx.echoMock)
+		if !assert.Error(t, err) {
+			return
+		}
+		assert.Equal(t, "code=400, message=could not parse checkTime: parsing time \"invalid formatted timestamp\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"invalid formatted timestamp\" as \"2006\"", err.Error())
+	})
+
+	t.Run("nok - verification returns an error", func(t *testing.T) {
+		ctx := createContext(t)
+		defer ctx.ctrl.Finish()
+
+		postParams := SignatureVerificationRequest{
+			VerifiablePresentation: VerifiablePresentation{},
+		}
+
+		bindPostBody(&ctx, postParams)
+
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any(), gomock.Any()).Return(nil, errors.New("verification error"))
+
+		err := ctx.wrapper.VerifySignature(ctx.echoMock)
+		if !assert.Error(t, err) {
+			return
+		}
+		assert.Equal(t, `code=400, message=unable to verify the verifiable presentation: verification error`, err.Error())
+	})
 }
