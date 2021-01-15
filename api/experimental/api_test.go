@@ -420,7 +420,7 @@ func TestWrapper_VerifySignature(t *testing.T) {
 		VpType:           &vpType,
 	}
 
-	ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(verificationResult, nil)
+	ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any(), gomock.Any()).Return(verificationResult, nil)
 	ctx.echoMock.EXPECT().JSON(http.StatusOK, expectedResponse)
 
 	err := ctx.wrapper.VerifySignature(ctx.echoMock)

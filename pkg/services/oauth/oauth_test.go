@@ -86,7 +86,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 		defer ctx.ctrl.Finish()
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Times(2).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().AnyTimes().Return(testTrustStore{ca: vendorCA(t)})
-		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(nil, errors.New("identity validation failed"))
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any(), nil).Return(nil, errors.New("identity validation failed"))
 
 		tokenCtx := validContext()
 		signToken(tokenCtx)
@@ -117,7 +117,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 	t.Run("invalid identity token", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(&contract.VPVerificationResult{Validity: contract.Invalid}, nil)
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any(), nil).Return(&contract.VPVerificationResult{Validity: contract.Invalid}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Times(2).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().AnyTimes().Return(testTrustStore{ca: vendorCA(t)})
 
@@ -134,7 +134,7 @@ func TestAuth_CreateAccessToken(t *testing.T) {
 	t.Run("valid - with legal base", func(t *testing.T) {
 		ctx := createContext(t)
 		defer ctx.ctrl.Finish()
-		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any()).Return(&contract.VPVerificationResult{Validity: contract.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
+		ctx.contractClientMock.EXPECT().VerifyVP(gomock.Any(), nil).Return(&contract.VPVerificationResult{Validity: contract.Valid, DisclosedAttributes: map[string]string{"name": "Henk de Vries"}}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.registryMock.EXPECT().OrganizationById(gomock.Any()).Return(&db.Organization{Vendor: vendorID}, nil)
 		ctx.cryptoMock.EXPECT().TrustStore().AnyTimes().Return(testTrustStore{ca: vendorCA(t)})

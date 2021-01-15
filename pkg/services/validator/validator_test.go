@@ -97,7 +97,7 @@ func TestService_ValidateContract(t *testing.T) {
 	})
 
 	t.Run("Returns validation result for JWT", func(t *testing.T) {
-		ctx.contractValidatorMock.EXPECT().ValidateJwt(gomock.Any(), gomock.Any()).Return(&services.ContractValidationResult{
+		ctx.contractValidatorMock.EXPECT().ValidateJwt(gomock.Any(), gomock.Any(), nil).Return(&services.ContractValidationResult{
 			ValidationResult: services.Valid,
 		}, nil)
 
@@ -109,7 +109,7 @@ func TestService_ValidateContract(t *testing.T) {
 	})
 
 	t.Run("Returns validation result for Irma", func(t *testing.T) {
-		ctx.contractValidatorMock.EXPECT().ValidateContract(gomock.Any(), gomock.Any(), gomock.Any()).Return(&services.ContractValidationResult{
+		ctx.contractValidatorMock.EXPECT().ValidateContract(gomock.Any(), gomock.Any(), gomock.Any(), nil).Return(&services.ContractValidationResult{
 			ValidationResult: services.Valid,
 		}, nil)
 
@@ -154,7 +154,7 @@ func TestContract_VerifyVP(t *testing.T) {
 		}
 
 		mockVerifier := servicesMock.NewMockContractClient(ctrl)
-		mockVerifier.EXPECT().VerifyVP(rawVP).Return(&contract.VPVerificationResult{Validity: contract.Valid}, nil)
+		mockVerifier.EXPECT().VerifyVP(rawVP, nil).Return(&contract.VPVerificationResult{Validity: contract.Valid}, nil)
 
 		validator := service{verifiers: map[contract.VPType]contract.VPVerifier{"bar": mockVerifier}}
 

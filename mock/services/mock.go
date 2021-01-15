@@ -42,31 +42,31 @@ func (m *MockContractValidator) EXPECT() *MockContractValidatorMockRecorder {
 // ValidateContract mocks base method
 func (m *MockContractValidator) ValidateContract(contract string, format services.ContractFormat, actingPartyCN *string, checkTime *time.Time) (*services.ContractValidationResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateContract", contract, format, actingPartyCN)
+	ret := m.ctrl.Call(m, "ValidateContract", contract, format, actingPartyCN, checkTime)
 	ret0, _ := ret[0].(*services.ContractValidationResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ValidateContract indicates an expected call of ValidateContract
-func (mr *MockContractValidatorMockRecorder) ValidateContract(contract, format, actingPartyCN interface{}) *gomock.Call {
+func (mr *MockContractValidatorMockRecorder) ValidateContract(contract, format, actingPartyCN, checkTime interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateContract", reflect.TypeOf((*MockContractValidator)(nil).ValidateContract), contract, format, actingPartyCN)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateContract", reflect.TypeOf((*MockContractValidator)(nil).ValidateContract), contract, format, actingPartyCN, checkTime)
 }
 
 // ValidateJwt mocks base method
 func (m *MockContractValidator) ValidateJwt(contract string, actingPartyCN *string, checkTime *time.Time) (*services.ContractValidationResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateJwt", contract, actingPartyCN)
+	ret := m.ctrl.Call(m, "ValidateJwt", contract, actingPartyCN, checkTime)
 	ret0, _ := ret[0].(*services.ContractValidationResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ValidateJwt indicates an expected call of ValidateJwt
-func (mr *MockContractValidatorMockRecorder) ValidateJwt(contract, actingPartyCN interface{}) *gomock.Call {
+func (mr *MockContractValidatorMockRecorder) ValidateJwt(contract, actingPartyCN, checkTime interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateJwt", reflect.TypeOf((*MockContractValidator)(nil).ValidateJwt), contract, actingPartyCN)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateJwt", reflect.TypeOf((*MockContractValidator)(nil).ValidateJwt), contract, actingPartyCN, checkTime)
 }
 
 // IsInitialized mocks base method
@@ -455,16 +455,16 @@ func (m *MockContractClient) EXPECT() *MockContractClientMockRecorder {
 // VerifyVP mocks base method
 func (m *MockContractClient) VerifyVP(rawVerifiablePresentation []byte, checkTime *time.Time) (*contract.VPVerificationResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "VerifyVP", rawVerifiablePresentation)
+	ret := m.ctrl.Call(m, "VerifyVP", rawVerifiablePresentation, checkTime)
 	ret0, _ := ret[0].(*contract.VPVerificationResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // VerifyVP indicates an expected call of VerifyVP
-func (mr *MockContractClientMockRecorder) VerifyVP(rawVerifiablePresentation interface{}) *gomock.Call {
+func (mr *MockContractClientMockRecorder) VerifyVP(rawVerifiablePresentation, checkTime interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyVP", reflect.TypeOf((*MockContractClient)(nil).VerifyVP), rawVerifiablePresentation)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyVP", reflect.TypeOf((*MockContractClient)(nil).VerifyVP), rawVerifiablePresentation, checkTime)
 }
 
 // CreateSigningSession mocks base method

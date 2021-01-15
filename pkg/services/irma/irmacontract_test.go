@@ -71,10 +71,6 @@ func TestSignedIrmaContract_VerifySignature(t *testing.T) {
 		}
 		ap := "Demo EHR"
 
-		oldNowFunc := contract.NowFunc
-		defer func() {
-			contract.NowFunc = oldNowFunc
-		}()
 		location, _ := time.LoadLocation(contract.AmsterdamTimeZone)
 		checkTime := time.Date(2019, time.October, 1, 13, 46, 00, 0, location)
 		res, err := cv.verifyAll(sic.(*SignedIrmaContract), &ap, &checkTime)
