@@ -138,7 +138,7 @@ func TestJwtX509Validator_Parse(t *testing.T) {
 		theJwt := jwt.New()
 		headers := jws.NewHeaders()
 		headers.Set(jws.X509CertChainKey, []string{base64.StdEncoding.EncodeToString(cert.Raw)})
-		rawToken, err := jwt.Sign(theJwt, jwa.RS256, privKey, jws.WithHeaders(headers))
+		rawToken, err := jwt.Sign(theJwt, jwa.RS256, privKey, jwt.WithHeaders(headers))
 		if !assert.NoError(t, err) {
 			return
 		}
