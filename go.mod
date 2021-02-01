@@ -11,7 +11,7 @@ require (
 	github.com/goodsign/monday v0.0.0-20190708072354-9bcb46af8546
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
 	github.com/labstack/echo/v4 v4.1.17
-	github.com/lestrrat-go/jwx v1.0.7
+	github.com/lestrrat-go/jwx v1.1.0
 	github.com/magiconair/properties v1.8.4
 	github.com/mdp/qrterminal/v3 v3.0.0
 	github.com/nuts-foundation/nuts-consent-store v0.16.0
@@ -25,5 +25,4 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.6.1
-	golang.org/x/tools v0.0.0-20200928201943-a0ef9b62deab // indirect
 )
