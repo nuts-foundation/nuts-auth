@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/bwesterb/go-atum v1.0.1 // indirect
 	github.com/cbroglie/mustache v1.2.0
-	github.com/deepmap/oapi-codegen v1.4.1
+	github.com/deepmap/oapi-codegen v1.5.1
 	github.com/dgrijalva/jwt-go v3.2.1-0.20200107013213-dc14462fd587+incompatible
 	github.com/golang/mock v1.4.4
 	github.com/goodsign/monday v0.0.0-20190708072354-9bcb46af8546
