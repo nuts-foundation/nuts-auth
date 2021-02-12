@@ -10,7 +10,7 @@ require (
 	github.com/golang/mock v1.4.4
 	github.com/goodsign/monday v0.0.0-20190708072354-9bcb46af8546
 	github.com/jasonlvhit/gocron v0.0.0-20191007145845-57f89394836a // indirect
-	github.com/labstack/echo/v4 v4.1.17
+	github.com/labstack/echo/v4 v4.2.0
 	github.com/lestrrat-go/jwx v1.0.7
 	github.com/magiconair/properties v1.8.4
 	github.com/mdp/qrterminal/v3 v3.0.0
